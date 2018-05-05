@@ -5,7 +5,7 @@ class ObjectBase:
     The base class for all schema objects.  Includes helpers for common schema-
     related functions.
     """
-    __slots__ = ['path','raw_element','_accessed_members','strict']
+    __slots__ = ['path','raw_element','_accessed_members','strict','extensions']
 
     def __init__(self, path, raw_element):
         """
@@ -16,7 +16,10 @@ class ObjectBase:
         self.raw_element = raw_element
 
         self._accessed_members = []
-        self.strict = False # TODO
+        self.strict = False # TODO - add a strict mode that errors if all members were not accessed
+        self.extensions = {}
+
+        self._parse_spec_extensions() # TODO - this may not be appropriate in all cases
 
     def _required_fields(self, *fields):
         """
@@ -37,7 +40,7 @@ class ObjectBase:
             raise SpecError("Missing required fields: {}".format(
                 ', '.join(missing_fields)))
 
-    def _get(self, field, object_type=None):
+    def _get(self, field, object_type, list_type=None):
         """
         Retrieves a value from this object's raw element, and returns None if
         it is not present.  Use :any:`_required_fields` to ensure all required
@@ -48,6 +51,9 @@ class ObjectBase:
         :param object_type: The type of Object that is expected.  This type will
                             be returned if specified.
         :type object_type: str or Type
+        :param list_type: The type of elements that should be in this list.  If
+                          object_type is not `list`, this is ignored.
+        :type list_type: Type
 
         :returns: object_type if given, otherwise the type parsed from the spec
                   file
@@ -66,14 +72,28 @@ class ObjectBase:
                 if not isinstance(ret, object_type):
                     raise SpecError('Expected {}.{} to be of type {}, got {}'.format(
                         self.get_path(), field, object_type, type(ret)))
+                if object_type == list and list_type is not None:
+                    # validate that list elements are of the correct type
+                    for v in ret:
+                        if not isinstance(v, list_type):
+                            raise SpecError('Elements of {}.{} must be of type {}, '
+                                            'but found {} of type {}'.format(
+                                                self.get_path(), field, list_type,
+                                                v, type(ret)))
 
         return ret
 
     def _parse_spec_extensions(self):
         """
-        TODO - parse vendor extensions
-        """
+        Examines the keys of this Object's raw_element and collects any `Specification
+        Extensions`_ into the extensions attribute of this Object.
 
+        .. _Specification Extensions: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions
+        """
+        for k, v in self.raw_element.items():
+            if k.startswith('x-'):
+                self.extensions[k[2:]] = v
+                self._accessed_members.append(k)
 
     @classmethod
     def get_object_type(cls, typename):
@@ -93,7 +113,7 @@ class ObjectBase:
             setattr(cls, '_subclass_map', {t.__name__: t for t in cls.__subclasses__()})
 
         if typename not in cls._subclass_map:
-            raise ValueError('ObjectBase has not subclass {}'.format(typename))
+            raise ValueError('ObjectBase has no subclass {}'.format(typename))
 
         return cls._subclass_map[typename]
 
@@ -105,3 +125,27 @@ class ObjectBase:
         :rtype: str
         """
         return '.'.join(self.path)
+
+    def parse_list(self, raw_list, object_type):
+        """
+        Given a list of Objects, iterates over the list and creates the relevant
+        Objects, returning the resulting list.
+
+        :param raw_list: The list to parse
+        :type raw_list: list[dict]
+        :param object_type: The name of a subclass of ObjectBase to parse the list
+                            items to.
+        :type object_type: str
+
+        :returns: A list of parsed objects
+        :rtype: list[object_type]
+        """
+        if raw_list is None:
+            return None
+
+        result = []
+        for i, cur in enumerate(raw_list):
+            result.append(ObjectBase.get_object_type(object_type)(
+                self.path+[i], cur))
+
+        return result

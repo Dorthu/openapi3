@@ -22,9 +22,16 @@ class OpenAPI(ObjectBase):
 
         self.openapi = self._get('openapi', str)
         self.info = self._get('info', 'Info')
-        self.servers = self._get('servers')
-        self.paths = self._get('paths')
-        self.components = self._get('components')
-        self.security = self._get('security')
-        self.tags = self._get('tags')
-        self.externalDocs = self._get('externalDocs')
+        raw_servers = self._get('servers', list)
+        raw_paths = self._get('paths', dict)
+        self.components = self._get('components', dict)
+        self.security = self._get('security', dict)
+        self.tags = self._get('tags', dict)
+        self.externalDocs = self._get('externalDocs', dict)
+
+        self.servers = self.parse_list(raw_servers, 'Server')
+
+        # parse the path objects
+        self.paths = {}
+        for k, v in raw_paths.items():
+            self.paths[k] = ObjectBase.get_object_type('Path')(['paths',k],v)

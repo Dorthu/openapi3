@@ -1,4 +1,4 @@
 from .openapi import OpenAPI
-from .info import Info
+from . import info, servers, paths
 
 __all__ = [OpenAPI]
