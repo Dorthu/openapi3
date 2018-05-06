@@ -7,14 +7,12 @@ class Info(ObjectBase):
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#infoObject
     """
     __slots__ = ['title','description','termsOfService','contact','license','version']
+    required_fields = ['title','version']
 
-    def __init__(self, path, raw_element):
+    def _parse_data(self):
         """
+        Implementation of :any:`ObjectBase._parse_data`
         """
-        super().__init__(path, raw_element)
-
-        self._required_fields('title', 'version')
-
         self.title = self._get('title', str)
         self.description = self._get('description', str)
         self.termsOfService = self._get('termsOfService', str)
@@ -30,9 +28,10 @@ class Contact(ObjectBase):
     """
     __slots__ = ['name','url','email']
 
-    def __init__(self, path, raw_element):
-        super().__init__(path, raw_element)
-
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
         self.name = self._get('name', str)
         self.url = self._get('url', str)
         self.email = self._get('email', str)
@@ -44,11 +43,11 @@ class License(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#license-object
     """
     __slots__ = ['name','url']
+    required_fields = ['name']
 
-    def __init__(self, path, raw_element):
-        super().__init__(path, raw_element)
-
-        self._required_fields('name')
-
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
         self.name = self._get('name', str)
         self.url = self._get('url', str)

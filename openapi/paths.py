@@ -7,9 +7,13 @@ class Path(ObjectBase):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#paths-object
     """
-    def __init__(self, path, raw_element):
-        super().__init__(path, raw_element)
+    __slots__ = ['summary','description','get','put','post','delete','options',
+                 'head', 'patch','trace','servers','parameters']
 
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
         # TODO - handle possible $ref
         self.summary = self._get("summary", str)
         self.description = self._get("description", str)
@@ -36,12 +40,12 @@ class Operation(ObjectBase):
     __slots__ = ['tags','summary','description','externalDocs','operationId',
                  'parameters','requedtBody','responses','callbacks','deprecated',
                  'security','servers']
+    required_fields = ['responses']
 
-    def __init__(self, path, raw_element):
-        super().__init__(path, raw_element)
-
-        self._required_fields("responses")
-
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
         self.tags = self._get('tags', list)
         self.summary = self._get('summary', str)
         self.description = self._get('description', str)

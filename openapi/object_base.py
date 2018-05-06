@@ -6,6 +6,7 @@ class ObjectBase:
     related functions.
     """
     __slots__ = ['path','raw_element','_accessed_members','strict','extensions']
+    required_fields = []
 
     def __init__(self, path, raw_element):
         """
@@ -19,7 +20,13 @@ class ObjectBase:
         self.strict = False # TODO - add a strict mode that errors if all members were not accessed
         self.extensions = {}
 
+        # parse our own element
+        self._required_fields(*type(self).required_fields)
+        self._parse_data()
+
         self._parse_spec_extensions() # TODO - this may not be appropriate in all cases
+
+        # TODO - assert that all keys of raw_element were accessed
 
     def _required_fields(self, *fields):
         """
@@ -40,6 +47,20 @@ class ObjectBase:
             raise SpecError("Missing required fields: {}".format(
                 ', '.join(missing_fields)))
 
+    def _parse_data(self):
+        """
+        Parses the raw_element into this object.  This is not implemented here,
+        but is called in the constructor and _must_ be implemented in all
+        subclasses.
+
+        An implementation of this method should use :any:`_get` to retrieve
+        values from the raw_element, which has the side-effect of noting that
+        those members were accessed.  After this is executed, spec extensions
+        are parsed and then an assertion is made that all keys in the
+        raw_element were accessed - if not, the schema is considered invalid.
+        """
+        raise NotImplemented("You must implement this method in subclasses!")
+
     def _get(self, field, object_type, list_type=None):
         """
         Retrieves a value from this object's raw element, and returns None if
@@ -58,6 +79,7 @@ class ObjectBase:
         :returns: object_type if given, otherwise the type parsed from the spec
                   file
         """
+        # TODO - accept object_types as a list
         self._accessed_members.append(field)
 
         ret =  self.raw_element.get(field, None)
@@ -149,3 +171,11 @@ class ObjectBase:
                 self.path+[i], cur))
 
         return result
+
+
+class Map:
+    """
+    The Map object wraps a python dict and parses its values into the chosen
+    type or types.
+    """
+    # TODO 

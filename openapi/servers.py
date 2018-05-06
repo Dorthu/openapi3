@@ -7,12 +7,12 @@ class Server(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#serverObject
     """
     __slots__ = ['url','description','variables']
+    required_fields=['url']
 
-    def __init__(self, path, raw_element):
-        super().__init__(path, raw_element)
-
-        self._required_fields('url')
-
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
         self.url = self._get('url', str)
         self.description = self._get('description', str)
         self.variables = self._get('variables', dict)
@@ -33,12 +33,12 @@ class ServerVariable(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#server-variable-object
     """
     __slots__ = ['enum','default','description']
+    required_fields = ['default']
 
-    def __init__(self, path, raw_element):
-        super().__init__(path, raw_element)
-
-        self._required_fields('default')
-
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
         self.enum = self._get('enum', list, list_type=str)
         self.default = self._get('default', str)
         self.description = self._get('description', str)
