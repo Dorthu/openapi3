@@ -114,7 +114,7 @@ class ObjectBase:
                     found_type = True
 
             if not found_type:
-                raise SpecError('Expected {}.{} to be one of {}, got {}'.format(
+                raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
                     self.get_path(), field, ','.join(object_types), type(ret)))
 
             # TODO - this should support multiple types too
@@ -132,10 +132,37 @@ class ObjectBase:
     @classmethod
     def can_parse(cls, dct):
         """
-        Returns True if the keys in the given dict match the slots of this
-        class.
+        Returns True if this class can parse the given dict.  This is based on
+        the __slots__ and required_fields of the class, and the keys of the dict.
+        This is intended to be used when an element may be one of a number of
+        allowed Object types - each type should independently consider if it
+        can parse the given element, and the first to report that it can should
+        be used.
+
+        :param dct: The dict to consider.
+        :type dct: dict
+
+        :returns: True if this class can parse dct into an instance of itself,
+                  otherwise False
+        :rtype: bool
         """
-        return True # TODO
+        # first, ensure that the dict's keys are valid in our slots
+        for key in dct.keys():
+            if key.startswith('x-'):
+                # ignore spec extensions
+                continue
+
+            if key not in cls.__slots__:
+                # it has something we don't - probably not a match
+                return False
+
+        # then, ensure that all required fields are present
+        for key in cls.required_fields:
+            if key not in dct:
+                # it doesn't have everything we need - probably not a match
+                return False
+
+        return True
 
     def _parse_spec_extensions(self):
         """
@@ -180,16 +207,20 @@ class ObjectBase:
         """
         return '.'.join(self.path)
 
-    def parse_list(self, raw_list, object_type):
+    def parse_list(self, raw_list, object_types, field=None):
         """
         Given a list of Objects, iterates over the list and creates the relevant
         Objects, returning the resulting list.
 
         :param raw_list: The list to parse
         :type raw_list: list[dict]
-        :param object_type: The name of a subclass of ObjectBase to parse the list
-                            items to.
-        :type object_type: str
+        :param object_types: A list of subclass names to attempt to parse the
+                             objects to.  The list does not need to consist of
+                             only one of these types.
+        :type object_type: list[str]
+        :param field: The field to append to self.get_path() when determining path
+                      for created objects.
+        :type field: str
 
         :returns: A list of parsed objects
         :rtype: list[object_type]
@@ -197,10 +228,28 @@ class ObjectBase:
         if raw_list is None:
             return None
 
+        if not isinstance(object_types, list):
+            object_types = [object_types]
+
+        real_path = self.path
+        if field:
+            real_path += [field]
+
+        python_types = [ObjectBase.get_object_type(t) for t in object_types]
+
         result = []
         for i, cur in enumerate(raw_list):
-            result.append(ObjectBase.get_object_type(object_type)(
-                self.path+[i], cur))
+            found_type = False
+
+            for cur_type in python_types:
+                if cur_type.can_parse(cur):
+                    result.append(cur_type(real_path+[i], cur))
+                    found_type = True
+                    continue
+
+            if not found_type:
+                raise SpecError("Could not parse {}.{}, expected to be one of [{}]".format(
+                    '.'.join(real_path), i, object_types))
 
         return result
 
