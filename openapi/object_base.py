@@ -61,7 +61,7 @@ class ObjectBase:
         """
         raise NotImplemented("You must implement this method in subclasses!")
 
-    def _get(self, field, object_type, list_type=None):
+    def _get(self, field, object_types, list_type=None):
         """
         Retrieves a value from this object's raw element, and returns None if
         it is not present.  Use :any:`_required_fields` to ensure all required
@@ -69,9 +69,10 @@ class ObjectBase:
 
         :param field: The field name to retrieve
         :type field: str
-        :param object_type: The type of Object that is expected.  This type will
-                            be returned if specified.
-        :type object_type: str or Type
+        :param object_types: The types of Objects that are accepted.  One of
+                             these types will be returned, or the spec will be
+                             considered invalid.
+        :type object_types: list[str or Type]
         :param list_type: The type of elements that should be in this list.  If
                           object_type is not `list`, this is ignored.
         :type list_type: Type
@@ -79,31 +80,62 @@ class ObjectBase:
         :returns: object_type if given, otherwise the type parsed from the spec
                   file
         """
-        # TODO - accept object_types as a list
         self._accessed_members.append(field)
 
         ret =  self.raw_element.get(field, None)
 
-        if ret is not None and object_type:
-            if isinstance(object_type, str):
-                # we're looking up a subclass and returning that
-                python_type = ObjectBase.get_object_type(object_type)
-                ret = python_type(self.path+[field], ret)
-            else:
-                # we're validating the datatype of the value in the spec
-                if not isinstance(ret, object_type):
-                    raise SpecError('Expected {}.{} to be of type {}, got {}'.format(
-                        self.get_path(), field, object_type, type(ret)))
-                if object_type == list and list_type is not None:
-                    # validate that list elements are of the correct type
-                    for v in ret:
-                        if not isinstance(v, list_type):
-                            raise SpecError('Elements of {}.{} must be of type {}, '
-                                            'but found {} of type {}'.format(
-                                                self.get_path(), field, list_type,
-                                                v, type(ret)))
+        if ret is not None:
+            if not isinstance(object_types, list):
+                object_types = [object_types] # maybe don't accept not-lists
+
+            accepts_string = str in object_types
+            found_type = False
+
+            for t in object_types:
+                if t == str:
+                    continue # try to parse everything else first
+
+                if isinstance(t, str):
+                    # we were given the name of a subclass of ObjectBase,
+                    # attempt to parse ret as that type
+                    python_type = ObjectBase.get_object_type(t)
+
+                    if python_type.can_parse(ret):
+                        ret = python_type(self.path+[field], ret)
+                        found_type = True
+                        break
+                elif isinstance(ret, t):
+                    # it's already the type we need
+                    found_type = True
+                    break
+
+            if not found_type:
+                if accepts_string and isinstance(ret, str):
+                    found_type = True
+
+            if not found_type:
+                raise SpecError('Expected {}.{} to be one of {}, got {}'.format(
+                    self.get_path(), field, ','.join(object_types), type(ret)))
+
+            # TODO - this should support multiple types too
+            if isinstance(ret, list) and list_type is not None:
+                # validate that list elements are of the correct type
+                for v in ret:
+                    if not isinstance(v, list_type):
+                        raise SpecError('Elements of {}.{} must be of type {}, '
+                                        'but found {} of type {}'.format(
+                                            self.get_path(), field, list_type,
+                                            v, type(ret)))
 
         return ret
+
+    @classmethod
+    def can_parse(cls, dct):
+        """
+        Returns True if the keys in the given dict match the slots of this
+        class.
+        """
+        return True # TODO
 
     def _parse_spec_extensions(self):
         """
@@ -178,4 +210,4 @@ class Map:
     The Map object wraps a python dict and parses its values into the chosen
     type or types.
     """
-    # TODO 
+    # TODO
