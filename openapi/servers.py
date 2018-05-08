@@ -1,4 +1,4 @@
-from .object_base import ObjectBase
+from .object_base import ObjectBase, Map
 
 class Server(ObjectBase):
     """
@@ -15,15 +15,12 @@ class Server(ObjectBase):
         """
         self.url = self._get('url', str)
         self.description = self._get('description', str)
-        self.variables = self._get('variables', dict)
+        raw_variables = self._get('variables', dict)
 
-        if self.variables is not None:
-            # parse the server variables
-            parsed_variables = {}
-            for k, v in self.variables.items():
-                parsed_variables[k] = ServerVariable(self.path+[k], v)
-
-            self.variables = parsed_variables
+        self.variables =  None
+        if raw_variables is not None:
+            self.variables = Map(self.path+['variables'], raw_variables,
+                                 ['ServerVariable'])
 
 
 class ServerVariable(ObjectBase):

@@ -243,7 +243,7 @@ class ObjectBase:
 
             for cur_type in python_types:
                 if cur_type.can_parse(cur):
-                    result.append(cur_type(real_path+[i], cur))
+                    result.append(cur_type(real_path+[str(i)], cur))
                     found_type = True
                     continue
 
@@ -254,9 +254,47 @@ class ObjectBase:
         return result
 
 
-class Map:
+class Map(dict):
     """
     The Map object wraps a python dict and parses its values into the chosen
     type or types.
     """
-    # TODO
+    __slots__ = ['dct','path','raw_element']
+
+    def __init__(self, path, raw_element, object_types):
+        """
+        Creates a dict containing the parsed objects from the raw element
+
+        :param path: The path to this Map in the spec.
+        :type path: list
+        :param raw_element: The raw spec data for this map.  The keys must all
+                            be strings.
+        :type raw_element: dict
+        :param object_types: A list of strings accepted by
+                             :any:`ObjectBase.get_object_type`, or the python
+                             types to parse.
+        :type object_types: list[str or Type]
+        """
+        self.path = path
+        self.raw_element = raw_element
+
+        python_types = []
+        dct = {}
+
+        for t in object_types:
+            if isinstance(t, str):
+                python_types.append(ObjectBase.get_object_type(t))
+            else:
+                python_types.append(t)
+
+        for k, v in self.raw_element.items():
+            for t in python_types:
+                if issubclass(t, ObjectBase) and t.can_parse(v):
+                    dct[k] = t(path+[k], v)
+                elif isinstance(v, t):
+                    dct[k] = v
+                else:
+                    raise SpecError("Expected {}.{} to be one of [{}], but found {}".format(
+                        '.'.join(path), k, object_types, v))
+
+        self.update(dct)

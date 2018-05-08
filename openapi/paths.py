@@ -1,5 +1,5 @@
 from .errors import SpecError
-from .object_base import ObjectBase
+from .object_base import ObjectBase, Map
 
 class Path(ObjectBase):
     """
@@ -87,12 +87,62 @@ class Operation(ObjectBase):
         self.description = self._get('description', str)
         self.externalDocs = self._get('externalDocs', 'ExternalDocumentation')
         self.operationId = self._get('operationId', str)
-        self.parameters = self._get('parameters', list)# of 'Parameters' or 'Reference'
-        self.requestBody = self._get('requestBody', dict)# 'RequestBody' or 'Reference')
+        raw_parameters = self._get('parameters', list)
+        self.requestBody = self._get('requestBody', ['RequestBody','Reference'])
         self.responses = self._get('responses', dict)# 'Responses')
-        self.callbacks = self._get('callbacks', dict)#, [dict, 'Reference'])
+        raw_callbacks = self._get('callbacks', dict)
         self.deprecated = self._get('deprecated', bool)
         self.security = self._get('seucrity', list)# of 'Security'
         raw_servers = self._get('servers', list)
 
-        self.servers = self.parse_list(raw_servers, 'Server')
+        self.servers = self.parse_list(raw_servers, 'Server', field='servers')
+
+        self.parameters = self.parse_list(raw_parameters, ['Parameter','Reference'],
+                                          field='parameters')
+
+        if raw_callbacks is not None:
+            self.callbacks = Map(self.path, raw_callbacks, ['Reference'])
+
+
+class RequestBody(ObjectBase):
+    """
+    A `RequestBody`_ object describes a single request body.
+
+    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
+    """
+    __slots__ = ['description','content','required']
+    required_fields = ['content']
+
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
+        self.description = self._get('description', str)
+        raw_content = self._get('content', dict)
+        self.required = self._get('required', bool)
+
+        if raw_content is not None:
+            self.content = Map(self.path+['content'], raw_content, ['MediaType'])
+
+
+class MediaType(ObjectBase):
+    """
+    A `MediaType`_ object provides schema and examples for the media type identified
+    by its key.  These are used in a RequestBody object.
+
+    .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
+    """
+    __slots__ = ['schema','example','examples','encoding']
+    required_fields = []
+
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
+        self.schema = self._get('schema', [dict, 'Reference'])# ['Schema','Reference'])
+        self.example = self._get('example', str)# 'any' type
+        raw_examples = self._get('examples', list)
+        self.encoding = self._get('encoding', dict) # Map['Encoding']
+
+        if raw_examples is not None:
+            self.examples = Map(self.path+['examples'], raw_examples, ['Reference'])# ['Example','Reference'])

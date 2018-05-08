@@ -25,3 +25,11 @@ class Reference(ObjectBase):
 
     def _parse_data(self):
         self.ref = self._get('$ref', str)
+
+    @classmethod
+    def can_parse(cls, dct):
+        """
+        Override ObjectBase.can_parse because we had to remove the $ from $ref
+        in __slots__ (since that's not a valid python variable name)
+        """
+        return len(dct.keys()) == 1 and '$ref' in dct

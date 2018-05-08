@@ -1,4 +1,4 @@
-from .object_base import ObjectBase
+from .object_base import ObjectBase, Map
 
 class OpenAPI(ObjectBase):
     """
@@ -37,9 +37,7 @@ class OpenAPI(ObjectBase):
         self.tags = self._get('tags', dict)
         self.externalDocs = self._get('externalDocs', dict)
 
-        self.servers = self.parse_list(raw_servers, 'Server')
+        self.servers = self.parse_list(raw_servers, 'Server', field='servers')
 
         # parse the path objects
-        self.paths = {}
-        for k, v in raw_paths.items():
-            self.paths[k] = ObjectBase.get_object_type('Path')(['paths',k],v)
+        self.paths = Map(['paths'], raw_paths, ['Path'])
