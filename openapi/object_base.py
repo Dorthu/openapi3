@@ -13,6 +13,10 @@ class ObjectBase:
         Creates a new Object for a OpenAPI schema with a reference to its own
         path in the schema.
         """
+        # init empty slots
+        for k in type(self).__slots__:
+            setattr(self, k, None)
+
         self.path = path
         self.raw_element = raw_element
 
@@ -27,6 +31,20 @@ class ObjectBase:
         self._parse_spec_extensions() # TODO - this may not be appropriate in all cases
 
         # TODO - assert that all keys of raw_element were accessed
+
+    def __repr__(self):
+        """
+        Returns a string representation of the parsed object
+        """
+        return str(self.__dict__())
+
+    def __dict__(self):
+        """
+        Returns this object as a dict, removing all empty keys.  This can be used
+        to serialize a spec.
+        """
+        return {k: getattr(self, k) for k in type(self).__slots__
+                if getattr(self, k) is not None}
 
     def _required_fields(self, *fields):
         """
@@ -61,7 +79,7 @@ class ObjectBase:
         """
         raise NotImplemented("You must implement this method in subclasses!")
 
-    def _get(self, field, object_types, list_type=None):
+    def _get(self, field, object_types, is_list=False, is_map=False):
         """
         Retrieves a value from this object's raw element, and returns None if
         it is not present.  Use :any:`_required_fields` to ensure all required
@@ -73,9 +91,12 @@ class ObjectBase:
                              these types will be returned, or the spec will be
                              considered invalid.
         :type object_types: list[str or Type]
-        :param list_type: The type of elements that should be in this list.  If
-                          object_type is not `list`, this is ignored.
-        :type list_type: Type
+        :param is_list: If true, this should return a List of object of the give
+                        types.
+        :param is_list: bool
+        :param is_map: If true, this must return a :any:`Map` of object of the given
+                       types
+        :type is_map: bool
 
         :returns: object_type if given, otherwise the type parsed from the spec
                   file
@@ -88,44 +109,49 @@ class ObjectBase:
             if not isinstance(object_types, list):
                 object_types = [object_types] # maybe don't accept not-lists
 
-            accepts_string = str in object_types
-            found_type = False
+            if is_list:
+                if not isinstance(ret, list):
+                    raise SpecError('Expected {}.{} to be a list of [{}], got {}'.format(
+                        self.get_path, field, ','.join([str(c) for c in object_types]),
+                        type(ret)))
+                ret = self.parse_list(ret, object_types, field)
+            elif is_map:
+                if not isinstance(ret, dict):
+                    raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
+                        self.get_path, field, ','.join([str(c) for c in object_types]),
+                        type(ret)))
+                ret = Map(self.path+[field], ret, object_types)
+            else:
+                accepts_string = str in object_types
+                found_type = False
 
-            for t in object_types:
-                if t == str:
-                    continue # try to parse everything else first
+                for t in object_types:
+                    if t == str:
+                        continue # try to parse everything else first
 
-                if isinstance(t, str):
-                    # we were given the name of a subclass of ObjectBase,
-                    # attempt to parse ret as that type
-                    python_type = ObjectBase.get_object_type(t)
+                    if isinstance(t, str):
+                        # we were given the name of a subclass of ObjectBase,
+                        # attempt to parse ret as that type
+                        python_type = ObjectBase.get_object_type(t)
 
-                    if python_type.can_parse(ret):
-                        ret = python_type(self.path+[field], ret)
+                        if python_type.can_parse(ret):
+                            ret = python_type(self.path+[field], ret)
+                            found_type = True
+                            break
+                    elif isinstance(ret, t):
+                        # it's already the type we need
                         found_type = True
                         break
-                elif isinstance(ret, t):
-                    # it's already the type we need
-                    found_type = True
-                    break
 
-            if not found_type:
-                if accepts_string and isinstance(ret, str):
-                    found_type = True
+                if not found_type:
+                    if accepts_string and isinstance(ret, str):
+                        found_type = True
 
-            if not found_type:
-                raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
-                    self.get_path(), field, ','.join(object_types), type(ret)))
-
-            # TODO - this should support multiple types too
-            if isinstance(ret, list) and list_type is not None:
-                # validate that list elements are of the correct type
-                for v in ret:
-                    if not isinstance(v, list_type):
-                        raise SpecError('Elements of {}.{} must be of type {}, '
-                                        'but found {} of type {}'.format(
-                                            self.get_path(), field, list_type,
-                                            v, type(ret)))
+                if not found_type:
+                    print(object_types)
+                    raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
+                        self.get_path(), field, ','.join([str(c) for c in object_types]),
+                        type(ret)))
 
         return ret
 
@@ -235,15 +261,20 @@ class ObjectBase:
         if field:
             real_path += [field]
 
-        python_types = [ObjectBase.get_object_type(t) for t in object_types]
+        python_types = [ObjectBase.get_object_type(t) if isinstance(t, str) else t
+                        for t in object_types]
 
         result = []
         for i, cur in enumerate(raw_list):
             found_type = False
 
             for cur_type in python_types:
-                if cur_type.can_parse(cur):
+                if issubclass(cur_type, ObjectBase) and cur_type.can_parse(cur):
                     result.append(cur_type(real_path+[str(i)], cur))
+                    found_type = True
+                    continue
+                elif isinstance(cur, cur_type):
+                    result.append(cur)
                     found_type = True
                     continue
 
@@ -288,13 +319,18 @@ class Map(dict):
                 python_types.append(t)
 
         for k, v in self.raw_element.items():
+            found_type = False
+
             for t in python_types:
                 if issubclass(t, ObjectBase) and t.can_parse(v):
                     dct[k] = t(path+[k], v)
+                    found_type = True
                 elif isinstance(v, t):
                     dct[k] = v
-                else:
-                    raise SpecError("Expected {}.{} to be one of [{}], but found {}".format(
-                        '.'.join(path), k, object_types, v))
+                    found_type = True
+
+            if not found_type:
+                raise SpecError("Expected {}.{} to be one of [{}], but found {}".format(
+                    '.'.join(path), k, object_types, v))
 
         self.update(dct)

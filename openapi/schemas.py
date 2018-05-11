@@ -1,4 +1,4 @@
-from .object_base import ObjectBase
+from .object_base import ObjectBase, Map
 
 class Schema(ObjectBase):
     """
@@ -31,3 +31,26 @@ class Schema(ObjectBase):
         #self.maxProperties
         #self.minProperties
         self.required = self._get('required', list)
+        self.enum = self._get('enum', list)
+        self.type = self._get('type', str)
+        self.allOf = self._get('allOf', list)
+        self.oneOf = self._get('oneOf', list)
+        self.anyOf = self._get('anyOf', list)
+        #self.not
+        self.items = self._get('items', ['Schema', 'Reference'])
+        raw_properties = self._get('properties', dict)
+        self.additionalProperties = self._get('additionalProperties', [bool, dict])
+        self.description = self._get('description', str)
+        self.format = self._get('format', str)
+        self.default = self._get('default', str) # any, must match self.type
+        self.nullable = self._get('nullable', bool)
+        self.discriminator = self._get('discriminator', dict)# 'Discriminator')
+        self.readOnly = self._get('readOnly', bool)
+        self.writeOnly = self._get('writeOnly', bool)
+        self.xml = self._get('xml', dict)# 'XML')
+        self.externalDocs = self._get('externalDocs', dict)# 'ExternalDocs')
+        #self.example = self._get('example', any?)
+        self.deprecated = self._get('deprecated', bool)
+
+        if raw_properties is not None:
+            self.properties = Map(self.path+['properties'], raw_properties, ['Schema', 'Reference'])

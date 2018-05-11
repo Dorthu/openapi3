@@ -89,7 +89,7 @@ class Operation(ObjectBase):
         self.operationId = self._get('operationId', str)
         raw_parameters = self._get('parameters', list)
         self.requestBody = self._get('requestBody', ['RequestBody','Reference'])
-        self.responses = self._get('responses', dict)# 'Responses')
+        raw_responses = self._get('responses', dict)
         raw_callbacks = self._get('callbacks', dict)
         self.deprecated = self._get('deprecated', bool)
         self.security = self._get('seucrity', list)# of 'Security'
@@ -101,8 +101,10 @@ class Operation(ObjectBase):
                                           field='parameters')
 
         if raw_callbacks is not None:
-            self.callbacks = Map(self.path, raw_callbacks, ['Reference'])
+            self.callbacks = Map(self.path+['callbacks'], raw_callbacks, ['Reference'])
 
+        if raw_responses is not None:
+            self.responses = Map(self.path+['responses'], raw_responses, ['Response','Reference'])
 
 class RequestBody(ObjectBase):
     """
@@ -139,10 +141,35 @@ class MediaType(ObjectBase):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        self.schema = self._get('schema', [dict, 'Reference'])# ['Schema','Reference'])
+        self.schema = self._get('schema', ['Schema', 'Reference'])
         self.example = self._get('example', str)# 'any' type
         raw_examples = self._get('examples', list)
         self.encoding = self._get('encoding', dict) # Map['Encoding']
 
         if raw_examples is not None:
             self.examples = Map(self.path+['examples'], raw_examples, ['Reference'])# ['Example','Reference'])
+
+
+class Response(ObjectBase):
+    """
+    A `Response Object`_ describes a single response from an API Operation,
+    including design-time, static links to operations based on the response.
+
+    .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
+    """
+    __slots__ = ['description','headers','content','links']
+    required_fields = ['description']
+
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
+        self.description = self._get('description', str)
+        raw_headers = self._get('headers', dict)
+        raw_content = self._get('content', dict)
+        raw_links = self._get('links', dict)
+
+        # TODO - raw_headers and raw_links
+
+        if raw_content is not None:
+            self.content = Map(self.path+['content'], raw_content, ['MediaType'])

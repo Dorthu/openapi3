@@ -36,6 +36,6 @@ class ServerVariable(ObjectBase):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        self.enum = self._get('enum', list, list_type=str)
+        self.enum = self._get('enum', [str], is_list=True)
         self.default = self._get('default', str)
         self.description = self._get('description', str)
