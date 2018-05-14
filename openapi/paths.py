@@ -1,5 +1,7 @@
+import requests
+
 from .errors import SpecError
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 
 class Path(ObjectBase):
     """
@@ -32,6 +34,7 @@ class Path(ObjectBase):
         self.servers = self.parse_list(raw_servers, 'Server', field='serers')
         self.parameters = self.parse_list(raw_parameters, ['Parameter','Reference'],
                                           field='parameters')
+
 
 
 class Parameter(ObjectBase):
@@ -87,24 +90,91 @@ class Operation(ObjectBase):
         self.description = self._get('description', str)
         self.externalDocs = self._get('externalDocs', 'ExternalDocumentation')
         self.operationId = self._get('operationId', str)
-        raw_parameters = self._get('parameters', list)
+        self.parameters = self._get('parameters', ['Parameter','Reference'], is_list=True)
         self.requestBody = self._get('requestBody', ['RequestBody','Reference'])
-        raw_responses = self._get('responses', dict)
-        raw_callbacks = self._get('callbacks', dict)
+        self.responses = self._get('responses', ['Response','Reference'], is_map=True)
+        #self.callbacks = self._get('callbacks', dict) TODO
         self.deprecated = self._get('deprecated', bool)
-        self.security = self._get('seucrity', list)# of 'Security'
+        self.security = self._get('security',['SecurityRequirement'], is_list=True)
+        self.servers = self._get('servers', ['Server'], is_list=True)
         raw_servers = self._get('servers', list)
 
-        self.servers = self.parse_list(raw_servers, 'Server', field='servers')
+    def request(self, base_url, security={}):
+        """
+        Sends an HTTP request as described by this Path
 
-        self.parameters = self.parse_list(raw_parameters, ['Parameter','Reference'],
-                                          field='parameters')
+        :param base_url: The URL to append this operation's path to when making
+                         the call.
+        :type base_url: str
+        :param security: The security scheme to use, and the values it needs to
+                         process successfully.
+        :type secuirity: dict{str: str}
+        """
+        request_method = self.path[-1] # get the request method
 
-        if raw_callbacks is not None:
-            self.callbacks = Map(self.path+['callbacks'], raw_callbacks, ['Reference'])
+        method = getattr(requests, request_method) # call this
 
-        if raw_responses is not None:
-            self.responses = Map(self.path+['responses'], raw_responses, ['Response','Reference'])
+        headers = {}
+
+        if security:
+            scheme, value = security.popitem()
+            security_requirement = None
+            for r in self.security:
+                if r.name == scheme:
+                    security_requirement = r
+                    break
+
+            if security_requirement is None:
+                raise ValueError("Security Scheme {} is not supported here".format(
+                    scheme))
+
+            security_scheme = self._root.components.securitySchemes[security_requirement.name]
+
+            if security_scheme.type == 'http':
+                if security_scheme.scheme == 'basic':
+                    raise NotImplementedError()
+                elif security_scheme.scheme == 'bearer':
+                    header_format = security_scheme.bearerFormat or 'Bearer {}'
+                    headers['Authorization'] = header_format.format(value)
+                elif security_scheme.scheme == 'digest':
+                    raise NotImplementedError()
+                # TODO https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
+                # defines many more authentication schemes that OpenAPI says it supports
+            elif security_scheme.type == 'apiKey':
+                raise NotImplementedError()
+            elif security_scheme.type == 'oauth2':
+                raise NotImplementedError()
+            elif secutity_scheme.type == 'openIdConnect':
+                raise NotImplementedError()
+
+
+        return method(base_url+self.path[-2], headers=headers)
+
+
+class SecurityRequirement(ObjectBase):
+    """
+    """
+    ___slots__ = ['name','types']
+    required_fields=[]
+
+    def _parse_data(self):
+        """
+        """
+        # these only ever have one key
+        self.name = [c for c in self.raw_element.keys()][0]
+        self.types = self._get(self.name, str, is_list=True)
+
+    @classmethod
+    def can_parse(cls, dct):
+        """
+        This needs to ignore can_parse since the objects it's parsing are not
+        regular - they must always have only one key though.
+        """
+        return len(dct.keys()) == 1 and isinstance([c for c in dct.values()][0], list)
+
+    def __dict__(self):
+        return {self.name: self.types}
+
 
 class RequestBody(ObjectBase):
     """
@@ -120,11 +190,9 @@ class RequestBody(ObjectBase):
         Implementation of :any:`ObjectBase._parse_data`
         """
         self.description = self._get('description', str)
+        self.content = self._get('content', ['MediaType'], is_map=True)
         raw_content = self._get('content', dict)
         self.required = self._get('required', bool)
-
-        if raw_content is not None:
-            self.content = Map(self.path+['content'], raw_content, ['MediaType'])
 
 
 class MediaType(ObjectBase):
@@ -166,10 +234,8 @@ class Response(ObjectBase):
         """
         self.description = self._get('description', str)
         raw_headers = self._get('headers', dict)
+        self.content = self._get('content', ['MediaType'], is_map=True)
         raw_content = self._get('content', dict)
         raw_links = self._get('links', dict)
 
         # TODO - raw_headers and raw_links
-
-        if raw_content is not None:
-            self.content = Map(self.path+['content'], raw_content, ['MediaType'])

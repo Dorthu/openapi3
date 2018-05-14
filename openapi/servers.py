@@ -1,4 +1,4 @@
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 
 class Server(ObjectBase):
     """
@@ -15,12 +15,7 @@ class Server(ObjectBase):
         """
         self.url = self._get('url', str)
         self.description = self._get('description', str)
-        raw_variables = self._get('variables', dict)
-
-        self.variables =  None
-        if raw_variables is not None:
-            self.variables = Map(self.path+['variables'], raw_variables,
-                                 ['ServerVariable'])
+        self.variables = self._get('variables', ['ServerVariable'], is_map=True)
 
 
 class ServerVariable(ObjectBase):

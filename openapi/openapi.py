@@ -19,7 +19,7 @@ class OpenAPI(ObjectBase):
         :param raw_document: The raw OpenAPI file loaded into python
         :type raw_document: dct
         """
-        super().__init__([], raw_document) # as the document root, we have no path
+        super().__init__([], raw_document, self) # as the document root, we have no path
 
 
     def _parse_data(self):
@@ -30,14 +30,9 @@ class OpenAPI(ObjectBase):
 
         self.openapi = self._get('openapi', str)
         self.info = self._get('info', 'Info')
-        raw_servers = self._get('servers', list)
-        raw_paths = self._get('paths', dict)
+        self.servers = self._get('servers', ['Server'], is_list=True)
+        self.paths = self._get('paths', ['Path'], is_map=True)
         self.components = self._get('components', ['Components'])
         self.security = self._get('security', dict)
         self.tags = self._get('tags', dict)
         self.externalDocs = self._get('externalDocs', dict)
-
-        self.servers = self.parse_list(raw_servers, 'Server', field='servers')
-
-        # parse the path objects
-        self.paths = Map(['paths'], raw_paths, ['Path'])

@@ -1,4 +1,4 @@
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 
 class Schema(ObjectBase):
     """
@@ -38,7 +38,7 @@ class Schema(ObjectBase):
         self.anyOf = self._get('anyOf', list)
         #self.not
         self.items = self._get('items', ['Schema', 'Reference'])
-        raw_properties = self._get('properties', dict)
+        self.properties = self._get('properties', ['Schema','Reference'], is_map=True)
         self.additionalProperties = self._get('additionalProperties', [bool, dict])
         self.description = self._get('description', str)
         self.format = self._get('format', str)
@@ -51,6 +51,3 @@ class Schema(ObjectBase):
         self.externalDocs = self._get('externalDocs', dict)# 'ExternalDocs')
         #self.example = self._get('example', any?)
         self.deprecated = self._get('deprecated', bool)
-
-        if raw_properties is not None:
-            self.properties = Map(self.path+['properties'], raw_properties, ['Schema', 'Reference'])

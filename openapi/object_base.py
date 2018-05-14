@@ -5,13 +5,22 @@ class ObjectBase:
     The base class for all schema objects.  Includes helpers for common schema-
     related functions.
     """
-    __slots__ = ['path','raw_element','_accessed_members','strict','extensions']
+    __slots__ = ['path','raw_element','_accessed_members','strict','extensions',
+                 '_root']
     required_fields = []
 
-    def __init__(self, path, raw_element):
+    def __init__(self, path, raw_element, root):
         """
         Creates a new Object for a OpenAPI schema with a reference to its own
         path in the schema.
+
+        :param path: The path to this element in the spec.
+        :type path: list[str]
+        :param raw_element: The raw element parsed from the spec that this object
+                            is parsing.
+        :type raw_element: dict
+        :param root: The root of the spec, for reference
+        :type root: OpenAPI
         """
         # init empty slots
         for k in type(self).__slots__:
@@ -19,6 +28,7 @@ class ObjectBase:
 
         self.path = path
         self.raw_element = raw_element
+        self._root = root
 
         self._accessed_members = []
         self.strict = False # TODO - add a strict mode that errors if all members were not accessed
@@ -120,7 +130,7 @@ class ObjectBase:
                     raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
                         self.get_path, field, ','.join([str(c) for c in object_types]),
                         type(ret)))
-                ret = Map(self.path+[field], ret, object_types)
+                ret = Map(self.path+[field], ret, object_types, self._root)
             else:
                 accepts_string = str in object_types
                 found_type = False
@@ -135,7 +145,7 @@ class ObjectBase:
                         python_type = ObjectBase.get_object_type(t)
 
                         if python_type.can_parse(ret):
-                            ret = python_type(self.path+[field], ret)
+                            ret = python_type(self.path+[field], ret, self._root)
                             found_type = True
                             break
                     elif isinstance(ret, t):
@@ -257,7 +267,7 @@ class ObjectBase:
         if not isinstance(object_types, list):
             object_types = [object_types]
 
-        real_path = self.path
+        real_path = self.path[:]
         if field:
             real_path += [field]
 
@@ -270,7 +280,7 @@ class ObjectBase:
 
             for cur_type in python_types:
                 if issubclass(cur_type, ObjectBase) and cur_type.can_parse(cur):
-                    result.append(cur_type(real_path+[str(i)], cur))
+                    result.append(cur_type(real_path+[str(i)], cur, self._root))
                     found_type = True
                     continue
                 elif isinstance(cur, cur_type):
@@ -290,9 +300,9 @@ class Map(dict):
     The Map object wraps a python dict and parses its values into the chosen
     type or types.
     """
-    __slots__ = ['dct','path','raw_element']
+    __slots__ = ['dct','path','raw_element','_root']
 
-    def __init__(self, path, raw_element, object_types):
+    def __init__(self, path, raw_element, object_types, root):
         """
         Creates a dict containing the parsed objects from the raw element
 
@@ -308,6 +318,7 @@ class Map(dict):
         """
         self.path = path
         self.raw_element = raw_element
+        self._root = root
 
         python_types = []
         dct = {}
@@ -323,7 +334,7 @@ class Map(dict):
 
             for t in python_types:
                 if issubclass(t, ObjectBase) and t.can_parse(v):
-                    dct[k] = t(path+[k], v)
+                    dct[k] = t(path+[k], v, self._root)
                     found_type = True
                 elif isinstance(v, t):
                     dct[k] = v

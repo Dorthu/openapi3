@@ -19,6 +19,6 @@ class Components(ObjectBase):
         self.examples = self._get('examples', ['Example','Reference'], is_map=True)
         self.requestBodies = self._get('requestBody', ['RequestBody', 'Reference'], is_map=True)
         #self.headers = self._get('headers', ['Header','Reference'], is_map=True)
-        #self.securitySchemes = self._get('securitySchemes', ['SecurityScheme','Reference'], is_map=True)
+        self.securitySchemes = self._get('securitySchemes', ['SecurityScheme','Reference'], is_map=True)
         #self.links = self._get('link', ['Link','Reference'], is_map=True)
         #self.callbacks = self._get('callbacks', ['Callback','Reference'], is_map=True)
