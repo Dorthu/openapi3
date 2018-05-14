@@ -32,7 +32,7 @@ class OpenAPI(ObjectBase):
         self.info = self._get('info', 'Info')
         raw_servers = self._get('servers', list)
         raw_paths = self._get('paths', dict)
-        self.components = self._get('components', dict)
+        self.components = self._get('components', ['Components'])
         self.security = self._get('security', dict)
         self.tags = self._get('tags', dict)
         self.externalDocs = self._get('externalDocs', dict)
