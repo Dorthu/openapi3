@@ -1,3 +1,4 @@
+import json
 import requests
 
 from .errors import SpecError
@@ -99,7 +100,7 @@ class Operation(ObjectBase):
         self.servers = self._get('servers', ['Server'], is_list=True)
         raw_servers = self._get('servers', list)
 
-    def request(self, base_url, security={}):
+    def request(self, base_url, security={}, data=None):
         """
         Sends an HTTP request as described by this Path
 
@@ -109,12 +110,15 @@ class Operation(ObjectBase):
         :param security: The security scheme to use, and the values it needs to
                          process successfully.
         :type secuirity: dict{str: str}
+        :param data: The request body to send.
+        :type data: any, should match content/type
         """
         request_method = self.path[-1] # get the request method
 
         method = getattr(requests, request_method) # call this
 
         headers = {}
+        body = None
 
         if security:
             scheme, value = security.popitem()
@@ -147,8 +151,16 @@ class Operation(ObjectBase):
             elif secutity_scheme.type == 'openIdConnect':
                 raise NotImplementedError()
 
+        if self.requestBody:
+            if self.requestBody.required and data is None:
+                raise ValueError("Request Body is required but none was provided.")
 
-        return method(base_url+self.path[-2], headers=headers)
+            if isinstance(data, dict) and 'application/json' in self.requestBody.content:
+                body = json.dumps(data)
+                headers['Content-Type'] = 'application/json'
+            # TODO other content/types
+
+        return method(base_url+self.path[-2], headers=headers, data=body)
 
 
 class SecurityRequirement(ObjectBase):
