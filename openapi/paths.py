@@ -100,6 +100,11 @@ class Operation(ObjectBase):
         self.servers = self._get('servers', ['Server'], is_list=True)
         raw_servers = self._get('servers', list)
 
+        # gather all operations into the spec object
+        if self.operationId is not None:
+            # TODO - how to store without an operationId?
+            self._root._operation_map[self.operationId] = self
+
     def request(self, base_url, security={}, data=None):
         """
         Sends an HTTP request as described by this Path
