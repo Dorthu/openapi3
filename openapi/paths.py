@@ -147,8 +147,10 @@ class Operation(ObjectBase):
                     headers['Authorization'] = header_format.format(value)
                 elif security_scheme.scheme == 'digest':
                     raise NotImplementedError()
-                # TODO https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
-                # defines many more authentication schemes that OpenAPI says it supports
+                else:
+                    # TODO https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
+                    # defines many more authentication schemes that OpenAPI says it supports
+                    raise NotImplementedError()
             elif security_scheme.type == 'apiKey':
                 raise NotImplementedError()
             elif security_scheme.type == 'oauth2':
@@ -163,9 +165,52 @@ class Operation(ObjectBase):
             if isinstance(data, dict) and 'application/json' in self.requestBody.content:
                 body = json.dumps(data)
                 headers['Content-Type'] = 'application/json'
-            # TODO other content/types
+            else:
+                raise NotImplementedError()
 
-        return method(base_url+self.path[-2], headers=headers, data=body)
+        result =  method(base_url+self.path[-2], headers=headers, data=body)
+
+        # examine result to see how we should handle it
+        # TODO - this should all be refactored into more functions, this is
+        # getting too long
+        status_code = str(result.status_code) # spec enforces these are strings
+        expected_response = None
+
+        # find the response model we received
+        if status_code in self.responses:
+            expected_response = self.responses[status_code]
+        elif 'default' in self.responses:
+            expecetd_response = self.responses['default']
+        else:
+            # TODO - custom exception class that has the response object in it
+            raise RuntimeError('Unexpected response {} from {} (expected one of {}, '
+                               'no default is defined)'.format(
+                                   result.status_code, self.operationId,
+                                   ','.join(self.responses.keys())))
+
+        content_type = result.headers['Content-Type']
+        expected_media = expected_response.content.get(content_type, None)
+
+        if expected_media is None and '/' in content_type:
+            # accept media type ranges in the spec - the most specific matching
+            # type should always be chosen, but if we don't have a match here
+            # a generic range should be accepted if one if provided
+            # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
+            generic_type = content_type.split('/')[0]+'/*'
+            expected_media = expected.response.content.get(generic_type, None)
+
+        if expected_media is None:
+            raise RuntimeError('Unexpected content type {} returned for operation {} '
+                               '(expected one of {})'.format(
+                                   result.headers['Content-Type'], self.operationId,
+                                   ','.join(expected_response.content.keys())))
+
+        response_data = None
+
+        if content_type.lower() == 'application/json':
+            return expected_media.schema.model(result.json())
+        else:
+            raise NotImplementedError()
 
 
 class SecurityRequirement(ObjectBase):
