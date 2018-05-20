@@ -8,7 +8,7 @@ class OpenAPI(ObjectBase):
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
     """
     __slots__ = ['openapi','info','servers','paths','components','security','tags',
-                 'externalDocs','_operation_map']
+                 'externalDocs','_operation_map','_security']
     required_fields=['openapi','info','paths']
 
     def __init__(self, raw_document):
@@ -22,7 +22,20 @@ class OpenAPI(ObjectBase):
         """
         super().__init__([], raw_document, self) # as the document root, we have no path
 
+    # public methods
+    def authenticte(self, security_scheme, value):
+        """
+        Authenticates all subsequent requests with the given arguments.
 
+        TODO - this should support more than just HTTP Auth
+        """
+        if not security_scheme in self.components.securitySchemes:
+            raise ValueError('{} does not accept security scheme {}'.format(
+                self.info.title, security_scheme))
+
+        self._security = {security_scheme: value}
+
+    # private methods
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
@@ -44,7 +57,7 @@ class OpenAPI(ObjectBase):
         """
         base_url = self.servers[0].url
 
-        return OperationCallable(operation, base_url)
+        return OperationCallable(operation, base_url, self._security)
 
     def __getattribute__(self, attr):
         """
@@ -62,9 +75,11 @@ class OpenAPI(ObjectBase):
 
 
 class OperationCallable:
-    def __init__(self, operation, base_url):
+    def __init__(self, operation, base_url, security):
         self.operation = operation
         self.base_url = base_url
+        self.security = security
 
     def __call__(self, *args, **kwargs):
-        return self.operation(self.base_url, *args, **kwargs)
+        return self.operation(self.base_url, *args, security=self.security,
+                              **kwargs)
