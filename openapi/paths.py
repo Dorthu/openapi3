@@ -1,5 +1,6 @@
 import json
 import requests
+from urllib.parse import urlencode # TODO - this will break in python2
 
 from .errors import SpecError
 from .object_base import ObjectBase
@@ -105,7 +106,13 @@ class Operation(ObjectBase):
             # TODO - how to store without an operationId?
             self._root._operation_map[self.operationId] = self
 
-    def request(self, base_url, security={}, data=None):
+        # TODO - maybe make this generic
+        if self.security is None:
+            self.security = []
+        if self.parameters is None:
+            self.parameters = []
+
+    def request(self, base_url, security={}, data=None, parameters=None):
         """
         Sends an HTTP request as described by this Path
 
@@ -124,6 +131,8 @@ class Operation(ObjectBase):
 
         headers = {}
         body = None
+        path = self.path[-2] # TODO - this won't work for $refs
+        query_params = {}
 
         if security:
             scheme, value = security.popitem()
@@ -168,7 +177,33 @@ class Operation(ObjectBase):
             else:
                 raise NotImplementedError()
 
-        result =  method(base_url+self.path[-2], headers=headers, data=body)
+        accepted_parameters = {p.name: p for p in self.parameters} # TODO better copy
+        # TODO - make this work with $refs
+        accepted_parameters.update({p.name: p for p in self._root.paths[self.path[-2]].parameters})
+
+        for name, spec in accepted_parameters.items():
+            if spec.required and not name in parameters:
+                raise ValueError('Required parameter {} not provided'.format(
+                    name))
+
+            if name in parameters:
+                value = parameters[name]
+
+                if spec.in_ == 'path':
+                    # the path's name should match the parameter name, so this
+                    # should work in all cases
+                    path = path.format(**{name: value})
+                elif spec.in_ == 'query':
+                    query_params[name] = value
+                    # TODO - make sure this is good enough
+                elif spec.in_ == 'header':
+                    raise NotImplementedError()
+                elif spec.in_ == 'cookie':
+                    raise NotImplementedError()
+
+        final_url = base_url + path + "?" +  urlencode(query_params)
+
+        result =  method(final_url, headers=headers, data=body)
 
         # examine result to see how we should handle it
         # TODO - this should all be refactored into more functions, this is

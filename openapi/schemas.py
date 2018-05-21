@@ -1,4 +1,5 @@
 from .object_base import ObjectBase
+from .general import Reference # need this for Model below
 
 class Schema(ObjectBase):
     """
@@ -85,7 +86,7 @@ class Schema(ObjectBase):
         :returns: A new :any:`Model` created in this Schema's type from the data.
         :rtype: self.get_type()
         """
-        return self.get_type()(data)
+        return self.get_type()(data, self)
 
 
 class Model:
@@ -94,8 +95,8 @@ class Model:
     are generated from Schema objects by called :any:`Schema.model` with the
     contents of a response.
     """
-    __slots__ = ['_raw_data']
-    def __init__(self, data):
+    __slots__ = ['_raw_data', '_schema']
+    def __init__(self, data, schema):
         """
         Creates a new Model from data.  This should never be called directly,
         but instead should be called through :any:`Schema.model` to generate a
@@ -108,7 +109,22 @@ class Model:
 
         # collect the data into this model
         for k, v in data.items():
-            setattr(self, k, v)
+            prop = schema.properties[k]
+            print("looking at {}".format(prop))
+            if isinstance(prop, Reference):
+                print("it's a reference")
+                # TODO resolve reference
+                pass
+            elif prop.type == 'array':
+                print("it's an array")
+                # TODO - handle arrays
+                pass
+            elif prop.type == 'object':
+                print("it's an object")
+                # TODO - handle objects
+                pass
+            else:
+                setattr(self, k, v)
 
     def __repr__(self):
         """
