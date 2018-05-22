@@ -6,7 +6,7 @@ class ObjectBase:
     related functions.
     """
     __slots__ = ['path','raw_element','_accessed_members','strict','extensions',
-                 '_root']
+                 '_root', '_original_ref']
     required_fields = []
 
     def __init__(self, path, raw_element, root):
@@ -158,7 +158,6 @@ class ObjectBase:
                         found_type = True
 
                 if not found_type:
-                    print(object_types)
                     raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
                         self.get_path(), field, ','.join([str(c) for c in object_types]),
                         type(ret)))
@@ -294,6 +293,42 @@ class ObjectBase:
 
         return result
 
+    def _resolve_references(self):
+        """
+        Resolves all reference objects below this object and notes their original
+        value was a reference.
+        """
+        reference_type = ObjectBase.get_object_type('Reference') # don't circular import
+
+        for slot in self.__slots__:
+            if slot.startswith('_'):
+                # don't parse private members
+                continue
+            value = getattr(self, slot)
+
+            if isinstance(value, reference_type):
+                # we found a reference - attempt to resolve it
+                reference_path = value.ref
+                if not reference_path.startswith('#/'):
+                    raise ReferenceResolutionError('Invalid reference path {}'.foramt(
+                        reference_path))
+
+                reference_path = reference_path.split('/')[1:]
+                resolved_value = self._root.resolve_path(reference_path)
+                resolved_value._original_ref = value # TODO - this will break if
+                                                     # multiple things reference
+                                                     # the same node.
+
+                setattr(self, slot, resolved_value) # resolved
+            elif issubclass(type(value), ObjectBase) or isinstance(value, Map):
+                # otherwise, continue resolving down the tree
+                value._resolve_references()
+            elif isinstance(value, list):
+                # if it's a list, resolve its item's references
+                for item in value:
+                    if issubclass(type(value), ObjectBase) or isinstance(value, Map):
+                        item._resolve_references()
+
 
 class Map(dict):
     """
@@ -345,3 +380,30 @@ class Map(dict):
                     '.'.join(path), k, object_types, v))
 
         self.update(dct)
+
+    def _resolve_references(self):
+        """
+        This has been added to allow propagation of reference resolution as defined
+        in :any:`ObjectBase._resolve_references`.  This implementation simply
+        calls the same on all values in this Map.
+        """
+        reference_type = ObjectBase.get_object_type('Reference')
+
+        for key, value in self.items():
+            if isinstance(value, reference_type):
+                # TODO - this is repeated code
+                # we found a reference - attempt to resolve it
+                reference_path = value.ref
+                if not reference_path.startswith('#/'):
+                    raise ReferenceResolutionError('Invalid reference path {}'.foramt(
+                        reference_path))
+
+                reference_path = reference_path.split('/')[1:]
+                resolved_value = self._root.resolve_path(reference_path)
+                resolved_value._original_ref = value # TODO - this will break if
+                                                     # multiple things reference
+                                                     # the same node.
+
+                self[key] = resolved_value # resolved
+            else:
+                value._resolve_references()

@@ -110,17 +110,10 @@ class Model:
         # collect the data into this model
         for k, v in data.items():
             prop = schema.properties[k]
-            print("looking at {}".format(prop))
-            if isinstance(prop, Reference):
-                print("it's a reference")
-                # TODO resolve reference
-                pass
-            elif prop.type == 'array':
-                print("it's an array")
+            if prop.type == 'array':
                 # TODO - handle arrays
                 pass
             elif prop.type == 'object':
-                print("it's an object")
                 # TODO - handle objects
                 pass
             else:

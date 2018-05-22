@@ -1,4 +1,5 @@
 from .object_base import ObjectBase, Map
+from .errors import ReferenceResolutionError
 
 class OpenAPI(ObjectBase):
     """
@@ -35,6 +36,32 @@ class OpenAPI(ObjectBase):
 
         self._security = {security_scheme: value}
 
+    def resolve_path(self, path):
+        """
+        Given a $ref path, follows the document tree and returns the given attribute.
+
+        :param path: The path down the spec tree to follow
+        :type path: list[str]
+
+        :returns: The node requested
+        :rtype: ObjectBase
+        :raises ValueError: if the given path is not valid
+        """
+        node = self
+
+        for part in path:
+            if isinstance(node, Map):
+                if part not in node:
+                    raise ReferenceResolutionError(
+                        'Invalid path {} in Reference'.format(path))
+                node = node.get(part)
+            else:
+                if not hasattr(node, part):
+                    raise ReferenceResolutionError('Invalid path {} in Reference'.format(path))
+                node = getattr(node, part)
+
+        return node
+
     # private methods
     def _parse_data(self):
         """
@@ -51,9 +78,20 @@ class OpenAPI(ObjectBase):
         self.tags = self._get('tags', dict)
         self.externalDocs = self._get('externalDocs', dict)
 
+        # now that we've parsed _all_ the data, resolve all references
+        self._resolve_references()
+
     def _get_callable(self, operation):
         """
-        TODO - explain this
+        A helper function to create OperationCallable objects for __getattribute__,
+        pre-initialized with the required values from this object.
+
+        :param operation: The Operation the callable should call
+        :type operation: callable (Operation.request)
+
+        :returns: The callable that executes this operation with this object's
+                  configuration.
+        :rtype: OperationCallable
         """
         base_url = self.servers[0].url
 
@@ -61,7 +99,22 @@ class OpenAPI(ObjectBase):
 
     def __getattribute__(self, attr):
         """
-        TODO - describe what this does
+        Extended __getattribute__ function to allow resolving dynamic function
+        names.  The purpose of this is to call syntax like this::
+
+           spec = OpenAPI(raw_spec)
+           spec.call_operationId()
+
+        This method will intercept the dot notation above (spec.call_operationId)
+        and look up the requested operation, returning a callable object that
+        will then immediately be called by the parenthesis.
+
+        :param attr: The attribute we're retrieving
+        :type attr: str
+
+        :returns: The attribute requested
+        :rtype: any
+        :raises AttributeError: if the requested attribute does not exist
         """
         if attr.startswith('call_'):
             _, operationId = attr.split('_', 1)
@@ -75,6 +128,13 @@ class OpenAPI(ObjectBase):
 
 
 class OperationCallable:
+    """
+    This class is returned by instances of the OpenAPI class when members
+    formatted like call_operationId are accessed, and a valid Operation is
+    found, and allows calling the operation directly from the OpenAPI object
+    with the configured values included.  This class is not intended to be used
+    directly.
+    """
     def __init__(self, operation, base_url, security):
         self.operation = operation
         self.base_url = base_url

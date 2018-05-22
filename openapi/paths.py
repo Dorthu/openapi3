@@ -135,7 +135,7 @@ class Operation(ObjectBase):
         query_params = {}
 
         if security:
-            scheme, value = security.popitem()
+            scheme, value = security.popitem() # TODO this loses auth after first call
             security_requirement = None
             for r in self.security:
                 if r.name == scheme:
@@ -215,7 +215,7 @@ class Operation(ObjectBase):
         if status_code in self.responses:
             expected_response = self.responses[status_code]
         elif 'default' in self.responses:
-            expecetd_response = self.responses['default']
+            expected_response = self.responses['default']
         else:
             # TODO - custom exception class that has the response object in it
             raise RuntimeError('Unexpected response {} from {} (expected one of {}, '
