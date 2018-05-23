@@ -325,9 +325,20 @@ class ObjectBase:
                 value._resolve_references()
             elif isinstance(value, list):
                 # if it's a list, resolve its item's references
+                resolved_list = []
                 for item in value:
-                    if issubclass(type(value), ObjectBase) or isinstance(value, Map):
-                        item._resolve_references()
+                    if isinstance(item, reference_type):
+                        # TODO - this is duplicated code
+                        reference_path = item.ref.split('/')[1:]
+                        resolved_value = self._root.resolve_path(reference_path)
+                        resolved_value._original_ref = value
+                        resolved_list.append(resolved_value)
+                    else:
+                        if issubclass(type(value), ObjectBase) or isinstance(value, Map):
+                            item._resolve_references()
+                        resolved_list.append(item)
+
+                setattr(self, slot, resolved_list)
 
 
 class Map(dict):

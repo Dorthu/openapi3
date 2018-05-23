@@ -1,5 +1,6 @@
-from .object_base import ObjectBase
+from .errors import SpecError
 from .general import Reference # need this for Model below
+from .object_base import ObjectBase
 
 class Schema(ObjectBase):
     """
@@ -56,6 +57,10 @@ class Schema(ObjectBase):
         #self.example = self._get('example', any?)
         self.deprecated = self._get('deprecated', bool)
 
+        if self.type == 'array' and self.items is None:
+            raise SpecError('{}: items is required when type is "array"'.format(
+                self.get_path()))
+
 
     def get_type(self):
         """
@@ -86,6 +91,10 @@ class Schema(ObjectBase):
         :returns: A new :any:`Model` created in this Schema's type from the data.
         :rtype: self.get_type()
         """
+        if self.properties is None and self.type in ('string', 'number'): # more simple types
+            # if this schema represents a simple type, simply return the data
+            # TODO -  maybe assert that the type of data matches the type we expected
+            return data
         return self.get_type()(data, self)
 
 
@@ -106,16 +115,24 @@ class Model:
         :type data: dict
         """
         self._raw_data = data
+        self._schema = schema
+
+        for s in self.__slots__:
+            # initialize all slots to None
+            setattr(self, s, None)
 
         # collect the data into this model
         for k, v in data.items():
             prop = schema.properties[k]
+
             if prop.type == 'array':
-                # TODO - handle arrays
-                pass
+                # handle arrays
+                item_schema = prop.items
+                setattr(self, k, [item_schema.model(c) for c in v])
             elif prop.type == 'object':
-                # TODO - handle objects
-                pass
+                # handle nested objects
+                object_schema = prop
+                setattr(self, k, object_schema.model(v))
             else:
                 setattr(self, k, v)
 

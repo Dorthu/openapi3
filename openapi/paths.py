@@ -30,13 +30,12 @@ class Path(ObjectBase):
         self.head = self._get("head", 'Operation')
         self.patch = self._get("patch", 'Operation')
         self.trace = self._get("trace", 'Operation')
-        raw_servers = self._get("servers", list)
-        raw_parameters = self._get("parameters", list)
+        self.servers = self._get("servers", ['Server'], is_list=True)
+        self.parameters = self._get("parameters", ['Parameter','Reference'], is_list=True)
 
-        self.servers = self.parse_list(raw_servers, 'Server', field='serers')
-        self.parameters = self.parse_list(raw_parameters, ['Parameter','Reference'],
-                                          field='parameters')
-
+        if self.parameters is None:
+            # this will be iterated over later
+            self.parameters = []
 
 
 class Parameter(ObjectBase):
@@ -112,7 +111,7 @@ class Operation(ObjectBase):
         if self.parameters is None:
             self.parameters = []
 
-    def request(self, base_url, security={}, data=None, parameters=None):
+    def request(self, base_url, security={}, data=None, parameters={}):
         """
         Sends an HTTP request as described by this Path
 
@@ -134,17 +133,24 @@ class Operation(ObjectBase):
         path = self.path[-2] # TODO - this won't work for $refs
         query_params = {}
 
-        if security:
-            scheme, value = security.popitem() # TODO this loses auth after first call
-            security_requirement = None
-            for r in self.security:
-                if r.name == scheme:
-                    security_requirement = r
-                    break
+        if security and self.security:
+            # find a security requirement - according to `the spec`_, only one
+            # of these needs to be satisfied to authorize a request (we'll be
+            # using the first
+            # .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#security-requirement-object
+            for scheme, value in security.items():
+                security_requirement = None
+                for r in self.security:
+                    if r.name == scheme:
+                        security_requirement = r
+                        break
+
+                if security_requirement is not None:
+                    break # we found one
 
             if security_requirement is None:
-                raise ValueError("Security Scheme {} is not supported here".format(
-                    scheme))
+                raise ValueError("No security requirement satisfied (accepts {})".format(
+                    ', '.join(self.security.keys())))
 
             security_scheme = self._root.components.securitySchemes[security_requirement.name]
 
@@ -178,9 +184,10 @@ class Operation(ObjectBase):
                 raise NotImplementedError()
 
         accepted_parameters = {p.name: p for p in self.parameters} # TODO better copy
-        # TODO - make this work with $refs
+        # TODO - make this work with $refs - can operations be $refs?
         accepted_parameters.update({p.name: p for p in self._root.paths[self.path[-2]].parameters})
 
+        # TODO - this should error if it got a bad parameter
         for name, spec in accepted_parameters.items():
             if spec.required and not name in parameters:
                 raise ValueError('Required parameter {} not provided'.format(

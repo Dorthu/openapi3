@@ -31,15 +31,26 @@ example, using `Linode's OpenAPI 3 Specification`_ for reference::
    # call an operation that requires authentication
    linodes  = api.call_getLinodeInstances()
 
+   # call an opertaion with parameters
+   linode = api.call_getLinodeInstance(parameters={"linodeId": 123})
+
+   # the models returns are all of the same (generated) type
+   print(type(linode))                      # openapi.schemas.Linode
+   type(linode) == type(linodes.data[0])    # True
+
+   # call an operation with a request body
+   new_linode = api.call_createLinodeInstance(data={"region":"us-east","type":"g6-standard-2"})
+
+   # the returned models is still of the correct type
+   type(new_linode) == type(linode)     # True
+
 Roadmap
 -------
 
 The following still needs to be done:
 
-* Support for parameters and other basic request features
 * Support for more authentication types
 * Support for non-json request/response content
-* $ref following/resolution
 * Validation mode that collects and reports spec errors without dying
 * Full support for all objected defined in the specification.
 
