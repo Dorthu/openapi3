@@ -5,6 +5,9 @@ openapi3-parser
 
 A Python `OpenAPI Specification`_ parser and library.
 
+.. image:: https://travis-ci.org/Dorthu/openapi3-parser.svg?branch=master
+    :target: https://travis-ci.org/Dorthu/openapi3-parser
+
 .. note::
    This is a work in progress, and may change significantly in the future.  Many
    features are presently absent, and many common cases may not be implemented.
