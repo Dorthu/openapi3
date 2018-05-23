@@ -1,3 +1,5 @@
+from typing import List
+
 from .object_base import ObjectBase
 
 class Info(ObjectBase):
@@ -7,7 +9,7 @@ class Info(ObjectBase):
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#infoObject
     """
     __slots__ = ['title','description','termsOfService','contact','license','version']
-    required_fields = ['title','version']
+    required_fields: List[str] = ['title','version']
 
     def _parse_data(self):
         """
@@ -43,7 +45,7 @@ class License(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#license-object
     """
     __slots__ = ['name','url']
-    required_fields = ['name']
+    required_fields: List[str] = ['name']
 
     def _parse_data(self):
         """

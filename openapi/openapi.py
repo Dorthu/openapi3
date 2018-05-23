@@ -1,3 +1,5 @@
+from typing import List
+
 from .object_base import ObjectBase, Map
 from .errors import ReferenceResolutionError
 
@@ -10,7 +12,7 @@ class OpenAPI(ObjectBase):
     """
     __slots__ = ['openapi','info','servers','paths','components','security','tags',
                  'externalDocs','_operation_map','_security']
-    required_fields=['openapi','info','paths']
+    required_fields: List[str] = ['openapi','info','paths']
 
     def __init__(self, raw_document):
         """

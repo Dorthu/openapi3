@@ -1,5 +1,6 @@
 import json
 import requests
+from typing import List
 from urllib.parse import urlencode # TODO - this will break in python2
 
 from .errors import SpecError
@@ -48,7 +49,7 @@ class Parameter(ObjectBase):
     __slots__ = ['name','in','in_','description','required','deprecated',
                  'allowEmptyValue','style','explode','allowReserved','schema',
                  'example','examples']
-    required_fields = ['name','in']
+    required_fields: List[str] = ['name','in']
 
 
     def _parse_data(self):
@@ -81,7 +82,7 @@ class Operation(ObjectBase):
     __slots__ = ['tags','summary','description','externalDocs','operationId',
                  'parameters','requestBody','responses','callbacks','deprecated',
                  'security','servers']
-    required_fields = ['responses']
+    required_fields: List[str] = ['responses']
 
     def _parse_data(self):
         """
@@ -252,7 +253,6 @@ class SecurityRequirement(ObjectBase):
     """
     """
     ___slots__ = ['name','types']
-    required_fields=[]
 
     def _parse_data(self):
         """
@@ -280,7 +280,7 @@ class RequestBody(ObjectBase):
     .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
     """
     __slots__ = ['description','content','required']
-    required_fields = ['content']
+    required_fields: List[str] = ['content']
 
     def _parse_data(self):
         """
@@ -300,7 +300,6 @@ class MediaType(ObjectBase):
     .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
     """
     __slots__ = ['schema','example','examples','encoding']
-    required_fields = []
 
     def _parse_data(self):
         """
@@ -323,7 +322,7 @@ class Response(ObjectBase):
     .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
     """
     __slots__ = ['description','headers','content','links']
-    required_fields = ['description']
+    required_fields: List[str] = ['description']
 
     def _parse_data(self):
         """
