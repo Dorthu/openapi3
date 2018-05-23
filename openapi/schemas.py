@@ -1,3 +1,5 @@
+from typing import List
+
 from .object_base import ObjectBase
 from .general import Reference # need this for Model below
 
@@ -14,7 +16,6 @@ class Schema(ObjectBase):
                  'properties','additionalProperties','description','format',
                  'default','nullable','discriminator','readOnly','writeOnly',
                  'xml','externalDocs','example','deprecated','_model_type']
-    required_fields = []
 
     def _parse_data(self):
         """

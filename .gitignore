@@ -1,3 +1,4 @@
 openapi.yaml
 *.swp
 *.pyc
+.mypy_cache

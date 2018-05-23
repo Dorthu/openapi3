@@ -1,3 +1,5 @@
+from typing import List
+
 from .errors import SpecError
 
 class ObjectBase:
@@ -7,7 +9,7 @@ class ObjectBase:
     """
     __slots__ = ['path','raw_element','_accessed_members','strict','extensions',
                  '_root', '_original_ref']
-    required_fields = []
+    required_fields: List[str] = []
 
     def __init__(self, path, raw_element, root):
         """
