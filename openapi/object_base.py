@@ -1,4 +1,4 @@
-from .errors import SpecError
+from .errors import SpecError, ReferenceResolutionError
 
 class ObjectBase:
     """
@@ -46,7 +46,8 @@ class ObjectBase:
         """
         Returns a string representation of the parsed object
         """
-        return str(self.__dict__())
+        # TODO - why?
+        return str(self.__dict__()) # pylint: disable=not-callable
 
     def __dict__(self):
         """
@@ -87,7 +88,7 @@ class ObjectBase:
         are parsed and then an assertion is made that all keys in the
         raw_element were accessed - if not, the schema is considered invalid.
         """
-        raise NotImplemented("You must implement this method in subclasses!")
+        raise NotImplementedError("You must implement this method in subclasses!")
 
     def _get(self, field, object_types, is_list=False, is_map=False):
         """
@@ -228,10 +229,11 @@ class ObjectBase:
             # generate subclass map on first call
             setattr(cls, '_subclass_map', {t.__name__: t for t in cls.__subclasses__()})
 
-        if typename not in cls._subclass_map:
+        # TODO - why?
+        if typename not in cls._subclass_map: # pylint: disable=no-member
             raise ValueError('ObjectBase has no subclass {}'.format(typename))
 
-        return cls._subclass_map[typename]
+        return cls._subclass_map[typename] # pylint: disable=no-member
 
     def get_path(self):
         """
@@ -310,7 +312,7 @@ class ObjectBase:
                 # we found a reference - attempt to resolve it
                 reference_path = value.ref
                 if not reference_path.startswith('#/'):
-                    raise ReferenceResolutionError('Invalid reference path {}'.foramt(
+                    raise ReferenceResolutionError('Invalid reference path {}'.format(
                         reference_path))
 
                 reference_path = reference_path.split('/')[1:]
@@ -406,7 +408,7 @@ class Map(dict):
                 # we found a reference - attempt to resolve it
                 reference_path = value.ref
                 if not reference_path.startswith('#/'):
-                    raise ReferenceResolutionError('Invalid reference path {}'.foramt(
+                    raise ReferenceResolutionError('Invalid reference path {}'.format(
                         reference_path))
 
                 reference_path = reference_path.split('/')[1:]

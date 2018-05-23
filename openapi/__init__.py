@@ -3,4 +3,4 @@ from .openapi import OpenAPI
 # that they may be referenced throughout the schema without issue
 from . import info, servers, paths, general, schemas, components, security
 
-__all__ = [OpenAPI]
+__all__ = ['OpenAPI']

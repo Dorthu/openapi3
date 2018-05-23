@@ -74,8 +74,9 @@ class Schema(ObjectBase):
            isinstance(object1, example._schema.get_type()) # true
            type(object1) == type(object2) # true
         """
-        if self._model_type is None:
-            self._model_type = type(self.path[-1], (Model,), {
+        if self._model_type is None: # pylint: disable=access-member-before-definition
+                                     # this is defined in ObjectBase.__init__ as all slots are
+            self._model_type = type(self.path[-1], (Model,), { # pylint: disable=attribute-defined-outside-init
                 '__slots__': self.properties.keys()
             })
 
@@ -140,7 +141,8 @@ class Model:
         """
         A generic representation of this model
         """
-        return str(self.__dict__())
+        # TODO - why?
+        return str(self.__dict__()) # pylint: disable=not-callable
 
     def __dict__(self):
         """

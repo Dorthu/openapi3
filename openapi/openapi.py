@@ -23,6 +23,8 @@ class OpenAPI(ObjectBase):
         """
         super().__init__([], raw_document, self) # as the document root, we have no path
 
+        self._security = {}
+
     # public methods
     def authenticte(self, security_scheme, value):
         """
@@ -51,7 +53,7 @@ class OpenAPI(ObjectBase):
 
         for part in path:
             if isinstance(node, Map):
-                if part not in node:
+                if part not in node: # pylint: disable=unsupported-membership-test
                     raise ReferenceResolutionError(
                         'Invalid path {} in Reference'.format(path))
                 node = node.get(part)

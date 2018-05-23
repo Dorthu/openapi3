@@ -170,7 +170,7 @@ class Operation(ObjectBase):
                 raise NotImplementedError()
             elif security_scheme.type == 'oauth2':
                 raise NotImplementedError()
-            elif secutity_scheme.type == 'openIdConnect':
+            elif security_scheme.type == 'openIdConnect':
                 raise NotImplementedError()
 
         if self.requestBody:
@@ -239,7 +239,7 @@ class Operation(ObjectBase):
             # a generic range should be accepted if one if provided
             # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
             generic_type = content_type.split('/')[0]+'/*'
-            expected_media = expected.response.content.get(generic_type, None)
+            expected_media = expected_response.content.get(generic_type, None)
 
         if expected_media is None:
             raise RuntimeError('Unexpected content type {} returned for operation {} '
@@ -315,11 +315,8 @@ class MediaType(ObjectBase):
         """
         self.schema = self._get('schema', ['Schema', 'Reference'])
         self.example = self._get('example', str)# 'any' type
-        raw_examples = self._get('examples', list)
+        self.examples = self._get('examples', ['Reference'], is_map=True)# ['Example','Reference']
         self.encoding = self._get('encoding', dict) # Map['Encoding']
-
-        if raw_examples is not None:
-            self.examples = Map(self.path+['examples'], raw_examples, ['Reference'])# ['Example','Reference'])
 
 
 class Response(ObjectBase):
