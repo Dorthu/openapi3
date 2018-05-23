@@ -5,6 +5,6 @@ python:
   - "3.5"
   - "3.6"
 install:
-  - pip install pylint
+  - pip install pylint requests
 script:
   - pylint openapi
