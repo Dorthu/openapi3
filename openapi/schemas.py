@@ -14,7 +14,8 @@ class Schema(ObjectBase):
                  'required','enum','type','allOf','oneOf','anyOf','not','items',
                  'properties','additionalProperties','description','format',
                  'default','nullable','discriminator','readOnly','writeOnly',
-                 'xml','externalDocs','example','deprecated','_model_type']
+                 'xml','externalDocs','example','deprecated','_model_type',
+                 '_request_model_type']
     required_fields = []
 
     def _parse_data(self):
@@ -76,7 +77,8 @@ class Schema(ObjectBase):
         """
         if self._model_type is None: # pylint: disable=access-member-before-definition
                                      # this is defined in ObjectBase.__init__ as all slots are
-            self._model_type = type(self.path[-1], (Model,), { # pylint: disable=attribute-defined-outside-init
+            type_name = self.title or self.path[-1]
+            self._model_type = type(type_name, (Model,), { # pylint: disable=attribute-defined-outside-init
                 '__slots__': self.properties.keys()
             })
 
@@ -97,6 +99,28 @@ class Schema(ObjectBase):
             # TODO -  maybe assert that the type of data matches the type we expected
             return data
         return self.get_type()(data, self)
+
+    def get_request_type(self):
+        """
+        Similar to :any:`get_type`, but the resulting type does not accept readOnly
+        fields
+        """
+        if self._request_model_type is None: # pylint: disable=access-member-before-definition
+                                     # this is defined in ObjectBase.__init__ as all slots are
+            type_name = self.title or self.path[-1]
+            self._request_model_type = type(type_name+'Request', (Model,), { # pylint: disable=attribute-defined-outside-init
+                '__slots__': [k for k, v in self.properties.items() if not v.readOnly]
+            })
+
+        return self._request_model_type
+
+    def request_model(self, **kwargs):
+        """
+        Converts the kwargs passed into a model of writeable fields of this
+        schema
+        """
+        # TODO - this doesn't get nested schemas
+        return self.get_request_type()(kwargs, self)
 
 
 class Model:
@@ -141,11 +165,11 @@ class Model:
         """
         A generic representation of this model
         """
-        # TODO - why?
-        return str(self.__dict__()) # pylint: disable=not-callable
+        return str(dict(self))
 
-    def __dict__(self):
-        """
-        This object as a dict
-        """
-        return {s: getattr(self, s) for s in self.__slots__ if not s.startswith('_')}
+    def __iter__(self):
+        for s in self.__slots__:
+            if s.startswith('_'):
+                continue
+            yield s, getattr(self, s)
+        return

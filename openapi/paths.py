@@ -4,6 +4,7 @@ from urllib.parse import urlencode # TODO - this will break in python2
 
 from .errors import SpecError
 from .object_base import ObjectBase
+from .schemas import Model
 
 class Path(ObjectBase):
     """
@@ -177,8 +178,13 @@ class Operation(ObjectBase):
             if self.requestBody.required and data is None:
                 raise ValueError("Request Body is required but none was provided.")
 
-            if isinstance(data, dict) and 'application/json' in self.requestBody.content:
-                body = json.dumps(data)
+            if 'application/json' in self.requestBody.content:
+                if isinstance(data, dict):
+                    body = json.dumps(data)
+                elif issubclass(type(data), Model):
+                    converter = lambda c: dict(c) # serialize models as dicts
+                    body = json.dumps({k: v for k, v in data if v is not None},
+                                       default=converter)
                 headers['Content-Type'] = 'application/json'
             else:
                 raise NotImplementedError()
