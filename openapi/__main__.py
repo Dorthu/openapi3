@@ -7,8 +7,7 @@ def main():
     specfile = sys.argv[1]
 
     with open(specfile) as f:
-        # TODO - support json too
-        spec = yaml.load(f.read())
+        spec = yaml.safe_load(f.read())
 
     o = OpenAPI(spec, validate=True)
 

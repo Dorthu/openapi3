@@ -17,9 +17,7 @@ Validation Mode
 
 This module can be run against a spec file to validate it like so::
 
-   python -m openapi /path/to/spec.yaml
-
-Right now this only support yaml specs, but json will be supported soon.
+   python -m openapi /path/to/spec
 
 Intended Usage
 --------------
