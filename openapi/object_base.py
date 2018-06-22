@@ -145,7 +145,7 @@ class ObjectBase:
                         raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
                             self.get_path, field, ','.join([str(c) for c in object_types]),
                             type(ret)),
-                            path=seld.path,
+                            path=self.path,
                             element=self)
                     ret = Map(self.path+[field], ret, object_types, self._root)
                 else:

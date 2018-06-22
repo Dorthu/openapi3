@@ -17,7 +17,7 @@ def main():
     if errors:
         # print errors
         for e in errors:
-            print('{}: {}'.format('.'.join(e.path), e.message[:100]))
+            print('{}: {}'.format('.'.join(e.path), e.message[:300]))
         print()
         print("{} errors".format(len(errors)))
     else:
