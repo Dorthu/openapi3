@@ -24,6 +24,9 @@ class ObjectBase:
         """
         # init empty slots
         for k in type(self).__slots__:
+            if k in ('_spec_errors', 'validation_mode'):
+                # allow these two fields to keep their values
+                continue
             setattr(self, k, None)
 
         self.path = path
@@ -35,8 +38,14 @@ class ObjectBase:
         self.extensions = {}
 
         # parse our own element
-        self._required_fields(*type(self).required_fields)
-        self._parse_data()
+        try:
+            self._required_fields(*type(self).required_fields)
+            self._parse_data()
+        except SpecError as e:
+            if self._root.validation_mode:
+                self._root.log_spec_error(e)
+            else:
+                raise
 
         self._parse_spec_extensions() # TODO - this may not be appropriate in all cases
 
@@ -74,7 +83,9 @@ class ObjectBase:
 
         if missing_fields:
             raise SpecError("Missing required fields: {}".format(
-                ', '.join(missing_fields)))
+                ', '.join(missing_fields)),
+                path=self.path,
+                element=self)
 
     def _parse_data(self):
         """
@@ -116,52 +127,65 @@ class ObjectBase:
 
         ret =  self.raw_element.get(field, None)
 
-        if ret is not None:
-            if not isinstance(object_types, list):
-                object_types = [object_types] # maybe don't accept not-lists
+        try:
+            if ret is not None:
+                if not isinstance(object_types, list):
+                    object_types = [object_types] # maybe don't accept not-lists
 
-            if is_list:
-                if not isinstance(ret, list):
-                    raise SpecError('Expected {}.{} to be a list of [{}], got {}'.format(
-                        self.get_path, field, ','.join([str(c) for c in object_types]),
-                        type(ret)))
-                ret = self.parse_list(ret, object_types, field)
-            elif is_map:
-                if not isinstance(ret, dict):
-                    raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
-                        self.get_path, field, ','.join([str(c) for c in object_types]),
-                        type(ret)))
-                ret = Map(self.path+[field], ret, object_types, self._root)
-            else:
-                accepts_string = str in object_types
-                found_type = False
+                if is_list:
+                    if not isinstance(ret, list):
+                        raise SpecError('Expected {}.{} to be a list of [{}], got {}'.format(
+                            self.get_path, field, ','.join([str(c) for c in object_types]),
+                            type(ret)),
+                            path=self.path,
+                            element=self)
+                    ret = self.parse_list(ret, object_types, field)
+                elif is_map:
+                    if not isinstance(ret, dict):
+                        raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
+                            self.get_path, field, ','.join([str(c) for c in object_types]),
+                            type(ret)),
+                            path=seld.path,
+                            element=self)
+                    ret = Map(self.path+[field], ret, object_types, self._root)
+                else:
+                    accepts_string = str in object_types
+                    found_type = False
 
-                for t in object_types:
-                    if t == str:
-                        continue # try to parse everything else first
+                    for t in object_types:
+                        if t == str:
+                            continue # try to parse everything else first
 
-                    if isinstance(t, str):
-                        # we were given the name of a subclass of ObjectBase,
-                        # attempt to parse ret as that type
-                        python_type = ObjectBase.get_object_type(t)
+                        if isinstance(t, str):
+                            # we were given the name of a subclass of ObjectBase,
+                            # attempt to parse ret as that type
+                            python_type = ObjectBase.get_object_type(t)
 
-                        if python_type.can_parse(ret):
-                            ret = python_type(self.path+[field], ret, self._root)
+                            if python_type.can_parse(ret):
+                                ret = python_type(self.path+[field], ret, self._root)
+                                found_type = True
+                                break
+                        elif isinstance(ret, t):
+                            # it's already the type we need
                             found_type = True
                             break
-                    elif isinstance(ret, t):
-                        # it's already the type we need
-                        found_type = True
-                        break
 
-                if not found_type:
-                    if accepts_string and isinstance(ret, str):
-                        found_type = True
+                    if not found_type:
+                        if accepts_string and isinstance(ret, str):
+                            found_type = True
 
-                if not found_type:
-                    raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
-                        self.get_path(), field, ','.join([str(c) for c in object_types]),
-                        type(ret)))
+                    if not found_type:
+                        raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
+                            self.get_path(), field, ','.join([str(c) for c in object_types]),
+                            type(ret)),
+                            path=self.path,
+                            element=self)
+        except SpecError as e:
+            if self._root.validation_mode:
+                self._root.log_spec_error(e)
+                ret = None
+            else:
+                raise
 
         return ret
 
@@ -291,7 +315,9 @@ class ObjectBase:
 
             if not found_type:
                 raise SpecError("Could not parse {}.{}, expected to be one of [{}]".format(
-                    '.'.join(real_path), i, object_types))
+                    '.'.join(real_path), i, object_types),
+                    path=self.path,
+                    element=self)
 
         return result
 
@@ -313,10 +339,20 @@ class ObjectBase:
                 reference_path = value.ref
                 if not reference_path.startswith('#/'):
                     raise ReferenceResolutionError('Invalid reference path {}'.format(
-                        reference_path))
+                        reference_path),
+                        path=self.path,
+                        element=self)
 
                 reference_path = reference_path.split('/')[1:]
-                resolved_value = self._root.resolve_path(reference_path)
+
+                try:
+                    resolved_value = self._root.resolve_path(reference_path)
+                except ReferenceResolutionError as e:
+                    # add metadata to the error
+                    e.path = self.path
+                    e.element = self
+                    raise
+
                 resolved_value._original_ref = value # TODO - this will break if
                                                      # multiple things reference
                                                      # the same node.
@@ -332,7 +368,15 @@ class ObjectBase:
                     if isinstance(item, reference_type):
                         # TODO - this is duplicated code
                         reference_path = item.ref.split('/')[1:]
-                        resolved_value = self._root.resolve_path(reference_path)
+
+                        try:
+                            resolved_value = self._root.resolve_path(reference_path)
+                        except ReferenceResolutionError as e:
+                            # add metadata to the error
+                            e.path = self.path
+                            e.element = self
+                            raise
+
                         resolved_value._original_ref = value
                         resolved_list.append(resolved_value)
                     else:
@@ -390,7 +434,9 @@ class Map(dict):
 
             if not found_type:
                 raise SpecError("Expected {}.{} to be one of [{}], but found {}".format(
-                    '.'.join(path), k, object_types, v))
+                    '.'.join(path), k, object_types, v),
+                    path=self.path,
+                    element=self)
 
         self.update(dct)
 
@@ -409,10 +455,20 @@ class Map(dict):
                 reference_path = value.ref
                 if not reference_path.startswith('#/'):
                     raise ReferenceResolutionError('Invalid reference path {}'.format(
-                        reference_path))
+                        reference_path),
+                        path=self.path,
+                        element=self)
 
                 reference_path = reference_path.split('/')[1:]
-                resolved_value = self._root.resolve_path(reference_path)
+
+                try:
+                    resolved_value = self._root.resolve_path(reference_path)
+                except ReferenceResolutionError as e:
+                    # add metadata to the error
+                    e.path = self.path
+                    e.element = self
+                    raise
+
                 resolved_value._original_ref = value # TODO - this will break if
                                                      # multiple things reference
                                                      # the same node.

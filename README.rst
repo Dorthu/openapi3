@@ -12,6 +12,15 @@ A Python `OpenAPI Specification`_ parser and library.
    This is a work in progress, and may change significantly in the future.  Many
    features are presently absent, and many common cases may not be implemented.
 
+Validation Mode
+---------------
+
+This module can be run against a spec file to validate it like so::
+
+   python -m openapi /path/to/spec.yaml
+
+Right now this only support yaml specs, but json will be supported soon.
+
 Intended Usage
 --------------
 
@@ -54,7 +63,6 @@ The following still needs to be done:
 
 * Support for more authentication types
 * Support for non-json request/response content
-* Validation mode that collects and reports spec errors without dying
 * Full support for all objected defined in the specification.
 
 .. _OpenAPI Specification: https://openapis.org

@@ -9,10 +9,11 @@ class OpenAPI(ObjectBase):
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
     """
     __slots__ = ['openapi','info','servers','paths','components','security','tags',
-                 'externalDocs','_operation_map','_security']
+                 'externalDocs','_operation_map','_security', 'validation_mode',
+                 '_spec_errors']
     required_fields=['openapi','info','paths']
 
-    def __init__(self, raw_document):
+    def __init__(self, raw_document, validate=False):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -20,7 +21,16 @@ class OpenAPI(ObjectBase):
 
         :param raw_document: The raw OpenAPI file loaded into python
         :type raw_document: dct
+        :param validate: If True, don't fail on errors, but instead capture all
+                         errors, continuing along the spec as best as possible,
+                         and make them available when parsing is complete.
         """
+        # do this first so super().__init__ can see it
+        self.validation_mode = validate
+
+        if validate:
+            self._spec_errors = []
+
         super().__init__([], raw_document, self) # as the document root, we have no path
 
         self._security = {}
@@ -63,6 +73,33 @@ class OpenAPI(ObjectBase):
                 node = getattr(node, part)
 
         return node
+
+    def log_spec_error(self, error):
+        """
+        In Validation Mode, this method is used when parsing a spec to record an
+        error that was encountered, for later reporting.  This should not be used
+        outside of Validation Mode.
+
+        :param error: The error encountered.
+        :type error: SpecError
+        """
+        if not self.validation_mode:
+            raise RuntimeError("This client is not in Validation Mode, cannot "
+                               "record errors!")
+        self._spec_errors.append(error)
+
+    def errors(self):
+        """
+        In Validation Mode, returns all errors encountered from parsing a spec.
+        This should not be called if not in Validation Mode.
+
+        :returns: The errors encountered during the parsing of this spec.
+        :rtype: list[SpecError]
+        """
+        if not self.validation_mode:
+            raise RuntimeError("This client is not in Validation Mode, cannot "
+                               "return errors!")
+        return self._spec_errors
 
     # private methods
     def _parse_data(self):
