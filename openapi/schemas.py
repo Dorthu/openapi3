@@ -2,6 +2,13 @@ from .errors import SpecError
 from .general import Reference # need this for Model below
 from .object_base import ObjectBase
 
+TYPE_LOOKUP = {
+    'object': dict,
+    'array': list,
+    'integer': int,
+    'string': str,
+}
+
 class Schema(ObjectBase):
     """
     The `Schema Object`_ allows the definition of input and output data types.
@@ -48,7 +55,7 @@ class Schema(ObjectBase):
         self.additionalProperties = self._get('additionalProperties', [bool, dict])
         self.description = self._get('description', str)
         self.format = self._get('format', str)
-        self.default = self._get('default', str) # any, must match self.type
+        self.default = self._get('default', TYPE_LOOKUP.get(self.type, str)) # TODO - str as a default?
         self.nullable = self._get('nullable', bool)
         self.discriminator = self._get('discriminator', dict)# 'Discriminator')
         self.readOnly = self._get('readOnly', bool)
