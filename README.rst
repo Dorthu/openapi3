@@ -1,33 +1,37 @@
-openapi3-parser
-===============
+openapi3
+========
 
 .. highlight:: python
 
-A Python `OpenAPI Specification`_ parser and library.
+A Python `OpenAPI 3 Specification`_ client and validator for Python 3.
 
 .. image:: https://travis-ci.org/Dorthu/openapi3-parser.svg?branch=master
     :target: https://travis-ci.org/Dorthu/openapi3-parser
 
-.. note::
-   This is a work in progress, and may change significantly in the future.  Many
-   features are presently absent, and many common cases may not be implemented.
+
+**NOTE**
+
+This is a work in progress, and may change significantly in the future.  Many
+features are presently absent, and many common cases may not be implemented.
 
 Validation Mode
 ---------------
 
 This module can be run against a spec file to validate it like so::
 
-   python -m openapi /path/to/spec
+   python3 -m openapi /path/to/spec
 
-Intended Usage
---------------
+Usage as a Client
+-----------------
 
-This library is a combination of spec parser/validator and client.  Here is an
-example, using `Linode's OpenAPI 3 Specification`_ for reference::
+This library also functions as an interactive client for arbitrary OpenAPI 3
+specs. For example, using `Linode's OpenAPI 3 Specification`_ for reference::
+
+   from openapi3 import OpenAPI
 
    # load the spec file and read the yaml
    with open('openapi.yaml') as f:
-       spec = yaml.load(f.read())
+       spec = yaml.safe_load(f.read())
 
    # parse the spec into python - this will raise if the spec is invalid
    api = OpenAPI(spec)
@@ -59,9 +63,11 @@ Roadmap
 
 The following still needs to be done:
 
-* Support for more authentication types
-* Support for non-json request/response content
-* Full support for all objected defined in the specification.
+* Request body models, creation, and validation.
+* Parameters interface with validation and explicit typing.
+* Support for more authentication types.
+* Support for non-json request/response content.
+* Full support for all objects defined in the specification.
 
 .. _OpenAPI Specification: https://openapis.org
 .. _Linode's OpenAPI 3 Specification: https://developers.linode.com/api/v4
