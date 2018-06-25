@@ -69,5 +69,5 @@ The following still needs to be done:
 * Support for non-json request/response content.
 * Full support for all objects defined in the specification.
 
-.. _OpenAPI Specification: https://openapis.org
+.. _OpenAPI 3 Specification: https://openapis.org
 .. _Linode's OpenAPI 3 Specification: https://developers.linode.com/api/v4
