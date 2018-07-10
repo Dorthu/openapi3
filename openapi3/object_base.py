@@ -1,6 +1,6 @@
 from .errors import SpecError, ReferenceResolutionError
 
-class ObjectBase:
+class ObjectBase(object):
     """
     The base class for all schema objects.  Includes helpers for common schema-
     related functions.

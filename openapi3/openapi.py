@@ -31,7 +31,7 @@ class OpenAPI(ObjectBase):
         if validate:
             self._spec_errors = []
 
-        super().__init__([], raw_document, self) # as the document root, we have no path
+        super(OpenAPI, self).__init__([], raw_document, self) # as the document root, we have no path
 
         self._security = {}
 

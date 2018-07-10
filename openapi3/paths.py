@@ -1,6 +1,10 @@
 import json
 import requests
-from urllib.parse import urlencode # TODO - this will break in python2
+
+try:
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
 
 from .errors import SpecError
 from .object_base import ObjectBase
@@ -63,7 +67,7 @@ class Parameter(ObjectBase):
         self.style = self._get('style', str)
         self.explode = self._get('explode', bool)
         self.allowReserved = self._get('allowReserved', bool)
-        self.schema = self._get('schema', [dict,'Reference'])#['Schema','Reference'])
+        self.schema = self._get('schema', ['Schema','Reference'])
         self.example = self._get('example', str)
         self.examples = self._get('examples', dict) # Map[str: ['Example','Reference']]
 

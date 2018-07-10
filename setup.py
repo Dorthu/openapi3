@@ -23,5 +23,4 @@ setup(
     packages=['openapi3'],
     license="BSD 3-Clause License",
     install_requires=["PyYaml","requests"],
-    python_requires=">=3.4"
 )
