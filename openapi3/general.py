@@ -35,3 +35,13 @@ class Reference(ObjectBase):
         cleaned_keys = [k for k in dct.keys() if not k.startswith('x-')] # TODO - can a reference object
                                                                          # have spec extensions?
         return len(cleaned_keys) == 1 and '$ref' in dct
+
+class Example(ObjectBase):
+    """
+    An `Example Object`_ designates the content of an example response.
+    """
+    __slots__ = ['value']
+    required_fields = ['value']
+
+    def _parse_data(self):
+        self.value = self._get('value', dict)
