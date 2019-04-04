@@ -14,7 +14,7 @@ class OpenAPI(ObjectBase):
                  'validation_mode', '_spec_errors']
     required_fields = ['openapi', 'info', 'paths']
 
-    def __init__(self, raw_document, validate=False):
+    def __init__(self, raw_document, validate=False, ssl_verify=None):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -25,6 +25,10 @@ class OpenAPI(ObjectBase):
         :param validate: If True, don't fail on errors, but instead capture all
                          errors, continuing along the spec as best as possible,
                          and make them available when parsing is complete.
+        :type validate: bool
+        :param ssl_verify: Decide if to use ssl verification to the requests or not,
+                           in case an str is passed, will be used as the CA.
+        :type ssl_verify: bool, str, None
         """
         # do this first so super().__init__ can see it
         self.validation_mode = validate
@@ -36,6 +40,8 @@ class OpenAPI(ObjectBase):
         super(OpenAPI, self).__init__([], raw_document, self)
 
         self._security = {}
+
+        self._ssl_verify = ssl_verify
 
     # public methods
     def authenticte(self, security_scheme, value):
@@ -139,7 +145,7 @@ class OpenAPI(ObjectBase):
         """
         base_url = self.servers[0].url
 
-        return OperationCallable(operation, base_url, self._security)
+        return OperationCallable(operation, base_url, self._security, self._ssl_verify)
 
     def __getattribute__(self, attr):
         """
@@ -179,11 +185,16 @@ class OperationCallable:
     with the configured values included.  This class is not intended to be used
     directly.
     """
-    def __init__(self, operation, base_url, security):
-        self.base_url  = base_url
+    def __init__(self, operation, base_url, security, ssl_verify):
         self.operation = operation
-        self.security  = security
+        self.base_url = base_url
+        self.security = security
+        self.ssl_verify = ssl_verify
 
     def __call__(self, *args, **kwargs):
+        if self.ssl_verify is not None:
+            kwargs['verify'] = self.ssl_verify
+        if self.session:
+            kwargs['session'] = self.session
         return self.operation(self.base_url, *args, security=self.security,
                               **kwargs)
