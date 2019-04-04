@@ -199,7 +199,8 @@ class Operation(ObjectBase):
         else:
             raise NotImplementedError()
 
-    def request(self, base_url, security={}, data=None, parameters={}, verify=True):
+    def request(self, base_url, security={}, data=None, parameters={}, verify=True,
+                session=None):
         """
         Sends an HTTP request as described by this Path
 
@@ -216,6 +217,8 @@ class Operation(ObjectBase):
         :param verify: Should we do an ssl verification on the request or not,
                        In case str was provided, will use that as the CA.
         :type verify: bool/str
+        :param session: a persistent request session
+        :type session: None, requests.Session
         """
         # Set request method (e.g. 'GET')
         self._request = requests.Request(self.path[-1])

@@ -1,3 +1,5 @@
+import requests
+
 from .object_base import ObjectBase, Map
 from .errors import ReferenceResolutionError
 
@@ -9,12 +11,12 @@ class OpenAPI(ObjectBase):
 
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
     """
-    __slots__ = ['openapi', 'info', 'servers', 'paths', 'components', 'tags',
-                 'security', 'externalDocs', '_operation_map', '_security',
-                 'validation_mode', '_spec_errors']
-    required_fields = ['openapi', 'info', 'paths']
+    __slots__ = ['openapi','info','servers','paths','components','security','tags',
+                 'externalDocs','_operation_map','_security', 'validation_mode',
+                 '_spec_errors', '_ssl_verify', '_session']
+    required_fields=['openapi','info','paths']
 
-    def __init__(self, raw_document, validate=False, ssl_verify=None):
+    def __init__(self, raw_document, validate=False, ssl_verify=None, use_session=False):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -29,6 +31,8 @@ class OpenAPI(ObjectBase):
         :param ssl_verify: Decide if to use ssl verification to the requests or not,
                            in case an str is passed, will be used as the CA.
         :type ssl_verify: bool, str, None
+        :param use_session: Should we use a consistant session between API calls
+        :type use_session: bool
         """
         # do this first so super().__init__ can see it
         self.validation_mode = validate
@@ -42,6 +46,10 @@ class OpenAPI(ObjectBase):
         self._security = {}
 
         self._ssl_verify = ssl_verify
+
+        self._session = None
+        if use_session:
+            self._session = requests.Session()
 
     # public methods
     def authenticte(self, security_scheme, value):
@@ -145,7 +153,8 @@ class OpenAPI(ObjectBase):
         """
         base_url = self.servers[0].url
 
-        return OperationCallable(operation, base_url, self._security, self._ssl_verify)
+        return OperationCallable(operation, base_url, self._security, self._ssl_verify,
+                                 self._session)
 
     def __getattribute__(self, attr):
         """
@@ -185,11 +194,12 @@ class OperationCallable:
     with the configured values included.  This class is not intended to be used
     directly.
     """
-    def __init__(self, operation, base_url, security, ssl_verify):
+    def __init__(self, operation, base_url, security, ssl_verify, session):
         self.operation = operation
         self.base_url = base_url
         self.security = security
         self.ssl_verify = ssl_verify
+        self.session = session
 
     def __call__(self, *args, **kwargs):
         if self.ssl_verify is not None:
