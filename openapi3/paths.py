@@ -200,7 +200,7 @@ class Operation(ObjectBase):
             raise NotImplementedError()
 
     def request(self, base_url, security={}, data=None, parameters={}, verify=True,
-                session=None):
+                session=None, raw_response=False):
         """
         Sends an HTTP request as described by this Path
 
@@ -219,6 +219,9 @@ class Operation(ObjectBase):
         :type verify: bool/str
         :param session: a persistent request session
         :type session: None, requests.Session
+        :param raw_response: If true, return the raw response instead of validating
+                             and exterpolating it.
+        :type raw_response: bool
         """
         # Set request method (e.g. 'GET')
         self._request = requests.Request(self.path[-1])
