@@ -180,7 +180,7 @@ class Operation(ObjectBase):
                 if security_scheme.scheme == 'mutualTLS':
                     cert = value
 
-                if security_scheme.scheme not in ('basic', 'bearer', 'digest'):
+                if security_scheme.scheme not in ('basic', 'bearer', 'digest', 'mutualTLS'):
                     # TODO https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
                     # defines many more authentication schemes that OpenAPI says it supports
                     raise NotImplementedError()
