@@ -4,9 +4,10 @@ class SpecError(ValueError):
     object in the spec.
     """
     def __init__(self, message, path=None, element=None):
-        self.message = message
-        self.path = path
         self.element = element
+        self.message = message
+        self.path    = path
+
 
 class ReferenceResolutionError(SpecError):
     """

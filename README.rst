@@ -58,6 +58,12 @@ specs. For example, using `Linode's OpenAPI 3 Specification`_ for reference::
    # the returned models is still of the correct type
    type(new_linode) == type(linode)     # True
 
+HTTP basic authentication and HTTP digest authentication works like this::
+
+   # authenticate using a securityScheme defined in the spec's components.securtiySchemes
+   # Tuple with (username, password) as second argument
+   api.authenticate('basicAuth', ('username', 'password'))
+
 Roadmap
 -------
 

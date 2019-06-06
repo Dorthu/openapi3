@@ -3,6 +3,7 @@ import yaml
 
 from .openapi import OpenAPI
 
+
 def main():
     specfile = sys.argv[1]
 
@@ -21,6 +22,7 @@ def main():
         print("{} errors".format(len(errors)))
     else:
         print("OK")
+
 
 if __name__ == '__main__':
     main()
