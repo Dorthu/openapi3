@@ -19,9 +19,9 @@ def main():
         for e in errors:
             print('{}: {}'.format('.'.join(e.path), e.message[:300]))
         print()
-        print("{} errors".format(len(errors)))
+        print('{} errors'.format(len(errors)))
     else:
-        print("OK")
+        print('OK')
 
 
 if __name__ == '__main__':

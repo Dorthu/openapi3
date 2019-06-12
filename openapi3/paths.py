@@ -26,18 +26,18 @@ class Path(ObjectBase):
         Implementation of :any:`ObjectBase._parse_data`
         """
         # TODO - handle possible $ref
-        self.delete      = self._get("delete", 'Operation')
-        self.description = self._get("description", str)
-        self.get         = self._get("get", 'Operation')
-        self.head        = self._get("head", 'Operation')
-        self.options     = self._get("options", 'Operation')
-        self.parameters  = self._get("parameters", ['Parameter', 'Reference'], is_list=True)
-        self.patch       = self._get("patch", 'Operation')
-        self.post        = self._get("post", 'Operation')
-        self.put         = self._get("put", 'Operation')
-        self.servers     = self._get("servers", ['Server'], is_list=True)
-        self.summary     = self._get("summary", str)
-        self.trace       = self._get("trace", 'Operation')
+        self.delete      = self._get('delete', 'Operation')
+        self.description = self._get('description', str)
+        self.get         = self._get('get', 'Operation')
+        self.head        = self._get('head', 'Operation')
+        self.options     = self._get('options', 'Operation')
+        self.parameters  = self._get('parameters', ['Parameter', 'Reference'], is_list=True)
+        self.patch       = self._get('patch', 'Operation')
+        self.post        = self._get('post', 'Operation')
+        self.put         = self._get('put', 'Operation')
+        self.servers     = self._get('servers', ['Server'], is_list=True)
+        self.summary     = self._get('summary', str)
+        self.trace       = self._get('trace', 'Operation')
 
         if self.parameters is None:
             # this will be iterated over later
@@ -73,8 +73,8 @@ class Parameter(ObjectBase):
 
         # required is required and must be True if this parameter is in the path
         if self.in_ == "path" and self.required is not True:
-            raise SpecError("Parameter {} must be required since it is in the path".format(
-                self.get_path()))
+            err_msg = 'Parameter {} must be required since it is in the path'
+            raise SpecError(err_msg.format(self.get_path()))
 
 
 class Operation(ObjectBase):
@@ -85,7 +85,7 @@ class Operation(ObjectBase):
     """
     __slots__ = ['tags', 'summary', 'description', 'externalDocs', 'security',
                  'operationId', 'parameters', 'requestBody', 'responses',
-                 'callbacks', 'deprecated', 'servers']
+                 'callbacks', 'deprecated', 'servers', '_session', '_request']
     required_fields = ['responses']
 
     def _parse_data(self):
@@ -115,8 +115,89 @@ class Operation(ObjectBase):
         # TODO - maybe make this generic
         if self.security is None:
             self.security = []
+
         if self.parameters is None:
             self.parameters = []
+
+        # Store session object
+        self._session = requests.Session()
+
+        # Store request object
+        self._request = requests.Request()
+
+    def _request_handle_secschemes(self, security_requirement, value):
+        ss = self._root.components.securitySchemes[security_requirement.name]
+
+        if ss.type == 'http' and ss.scheme == 'basic':
+            self._request.auth = requests.auth.HTTPBasicAuth(*value)
+
+        if ss.type == 'http' and ss.scheme == 'digest':
+            self._request.auth = requests.auth.HTTPDigestAuth(*value)
+
+        if ss.type == 'http' and ss.scheme == 'bearer':
+            header = ss.bearerFormat or 'Bearer {}'
+            self._request.headers['Authorization'] = header.format(value)
+
+        if ss.type == 'mutualTLS':
+            # TLS Client certificates (mutualTLS)
+            self._request.cert = value
+
+        if ss.type == 'apiKey':
+            if ss.in_ == 'query':
+                # apiKey in query parameter
+                self._request.params[ss.name]  = value
+
+            if ss.in_ == 'header':
+                # apiKey in query header data
+                self._request.headers[ss.name] = value
+
+    def _request_handle_parameters(self, parameters={}):
+        # Parameters
+        accepted_parameters = {}
+        p = self.parameters + self._root.paths[self.path[-2]].parameters
+
+        for _ in list(p):
+            # TODO - make this work with $refs - can operations be $refs?
+            accepted_parameters.update({_.name: _})
+
+        for name, spec in accepted_parameters.items():
+            try:
+                value = parameters[name]
+            except KeyError:
+                if spec.required and name not in parameters:
+                    err_msg = 'Required parameter {} not provided'.format(name)
+                    raise ValueError(err_msg)
+
+                continue
+
+            if spec.in_ == 'path':
+                self._request.url = self._request.url.format(**{name: value})
+
+            if spec.in_ == 'query':
+                self._request.params[name]  = value
+
+            if spec.in_ == 'header':
+                self._request.headers[name] = value
+
+            if spec.in_ == 'cookie':
+                self._request.cookies[name] = value
+
+    def _request_handle_body(self, data):
+        if 'application/json' in self.requestBody.content:
+            if isinstance(data, dict):
+                body = json.dumps(data)
+
+            if issubclass(type(data), Model):
+                # serialize models as dicts
+                converter = lambda c: dict(c)
+                data_dict = {k: v for k, v in data if v is not None}
+
+                body = json.dumps(data_dict, default=converter)
+
+            self._request.data = body
+            self._request.headers['Content-Type'] = 'application/json'
+        else:
+            raise NotImplementedError()
 
     def request(self, base_url, security={}, data=None, parameters={}):
         """
@@ -127,154 +208,79 @@ class Operation(ObjectBase):
         :type base_url: str
         :param security: The security scheme to use, and the values it needs to
                          process successfully.
-        :type secuirity: dict{str: str}
+        :type security: dict{str: str}
         :param data: The request body to send.
         :type data: any, should match content/type
         """
-        # get the request method
-        request_method = self.path[-1]
+        # Set request method (e.g. 'GET')
+        self._request = requests.Request(self.path[-1])
 
-        method = getattr(requests, request_method)  # call this
-
-        body = None
-        headers = {}
-        path = self.path[-2]  # TODO - this won't work for $refs
-        query_params = {}
-
-        auth = None
-        cert = None
+        # Set self._request.url to base_url w/ path
+        self._request.url = base_url + self.path[-2]
 
         if security and self.security:
-            # find a security requirement - according to `the spec`_, only one
-            # of these needs to be satisfied to authorize a request (we'll be
-            # using the first
-            # .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#security-requirement-object
+            security_requirement = None
             for scheme, value in security.items():
                 security_requirement = None
                 for r in self.security:
                     if r.name == scheme:
                         security_requirement = r
-                        break
-
-                if security_requirement is not None:
-                    # we found one
-                    break
+                        self._request_handle_secschemes(r, value)
 
             if security_requirement is None:
-                raise ValueError("No security requirement satisfied (accepts {})".format(
-                    ', '.join(self.security.keys())))
-
-            security_scheme = self._root.components.securitySchemes[security_requirement.name]
-
-            if security_scheme.type == 'http':
-                if security_scheme.scheme == 'basic':
-                    auth = requests.auth.HTTPBasicAuth(*value)
-
-                if security_scheme.scheme == 'bearer':
-                    header_format = security_scheme.bearerFormat or 'Bearer {}'
-                    headers['Authorization'] = header_format.format(value)
-
-                if security_scheme.scheme == 'digest':
-                    auth = requests.auth.HTTPDigestAuth(*value)
-
-                if security_scheme.scheme == 'mutualTLS':
-                    cert = value
-
-                if security_scheme.scheme not in ('basic', 'bearer', 'digest', 'mutualTLS'):
-                    # TODO https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml
-                    # defines many more authentication schemes that OpenAPI says it supports
-                    raise NotImplementedError()
-
-            if security_scheme.type == 'apiKey':
-                if security_scheme.in_ == 'query':
-                    query_params[security_scheme.name] = value
-
-                if security_scheme.in_ == 'header':
-                    headers[security_scheme.name] = value
-
-            if security_scheme.type in ('oauth2', 'openIdConnect'):
-                raise NotImplementedError()
+                err_msg = '''No security requirement satisfied (accepts {}) \
+                          '''.format(', '.join(self.security.keys()))
+                raise ValueError(err_msg)
 
         if self.requestBody:
             if self.requestBody.required and data is None:
-                raise ValueError("Request Body is required but none was provided.")
+                err_msg = 'Request Body is required but none was provided.'
+                raise ValueError(err_msg)
 
-            if 'application/json' in self.requestBody.content:
-                if isinstance(data, dict):
-                    body = json.dumps(data)
-                elif issubclass(type(data), Model):
-                    # serialize models as dicts
-                    converter = lambda c: dict(c)
-                    body = json.dumps({k: v for k, v in data if v is not None}, default=converter)
-                headers['Content-Type'] = 'application/json'
-            else:
-                raise NotImplementedError()
+            self._request_handle_body(data)
 
-        # TODO - better copy
-        accepted_parameters = {p.name: p for p in self.parameters}
+        self._request_handle_parameters(parameters)
 
-        # TODO - make this work with $refs - can operations be $refs?
-        accepted_parameters.update({p.name: p for p in self._root.paths[self.path[-2]].parameters})
-
-        # TODO - this should error if it got a bad parameter
-        for name, spec in accepted_parameters.items():
-            if spec.required and name not in parameters:
-                raise ValueError('Required parameter {} not provided'.format(
-                    name))
-
-            if name in parameters:
-                value = parameters[name]
-
-                if spec.in_ == 'path':
-                    # the path's name should match the parameter name, so this
-                    # should work in all cases
-                    path = path.format(**{name: value})
-                elif spec.in_ == 'query':
-                    query_params[name] = value
-                elif spec.in_ == 'header':
-                    headers[name] = value
-                elif spec.in_ == 'cookie':
-                    headers['Cookie'] = value
-
-        final_url = base_url + path + "?" + urlencode(query_params)
-
-        result = method(final_url, auth=auth, cert=cert, headers=headers, data=body)
-
-        # examine result to see how we should handle it
-        # TODO - refactor into seperate functions later
+        # send the prepared request
+        result = self._session.send(self._request.prepare())
 
         # spec enforces these are strings
         status_code = str(result.status_code)
-        expected_response = None
 
-        # find the response model we received
+        # find the response model in spec we received
+        expected_response = None
         if status_code in self.responses:
             expected_response = self.responses[status_code]
-        elif 'default' in self.responses:
-            expected_response = self.responses['default']
-        else:
-            # TODO - custom exception class that has the response object in it
-            raise RuntimeError('Unexpected response {} from {} (expected one of {}, '
-                               'no default is defined)'.format(
-                                   result.status_code, self.operationId,
-                                   ','.join(self.responses.keys())))
 
-        content_type = result.headers['Content-Type']
+        if 'default' in self.responses:
+            expected_response = self.responses['default']
+
+        if expected_response is None:
+            # TODO - custom exception class that has the response object in it
+            err_msg = '''Unexpected response {} from {} (expected one of {}, \
+                         no default is defined'''
+            err_var = result.status_code, self.operationId, ','.join(self.responses.keys())
+
+            raise RuntimeError(err_msg.format(*err_var))
+
+        content_type   = result.headers['Content-Type']
         expected_media = expected_response.content.get(content_type, None)
 
         if expected_media is None and '/' in content_type:
-            # accept media type ranges in the spec - the most specific matching
-            # type should always be chosen, but if we don't have a match here
+            # accept media type ranges in the spec. the most specific matching
+            # type should always be chosen, but if we do not have a match here
             # a generic range should be accepted if one if provided
             # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
-            generic_type = content_type.split('/')[0] + '/*'
+
+            generic_type   = content_type.split('/')[0] + '/*'
             expected_media = expected_response.content.get(generic_type, None)
 
         if expected_media is None:
-            raise RuntimeError('Unexpected content type {} returned for operation {} '
-                               '(expected one of {})'.format(
-                                   result.headers['Content-Type'], self.operationId,
-                                   ','.join(expected_response.content.keys())))
+            err_msg = '''Unexpected Content-Type {} returned for operation {} \
+                         (expected one of {})'''
+            err_var = result.headers['Content-Type'], self.operationId, ','.join(expected_response.content.keys())
+
+            raise RuntimeError(err_msg.format(err_var))
 
         response_data = None
 
@@ -286,6 +292,9 @@ class Operation(ObjectBase):
 
 class SecurityRequirement(ObjectBase):
     """
+    A `SecurityRequirement`_ object describes security schemes for API access.
+
+    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
     """
     ___slots__ = ['name', 'types']
     required_fields = []
@@ -294,7 +303,7 @@ class SecurityRequirement(ObjectBase):
         """
         """
         # these only ever have one key
-        self.name = [c for c in self.raw_element.keys()][0]
+        self.name  = [c for c in self.raw_element.keys()][0]
         self.types = self._get(self.name, str, is_list=True)
 
     @classmethod

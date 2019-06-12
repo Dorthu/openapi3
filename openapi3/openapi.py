@@ -68,12 +68,13 @@ class OpenAPI(ObjectBase):
         for part in path:
             if isinstance(node, Map):
                 if part not in node:  # pylint: disable=unsupported-membership-test
-                    raise ReferenceResolutionError(
-                        'Invalid path {} in Reference'.format(path))
+                    err_msg = 'Invalid path {} in Reference'.format(path)
+                    raise ReferenceResolutionError(err_msg)
                 node = node.get(part)
             else:
                 if not hasattr(node, part):
-                    raise ReferenceResolutionError('Invalid path {} in Reference'.format(path))
+                    err_msg = 'Invalid path {} in Reference'.format(path)
+                    raise ReferenceResolutionError(err_msg)
                 node = getattr(node, part)
 
         return node
@@ -88,8 +89,8 @@ class OpenAPI(ObjectBase):
         :type error: SpecError
         """
         if not self.validation_mode:
-            raise RuntimeError("This client is not in Validation Mode, cannot "
-                               "record errors!")
+            raise RuntimeError('This client is not in Validation Mode, cannot '
+                               'record errors!')
         self._spec_errors.append(error)
 
     def errors(self):
@@ -101,8 +102,8 @@ class OpenAPI(ObjectBase):
         :rtype: list[SpecError]
         """
         if not self.validation_mode:
-            raise RuntimeError("This client is not in Validation Mode, cannot "
-                               "return errors!")
+            raise RuntimeError('This client is not in Validation Mode, cannot '
+                               'return errors!')
         return self._spec_errors
 
     # private methods

@@ -86,7 +86,7 @@ class ObjectBase(object):
                 missing_fields.append(field)
 
         if missing_fields:
-            raise SpecError("Missing required fields: {}".format(
+            raise SpecError('Missing required fields: {}'.format(
                 ', '.join(missing_fields)),
                 path=self.path,
                 element=self)
@@ -103,7 +103,7 @@ class ObjectBase(object):
         are parsed and then an assertion is made that all keys in the
         raw_element were accessed - if not, the schema is considered invalid.
         """
-        raise NotImplementedError("You must implement this method in subclasses!")
+        raise NotImplementedError('You must implement this method in subclasses!')
 
     def _get(self, field, object_types, is_list=False, is_map=False):
         """
@@ -320,7 +320,7 @@ class ObjectBase(object):
                     continue
 
             if not found_type:
-                raise SpecError("Could not parse {}.{}, expected to be one of [{}]".format(
+                raise SpecError('Could not parse {}.{}, expected to be one of [{}]'.format(
                     '.'.join(real_path), i, object_types),
                     path=self.path,
                     element=self)
@@ -441,7 +441,7 @@ class Map(dict):
                     found_type = True
 
             if not found_type:
-                raise SpecError("Expected {}.{} to be one of [{}], but found {}".format(
+                raise SpecError('Expected {}.{} to be one of [{}], but found {}'.format(
                     '.'.join(path), k, object_types, v),
                     path=self.path,
                     element=self)
