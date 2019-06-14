@@ -7,6 +7,7 @@ TYPE_LOOKUP = {
     'array': list,
     'integer': int,
     'string': str,
+    'boolean': bool,
 }
 
 class Schema(ObjectBase):
