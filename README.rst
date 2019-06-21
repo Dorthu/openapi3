@@ -21,7 +21,7 @@ Validation Mode
 
 This module can be run against a spec file to validate it like so::
 
-   python3 -m openapi /path/to/spec
+   python3 -m openapi3 /path/to/spec
 
 Usage as a Client
 -----------------
