@@ -7,6 +7,10 @@ A Python `OpenAPI 3 Specification`_ client and validator for Python 3.
     :target: https://travis-ci.org/Dorthu/openapi3
 
 
+.. image:: https://badge.fury.io/py/openapi3.svg
+   :target: https://badge.fury.io/py/openapi3
+
+
 **NOTE**
 
 This is a work in progress, and may change significantly in the future.  Many
