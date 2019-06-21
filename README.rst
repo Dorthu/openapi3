@@ -1,8 +1,6 @@
 openapi3
 ========
 
-.. highlight:: python
-
 A Python `OpenAPI 3 Specification`_ client and validator for Python 3.
 
 .. image:: https://travis-ci.org/Dorthu/openapi3.svg?branch=master
