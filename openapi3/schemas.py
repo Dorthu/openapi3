@@ -7,6 +7,7 @@ TYPE_LOOKUP = {
     'integer': int,
     'object': dict,
     'string': str,
+    'boolean': bool,
 }
 
 
