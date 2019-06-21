@@ -251,8 +251,7 @@ class Operation(ObjectBase):
         expected_response = None
         if status_code in self.responses:
             expected_response = self.responses[status_code]
-
-        if 'default' in self.responses:
+        elif 'default' in self.responses:
             expected_response = self.responses['default']
 
         if expected_response is None:
