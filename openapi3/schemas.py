@@ -1,14 +1,15 @@
 from .errors import SpecError
-from .general import Reference # need this for Model below
+from .general import Reference  # need this for Model below
 from .object_base import ObjectBase
 
 TYPE_LOOKUP = {
-    'object': dict,
     'array': list,
     'integer': int,
+    'object': dict,
     'string': str,
     'boolean': bool,
 }
+
 
 class Schema(ObjectBase):
     """
@@ -16,13 +17,14 @@ class Schema(ObjectBase):
 
     .. _Schema Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#schemaObject
     """
-    __slots__ = ['title','multipleOf','maximum','exclusiveMaximum','minimum',
-                 'exclusiveMinimum','maxLength','minLength','pattern','maxItems',
-                 'minItems','uniqueItems','maxProperties','minProperties',
-                 'required','enum','type','allOf','oneOf','anyOf','not','items',
-                 'properties','additionalProperties','description','format',
-                 'default','nullable','discriminator','readOnly','writeOnly',
-                 'xml','externalDocs','example','deprecated','_model_type',
+    __slots__ = ['title', 'multipleOf', 'maximum', 'exclusiveMaximum',
+                 'minimum', 'exclusiveMinimum', 'maxLength', 'minLength',
+                 'pattern', 'maxItems', 'minItems', 'uniqueItems',
+                 'maxProperties', 'minProperties', 'required', 'enum', 'type',
+                 'allOf', 'oneOf', 'anyOf', 'not', 'items', 'properties',
+                 'additionalProperties', 'description', 'format', 'default',
+                 'nullable', 'discriminator', 'readOnly', 'writeOnly', 'xml',
+                 'externalDocs', 'example', 'deprecated', '_model_type',
                  '_request_model_type']
     required_fields = []
 
@@ -30,46 +32,47 @@ class Schema(ObjectBase):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        self.title = self._get('title', str)
-        #self.multipleOf
-        self.maximum = self._get('maximum', int)
-        #self.exclusiveMaximum
-        self.minimum = self._get('minimum', int)
-        #self.exclusiveMinimum
-        self.maxLength = self._get('maxLength',int)
-        self.minLength = self._get('minLength', int)
-        self.pattern = self._get('pattern', str)
-        self.maxItems = self._get('maxItems', int)
-        self.minItems = self._get('minItmes', int)
-        #self.uniqueItems
-        #self.maxProperties
-        #self.minProperties
-        self.required = self._get('required', list)
-        self.enum = self._get('enum', list)
-        self.type = self._get('type', str)
-        self.allOf = self._get('allOf', list)
-        self.oneOf = self._get('oneOf', list)
-        self.anyOf = self._get('anyOf', list)
-        #self.not
-        self.items = self._get('items', ['Schema', 'Reference'])
-        self.properties = self._get('properties', ['Schema','Reference'], is_map=True)
+        self.title                = self._get('title', str)
+        self.maximum              = self._get('maximum', int)
+        self.minimum              = self._get('minimum', int)
+        self.maxLength            = self._get('maxLength', int)
+        self.minLength            = self._get('minLength', int)
+        self.pattern              = self._get('pattern', str)
+        self.maxItems             = self._get('maxItems', int)
+        self.minItems             = self._get('minItmes', int)
+        self.required             = self._get('required', list)
+        self.enum                 = self._get('enum', list)
+        self.type                 = self._get('type', str)
+        self.allOf                = self._get('allOf', list)
+        self.oneOf                = self._get('oneOf', list)
+        self.anyOf                = self._get('anyOf', list)
+        self.items                = self._get('items', ['Schema', 'Reference'])
+        self.properties           = self._get('properties', ['Schema', 'Reference'], is_map=True)
         self.additionalProperties = self._get('additionalProperties', [bool, dict])
-        self.description = self._get('description', str)
-        self.format = self._get('format', str)
-        self.default = self._get('default', TYPE_LOOKUP.get(self.type, str)) # TODO - str as a default?
-        self.nullable = self._get('nullable', bool)
-        self.discriminator = self._get('discriminator', dict)# 'Discriminator')
-        self.readOnly = self._get('readOnly', bool)
-        self.writeOnly = self._get('writeOnly', bool)
-        self.xml = self._get('xml', dict)# 'XML')
-        self.externalDocs = self._get('externalDocs', dict)# 'ExternalDocs')
-        #self.example = self._get('example', any?)
-        self.deprecated = self._get('deprecated', bool)
+        self.description          = self._get('description', str)
+        self.format               = self._get('format', str)
+        self.default              = self._get('default', TYPE_LOOKUP.get(self.type, str))  # TODO - str as a default?
+        self.nullable             = self._get('nullable', bool)
+        self.discriminator        = self._get('discriminator', dict)  # 'Discriminator'
+        self.readOnly             = self._get('readOnly', bool)
+        self.writeOnly            = self._get('writeOnly', bool)
+        self.xml                  = self._get('xml', dict)  # 'XML'
+        self.externalDocs         = self._get('externalDocs', dict)  # 'ExternalDocs'
+        self.deprecated           = self._get('deprecated', bool)
+
+        # TODO - Implement the following properties:
+        # self.example
+        # self.multipleOf
+        # self.not
+        # self.uniqueItems
+        # self.maxProperties
+        # self.minProperties
+        # self.exclusiveMinimum
+        # self.exclusiveMaximum
 
         if self.type == 'array' and self.items is None:
             raise SpecError('{}: items is required when type is "array"'.format(
                 self.get_path()))
-
 
     def get_type(self):
         """
@@ -83,10 +86,10 @@ class Schema(ObjectBase):
            isinstance(object1, example._schema.get_type()) # true
            type(object1) == type(object2) # true
         """
-        if self._model_type is None: # pylint: disable=access-member-before-definition
-                                     # this is defined in ObjectBase.__init__ as all slots are
+        # this is defined in ObjectBase.__init__ as all slots are
+        if self._model_type is None:  # pylint: disable=access-member-before-definition
             type_name = self.title or self.path[-1]
-            self._model_type = type(type_name, (Model,), { # pylint: disable=attribute-defined-outside-init
+            self._model_type = type(type_name, (Model,), {  # pylint: disable=attribute-defined-outside-init
                 '__slots__': self.properties.keys()
             })
 
@@ -102,9 +105,10 @@ class Schema(ObjectBase):
         :returns: A new :any:`Model` created in this Schema's type from the data.
         :rtype: self.get_type()
         """
-        if self.properties is None and self.type in ('string', 'number'): # more simple types
+        if self.properties is None and self.type in ('string', 'number'):  # more simple types
             # if this schema represents a simple type, simply return the data
-            # TODO -  maybe assert that the type of data matches the type we expected
+            # TODO - perhaps assert that the type of data matches the type we
+            # expected
             return data
         return self.get_type()(data, self)
 
@@ -113,10 +117,10 @@ class Schema(ObjectBase):
         Similar to :any:`get_type`, but the resulting type does not accept readOnly
         fields
         """
-        if self._request_model_type is None: # pylint: disable=access-member-before-definition
-                                     # this is defined in ObjectBase.__init__ as all slots are
+        # this is defined in ObjectBase.__init__ as all slots are
+        if self._request_model_type is None:  # pylint: disable=access-member-before-definition
             type_name = self.title or self.path[-1]
-            self._request_model_type = type(type_name+'Request', (Model,), { # pylint: disable=attribute-defined-outside-init
+            self._request_model_type = type(type_name + 'Request', (Model,), {  # pylint: disable=attribute-defined-outside-init
                 '__slots__': [k for k, v in self.properties.items() if not v.readOnly]
             })
 
@@ -138,6 +142,7 @@ class Model:
     contents of a response.
     """
     __slots__ = ['_raw_data', '_schema']
+
     def __init__(self, data, schema):
         """
         Creates a new Model from data.  This should never be called directly,
@@ -148,7 +153,7 @@ class Model:
         :type data: dict
         """
         self._raw_data = data
-        self._schema = schema
+        self._schema   = schema
 
         for s in self.__slots__:
             # initialize all slots to None

@@ -1,12 +1,13 @@
 from .errors import SpecError, ReferenceResolutionError
 
+
 class ObjectBase(object):
     """
     The base class for all schema objects.  Includes helpers for common schema-
     related functions.
     """
-    __slots__ = ['path','raw_element','_accessed_members','strict','extensions',
-                 '_root', '_original_ref']
+    __slots__ = ['path', 'raw_element', '_accessed_members', 'strict', '_root',
+                 'extensions', '_original_ref']
     required_fields = []
 
     def __init__(self, path, raw_element, root):
@@ -34,8 +35,10 @@ class ObjectBase(object):
         self._root = root
 
         self._accessed_members = []
-        self.strict = False # TODO - add a strict mode that errors if all members were not accessed
         self.extensions = {}
+
+        # TODO - add strict mode that errors if all members were not accessed
+        self.strict = False
 
         # parse our own element
         try:
@@ -47,7 +50,8 @@ class ObjectBase(object):
             else:
                 raise
 
-        self._parse_spec_extensions() # TODO - this may not be appropriate in all cases
+        # TODO - this may not be appropriate in all cases
+        self._parse_spec_extensions()
 
         # TODO - assert that all keys of raw_element were accessed
 
@@ -56,7 +60,7 @@ class ObjectBase(object):
         Returns a string representation of the parsed object
         """
         # TODO - why?
-        return str(self.__dict__()) # pylint: disable=not-callable
+        return str(self.__dict__())  # pylint: disable=not-callable
 
     def __dict__(self):
         """
@@ -82,7 +86,7 @@ class ObjectBase(object):
                 missing_fields.append(field)
 
         if missing_fields:
-            raise SpecError("Missing required fields: {}".format(
+            raise SpecError('Missing required fields: {}'.format(
                 ', '.join(missing_fields)),
                 path=self.path,
                 element=self)
@@ -99,7 +103,7 @@ class ObjectBase(object):
         are parsed and then an assertion is made that all keys in the
         raw_element were accessed - if not, the schema is considered invalid.
         """
-        raise NotImplementedError("You must implement this method in subclasses!")
+        raise NotImplementedError('You must implement this method in subclasses!')
 
     def _get(self, field, object_types, is_list=False, is_map=False):
         """
@@ -125,12 +129,13 @@ class ObjectBase(object):
         """
         self._accessed_members.append(field)
 
-        ret =  self.raw_element.get(field, None)
+        ret = self.raw_element.get(field, None)
 
         try:
             if ret is not None:
                 if not isinstance(object_types, list):
-                    object_types = [object_types] # maybe don't accept not-lists
+                    # maybe don't accept not-lists
+                    object_types = [object_types]
 
                 if is_list:
                     if not isinstance(ret, list):
@@ -147,14 +152,15 @@ class ObjectBase(object):
                             type(ret)),
                             path=self.path,
                             element=self)
-                    ret = Map(self.path+[field], ret, object_types, self._root)
+                    ret = Map(self.path + [field], ret, object_types, self._root)
                 else:
                     accepts_string = str in object_types
                     found_type = False
 
                     for t in object_types:
                         if t == str:
-                            continue # try to parse everything else first
+                            # try to parse everything else first
+                            continue
 
                         if isinstance(t, str):
                             # we were given the name of a subclass of ObjectBase,
@@ -162,7 +168,7 @@ class ObjectBase(object):
                             python_type = ObjectBase.get_object_type(t)
 
                             if python_type.can_parse(ret):
-                                ret = python_type(self.path+[field], ret, self._root)
+                                ret = python_type(self.path + [field], ret, self._root)
                                 found_type = True
                                 break
                         elif isinstance(ret, t):
@@ -254,10 +260,10 @@ class ObjectBase(object):
             setattr(cls, '_subclass_map', {t.__name__: t for t in cls.__subclasses__()})
 
         # TODO - why?
-        if typename not in cls._subclass_map: # pylint: disable=no-member
+        if typename not in cls._subclass_map:  # pylint: disable=no-member
             raise ValueError('ObjectBase has no subclass {}'.format(typename))
 
-        return cls._subclass_map[typename] # pylint: disable=no-member
+        return cls._subclass_map[typename]  # pylint: disable=no-member
 
     def get_path(self):
         """
@@ -305,7 +311,7 @@ class ObjectBase(object):
 
             for cur_type in python_types:
                 if issubclass(cur_type, ObjectBase) and cur_type.can_parse(cur):
-                    result.append(cur_type(real_path+[str(i)], cur, self._root))
+                    result.append(cur_type(real_path + [str(i)], cur, self._root))
                     found_type = True
                     continue
                 elif isinstance(cur, cur_type):
@@ -314,7 +320,7 @@ class ObjectBase(object):
                     continue
 
             if not found_type:
-                raise SpecError("Could not parse {}.{}, expected to be one of [{}]".format(
+                raise SpecError('Could not parse {}.{}, expected to be one of [{}]'.format(
                     '.'.join(real_path), i, object_types),
                     path=self.path,
                     element=self)
@@ -326,7 +332,8 @@ class ObjectBase(object):
         Resolves all reference objects below this object and notes their original
         value was a reference.
         """
-        reference_type = ObjectBase.get_object_type('Reference') # don't circular import
+        # don't circular import
+        reference_type = ObjectBase.get_object_type('Reference')
 
         for slot in self.__slots__:
             if slot.startswith('_'):
@@ -353,11 +360,12 @@ class ObjectBase(object):
                     e.element = self
                     raise
 
-                resolved_value._original_ref = value # TODO - this will break if
-                                                     # multiple things reference
-                                                     # the same node.
+                # FIXME - will break if multiple things reference the same
+                # node
+                resolved_value._original_ref = value
 
-                setattr(self, slot, resolved_value) # resolved
+                # resolved
+                setattr(self, slot, resolved_value)
             elif issubclass(type(value), ObjectBase) or isinstance(value, Map):
                 # otherwise, continue resolving down the tree
                 value._resolve_references()
@@ -392,7 +400,7 @@ class Map(dict):
     The Map object wraps a python dict and parses its values into the chosen
     type or types.
     """
-    __slots__ = ['dct','path','raw_element','_root']
+    __slots__ = ['dct', 'path', 'raw_element', '_root']
 
     def __init__(self, path, raw_element, object_types, root):
         """
@@ -426,14 +434,14 @@ class Map(dict):
 
             for t in python_types:
                 if issubclass(t, ObjectBase) and t.can_parse(v):
-                    dct[k] = t(path+[k], v, self._root)
+                    dct[k] = t(path + [k], v, self._root)
                     found_type = True
                 elif isinstance(v, t):
                     dct[k] = v
                     found_type = True
 
             if not found_type:
-                raise SpecError("Expected {}.{} to be one of [{}], but found {}".format(
+                raise SpecError('Expected {}.{} to be one of [{}], but found {}'.format(
                     '.'.join(path), k, object_types, v),
                     path=self.path,
                     element=self)
@@ -469,10 +477,11 @@ class Map(dict):
                     e.element = self
                     raise
 
-                resolved_value._original_ref = value # TODO - this will break if
-                                                     # multiple things reference
-                                                     # the same node.
+                # FIXME - will break if multiple things reference the same
+                # node
+                resolved_value._original_ref = value
 
-                self[key] = resolved_value # resolved
+                # resolved
+                self[key] = resolved_value
             else:
                 value._resolve_references()

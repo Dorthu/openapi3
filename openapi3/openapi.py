@@ -1,6 +1,7 @@
 from .object_base import ObjectBase, Map
 from .errors import ReferenceResolutionError
 
+
 class OpenAPI(ObjectBase):
     """
     This class represents the root of the OpenAPI schema document, as defined
@@ -8,10 +9,10 @@ class OpenAPI(ObjectBase):
 
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
     """
-    __slots__ = ['openapi','info','servers','paths','components','security','tags',
-                 'externalDocs','_operation_map','_security', 'validation_mode',
-                 '_spec_errors']
-    required_fields=['openapi','info','paths']
+    __slots__ = ['openapi', 'info', 'servers', 'paths', 'components', 'tags',
+                 'security', 'externalDocs', '_operation_map', '_security',
+                 'validation_mode', '_spec_errors']
+    required_fields = ['openapi', 'info', 'paths']
 
     def __init__(self, raw_document, validate=False):
         """
@@ -31,7 +32,8 @@ class OpenAPI(ObjectBase):
         if validate:
             self._spec_errors = []
 
-        super(OpenAPI, self).__init__([], raw_document, self) # as the document root, we have no path
+        # as the document root, we have no path
+        super(OpenAPI, self).__init__([], raw_document, self)
 
         self._security = {}
 
@@ -42,11 +44,13 @@ class OpenAPI(ObjectBase):
 
         TODO - this should support more than just HTTP Auth
         """
-        if not security_scheme in self.components.securitySchemes:
+        if security_scheme not in self.components.securitySchemes:
             raise ValueError('{} does not accept security scheme {}'.format(
                 self.info.title, security_scheme))
 
         self._security = {security_scheme: value}
+
+    authenticate = authenticte
 
     def resolve_path(self, path):
         """
@@ -63,13 +67,14 @@ class OpenAPI(ObjectBase):
 
         for part in path:
             if isinstance(node, Map):
-                if part not in node: # pylint: disable=unsupported-membership-test
-                    raise ReferenceResolutionError(
-                        'Invalid path {} in Reference'.format(path))
+                if part not in node:  # pylint: disable=unsupported-membership-test
+                    err_msg = 'Invalid path {} in Reference'.format(path)
+                    raise ReferenceResolutionError(err_msg)
                 node = node.get(part)
             else:
                 if not hasattr(node, part):
-                    raise ReferenceResolutionError('Invalid path {} in Reference'.format(path))
+                    err_msg = 'Invalid path {} in Reference'.format(path)
+                    raise ReferenceResolutionError(err_msg)
                 node = getattr(node, part)
 
         return node
@@ -84,8 +89,8 @@ class OpenAPI(ObjectBase):
         :type error: SpecError
         """
         if not self.validation_mode:
-            raise RuntimeError("This client is not in Validation Mode, cannot "
-                               "record errors!")
+            raise RuntimeError('This client is not in Validation Mode, cannot '
+                               'record errors!')
         self._spec_errors.append(error)
 
     def errors(self):
@@ -97,8 +102,8 @@ class OpenAPI(ObjectBase):
         :rtype: list[SpecError]
         """
         if not self.validation_mode:
-            raise RuntimeError("This client is not in Validation Mode, cannot "
-                               "return errors!")
+            raise RuntimeError('This client is not in Validation Mode, cannot '
+                               'return errors!')
         return self._spec_errors
 
     # private methods
@@ -108,14 +113,14 @@ class OpenAPI(ObjectBase):
         """
         self._operation_map = {}
 
-        self.openapi = self._get('openapi', str)
-        self.info = self._get('info', 'Info')
-        self.servers = self._get('servers', ['Server'], is_list=True)
-        self.paths = self._get('paths', ['Path'], is_map=True)
-        self.components = self._get('components', ['Components'])
-        self.security = self._get('security', dict)
-        self.tags = self._get('tags', dict)
+        self.components   = self._get('components', ['Components'])
         self.externalDocs = self._get('externalDocs', dict)
+        self.info         = self._get('info', 'Info')
+        self.openapi      = self._get('openapi', str)
+        self.paths        = self._get('paths', ['Path'], is_map=True)
+        self.security     = self._get('security', dict)
+        self.servers      = self._get('servers', ['Server'], is_list=True)
+        self.tags         = self._get('tags', dict)
 
         # now that we've parsed _all_ the data, resolve all references
         self._resolve_references()
@@ -175,9 +180,9 @@ class OperationCallable:
     directly.
     """
     def __init__(self, operation, base_url, security):
+        self.base_url  = base_url
         self.operation = operation
-        self.base_url = base_url
-        self.security = security
+        self.security  = security
 
     def __call__(self, *args, **kwargs):
         return self.operation(self.base_url, *args, security=self.security,

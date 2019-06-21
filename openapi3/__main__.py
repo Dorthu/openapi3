@@ -3,6 +3,7 @@ import yaml
 
 from .openapi import OpenAPI
 
+
 def main():
     specfile = sys.argv[1]
 
@@ -18,10 +19,11 @@ def main():
         for e in errors:
             print('{}: {}'.format('.'.join(e.path), e.message[:300]))
         print()
-        print("{} errors".format(len(errors)))
+        print('{} errors'.format(len(errors)))
         sys.exit(1) # exit with error status
     else:
-        print("OK")
+        print('OK')
+
 
 if __name__ == '__main__':
     main()
