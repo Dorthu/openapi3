@@ -20,6 +20,7 @@ def main():
             print('{}: {}'.format('.'.join(e.path), e.message[:300]))
         print()
         print('{} errors'.format(len(errors)))
+        sys.exit(1) # exit with error status
     else:
         print('OK')
 
