@@ -120,7 +120,7 @@ class OpenAPI(ObjectBase):
         self.paths        = self._get('paths', ['Path'], is_map=True)
         self.security     = self._get('security', dict)
         self.servers      = self._get('servers', ['Server'], is_list=True)
-        self.tags         = self._get('tags', dict)
+        self.tags         = self._get('tags', ['Tag'], is_list=True)
 
         # now that we've parsed _all_ the data, resolve all references
         self._resolve_references()
