@@ -212,7 +212,11 @@ class ObjectBase(object):
                   otherwise False
         :rtype: bool
         """
-        # first, ensure that the dict's keys are valid in our slots
+        # if this isn't a dict, the spec is dreadfully wrong (and since no type
+        # will be able to parse this value, an appropriate error is returned)
+        if not isinstance(dct, dict):
+            return False
+        # ensure that the dict's keys are valid in our slots
         for key in dct.keys():
             if key.startswith('x-'):
                 # ignore spec extensions
