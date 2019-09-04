@@ -11,11 +11,6 @@ A Python `OpenAPI 3 Specification`_ client and validator for Python 3.
    :target: https://badge.fury.io/py/openapi3
 
 
-**NOTE**
-
-This is a work in progress, and may change significantly in the future.  Many
-features are presently absent, and many common cases may not be implemented.
-
 Validation Mode
 ---------------
 
@@ -69,7 +64,7 @@ HTTP basic authentication and HTTP digest authentication works like this::
 Roadmap
 -------
 
-The following still needs to be done:
+The following features are planned for the future:
 
 * Request body models, creation, and validation.
 * Parameters interface with validation and explicit typing.
