@@ -5,3 +5,4 @@ openapi.json
 openapi3.egg-info/*
 build/*
 dist/*
+*~
