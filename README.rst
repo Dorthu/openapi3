@@ -25,6 +25,7 @@ This library also functions as an interactive client for arbitrary OpenAPI 3
 specs. For example, using `Linode's OpenAPI 3 Specification`_ for reference::
 
    from openapi3 import OpenAPI
+   import yaml
 
    # load the spec file and read the yaml
    with open('openapi.yaml') as f:
