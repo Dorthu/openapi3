@@ -37,7 +37,7 @@ specs. For example, using `Linode's OpenAPI 3 Specification`_ for reference::
    # call operations and receive result models
    regions = api.call_getRegions()
 
-   # authenticate using a securityScheme defined in the spec's components.securtiySchemes
+   # authenticate using a securityScheme defined in the spec's components.securitySchemes
    api.authenticate('personalAccessToken', my_token)
 
    # call an operation that requires authentication
@@ -58,7 +58,7 @@ specs. For example, using `Linode's OpenAPI 3 Specification`_ for reference::
 
 HTTP basic authentication and HTTP digest authentication works like this::
 
-   # authenticate using a securityScheme defined in the spec's components.securtiySchemes
+   # authenticate using a securityScheme defined in the spec's components.securitySchemes
    # Tuple with (username, password) as second argument
    api.authenticate('basicAuth', ('username', 'password'))
 
