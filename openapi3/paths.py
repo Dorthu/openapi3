@@ -184,7 +184,7 @@ class Operation(ObjectBase):
 
     def _request_handle_body(self, data):
         if 'application/json' in self.requestBody.content:
-            if isinstance(data, dict):
+            if isinstance(data, dict) or isinstance(data, list):
                 body = json.dumps(data)
 
             if issubclass(type(data), Model):
