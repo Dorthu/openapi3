@@ -290,7 +290,7 @@ class Operation(ObjectBase):
                          (expected one of {})'''
             err_var = result.headers['Content-Type'], self.operationId, ','.join(expected_response.content.keys())
 
-            raise RuntimeError(err_msg.format(err_var))
+            raise RuntimeError(err_msg.format(*err_var))
 
         response_data = None
 
