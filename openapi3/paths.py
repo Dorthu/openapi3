@@ -114,7 +114,7 @@ class Operation(ObjectBase):
 
         # TODO - maybe make this generic
         if self.security is None:
-            self.security = []
+            self.security = self._root._get('security',  ['SecurityRequirement'], is_list=True)
 
         if self.parameters is None:
             self.parameters = []
