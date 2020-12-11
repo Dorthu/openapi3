@@ -1,4 +1,14 @@
+import sys
+
 from .errors import SpecError, ReferenceResolutionError
+
+IS_PYTHON_2 = False
+if sys.version_info[0] == 2:
+    IS_PYTHON_2 = True
+else:
+    # unicode was removed in python3, but we need to support both here, so define
+    # it in python 3 only
+    unicode = str
 
 
 class ObjectBase(object):
@@ -136,6 +146,14 @@ class ObjectBase(object):
                 if not isinstance(object_types, list):
                     # maybe don't accept not-lists
                     object_types = [object_types]
+
+                # in python2, some strings might come in as unicode if they have
+                # unicode-only characters in them.  This should allow us to accept
+                # them just as we would in python3
+                if IS_PYTHON_2:
+                    if str in object_types:
+                        object_types += [unicode]
+
 
                 if is_list:
                     if not isinstance(ret, list):
