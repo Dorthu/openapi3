@@ -199,7 +199,8 @@ class Operation(ObjectBase):
         else:
             raise NotImplementedError()
 
-    def request(self, base_url, security={}, data=None, parameters={}):
+    def request(self, base_url, security={}, data=None, parameters={}, verify=True,
+                session=None, raw_response=False):
         """
         Sends an HTTP request as described by this Path
 
@@ -211,6 +212,16 @@ class Operation(ObjectBase):
         :type security: dict{str: str}
         :param data: The request body to send.
         :type data: any, should match content/type
+        :param parameters: The parameters used to create the path
+        :type parameters: dict{str: str}
+        :param verify: Should we do an ssl verification on the request or not,
+                       In case str was provided, will use that as the CA.
+        :type verify: bool/str
+        :param session: a persistent request session
+        :type session: None, requests.Session
+        :param raw_response: If true, return the raw response instead of validating
+                             and exterpolating it.
+        :type raw_response: bool
         """
         # Set request method (e.g. 'GET')
         self._request = requests.Request(self.path[-1])

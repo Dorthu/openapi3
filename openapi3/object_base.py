@@ -196,6 +196,19 @@ class ObjectBase(object):
         return ret
 
     @classmethod
+    def key_contained(cls, key, target_list):
+        """
+        Returns whether the key is contained in the given list or not.
+        We use this specific function as to prevent usage of keywords we add "_"
+        to several parameters, and we still want to validate those parameters
+        """
+        if key.endswith("_"):
+            extra_key = key[:-1]
+        else:
+            extra_key = key + "_"
+        return key in target_list or extra_key in target_list
+
+    @classmethod
     def can_parse(cls, dct):
         """
         Returns True if this class can parse the given dict.  This is based on
@@ -222,13 +235,13 @@ class ObjectBase(object):
                 # ignore spec extensions
                 continue
 
-            if key not in cls.__slots__:
+            if not cls.key_contained(key, cls.__slots__):
                 # it has something we don't - probably not a match
                 return False
 
         # then, ensure that all required fields are present
         for key in cls.required_fields:
-            if key not in dct:
+            if not cls.key_contained(key, dct):
                 # it doesn't have everything we need - probably not a match
                 return False
 
