@@ -25,7 +25,7 @@ class Schema(ObjectBase):
                  'additionalProperties', 'description', 'format', 'default',
                  'nullable', 'discriminator', 'readOnly', 'writeOnly', 'xml',
                  'externalDocs', 'example', 'deprecated', '_model_type',
-                 '_request_model_type']
+                 '_request_model_type', '_resolved_allOfs']
     required_fields = []
 
     def _parse_data(self):
@@ -69,6 +69,8 @@ class Schema(ObjectBase):
         # self.minProperties
         # self.exclusiveMinimum
         # self.exclusiveMaximum
+
+        self._resolved_allOfs = False
 
         if self.type == 'array' and self.items is None:
             raise SpecError('{}: items is required when type is "array"'.format(
@@ -138,12 +140,14 @@ class Schema(ObjectBase):
         """
         Handles merging properties for allOfs
         """
-        if self.allOf:
-            print("Schema {} resolving allOf: {}".format(self.path, self.allOf))
+        if self._resolved_allOfs:
+            return
 
+        self._resolved_allOfs = True
+
+        if self.allOf:
             for c in self.allOf:
                 if isinstance(c, Schema):
-                    print("Handling {}".format(c))
                     self._merge(c)
 
     def _merge(self, other):
@@ -151,8 +155,13 @@ class Schema(ObjectBase):
         Merges this Schema with the other, preferring the other schema's values
         """
         for slot in self.__slots__:
+            if slot.startswith("_"):
+                # skip private members
+                continue
+
             my_value = getattr(self, slot)
             other_value = getattr(other, slot)
+
             if other_value:
                 # we got a value to merge
                 if isinstance(other_value, Schema):
@@ -162,16 +171,22 @@ class Schema(ObjectBase):
                     else:
                         setattr(self, slot, other_value)
                 elif isinstance(other_value, list):
-                    # we got a list - use the other one
-                    setattr(self, slot, other_value)
+                    # we got a list, combine them
+                    if my_value is None:
+                        my_value = []
+                    setattr(self, slot, my_value + other_value)
                 elif isinstance(other_value, dict) or isinstance(other_value, Map):
                     if my_value:
                         for k, v in my_value.items():
                             if k in other_value:
                                 if isinstance(v, Schema):
                                     v._merge(other_value[k])
+                                    continue
                                 else:
                                     my_value[k] = other_value[k]
+                        for ok, ov in other_value.items():
+                            if ok not in my_value:
+                                my_value[ok] = ov
                     else:
                         setattr(self, slot, other_value)
                 else:
