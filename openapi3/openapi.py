@@ -138,6 +138,7 @@ class OpenAPI(ObjectBase):
 
         # now that we've parsed _all_ the data, resolve all references
         self._resolve_references()
+        self._resolve_allOfs()
 
     def _get_callable(self, operation):
         """

@@ -449,6 +449,30 @@ class ObjectBase(object):
 
                 setattr(self, slot, resolved_list)
 
+    def _resolve_allOfs(self):
+        """
+        Walks object tree calling _resolve_allOf on each type.
+
+        Types can override this to handle allOf handling themselves.  Types that
+        do so should call the parent class' _resolve_allOf when they do
+        """
+        for slot in self.__slots__:
+            if slot.startswith("_"):
+                # no need to handle private members
+                continue
+
+            value = getattr(self, slot)
+
+            if issubclass(type(value), ObjectBase):
+                value._resolve_allOfs()
+            elif issubclass(type(value), Map):
+                for _, c in value.items():
+                    c._resolve_allOfs()
+            elif isinstance(value, list):
+                for c in value:
+                    if issubclass(type(c), ObjectBase) or issubclass(type(c), Map):
+                        c._resolve_allOfs()
+
 
 class Map(dict):
     """
