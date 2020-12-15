@@ -35,6 +35,7 @@ def test_allOf_resolution(petstore_expanded_spec):
     Tests that allOfs are resolved correctly
     """
     ref = petstore_exapnded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema
+    ref = petstore_expanded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema
 
     assert type(ref) == Schema
     assert ref.type == "object"
@@ -43,13 +44,25 @@ def test_allOf_resolution(petstore_expanded_spec):
     assert 'id' in ref.properties
     assert 'name' in ref.properties
     assert 'tag' in ref.properties
+    assert ref.type == "array"
+
+    items = ref.items
+    assert type(items) == Schema
+    assert sorted(items.required) == sorted(["id","name"])
+    assert len(items.properties) == 3
+    assert 'id' in items.properties
+    assert 'name' in items.properties
+    assert 'tag' in items.properties
 
     id_prop = ref.properties['id']
+    id_prop = items.properties['id']
     assert id_prop.type == "integer"
     assert id_prop.format == "int64"
 
     name = ref.properties['name']
+    name = items.properties['name']
     assert name.type == 'string'
 
     tag = ref.properties['tag']
+    tag = items.properties['tag']
     assert tag.type == 'string'
