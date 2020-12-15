@@ -4,6 +4,7 @@ python:
   - "3.6"
   - "3.7"
 install:
-  - pip install pylint requests PyYAML
+  - pip install pylint requests PyYAML pytest
 script:
+  - pytest
   - pylint openapi
