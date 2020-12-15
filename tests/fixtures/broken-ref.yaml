@@ -1,0 +1,11 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: This has a broken $ref in it
+paths:
+  /example:
+    get:
+      operationId: hasBrokenRef
+      responses:
+        '200':
+          $ref: '#/components/responses/Missing'
