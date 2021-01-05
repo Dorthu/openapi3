@@ -4,4 +4,4 @@ from .openapi import OpenAPI
 from . import info, servers, paths, general, schemas, components, security, tag, example
 from .errors import SpecError, ReferenceResolutionError
 
-__all__ = ['OpenAPI', 'SpecError', 'ReferenceResolvutionError']
+__all__ = ['OpenAPI', 'SpecError', 'ReferenceResolutionError']
