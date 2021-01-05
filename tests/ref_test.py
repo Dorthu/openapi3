@@ -29,22 +29,16 @@ def test_ref_resolution(petstore_expanded_spec):
     assert message.type == 'string'
 
 
-@pytest.mark.skip("This feature isn't merged yet")
 def test_allOf_resolution(petstore_expanded_spec):
     """
     Tests that allOfs are resolved correctly
     """
-    ref = petstore_exapnded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema
+    ref = petstore_expanded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema
     ref = petstore_expanded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema
 
     assert type(ref) == Schema
-    assert ref.type == "object"
-    assert ref.required == ["id","name"]
-    assert len(ref.properties) == 3
-    assert 'id' in ref.properties
-    assert 'name' in ref.properties
-    assert 'tag' in ref.properties
     assert ref.type == "array"
+    assert ref.items is not None
 
     items = ref.items
     assert type(items) == Schema
@@ -54,15 +48,15 @@ def test_allOf_resolution(petstore_expanded_spec):
     assert 'name' in items.properties
     assert 'tag' in items.properties
 
-    id_prop = ref.properties['id']
+    id_prop = items.properties['id']
     id_prop = items.properties['id']
     assert id_prop.type == "integer"
     assert id_prop.format == "int64"
 
-    name = ref.properties['name']
+    name = items.properties['name']
     name = items.properties['name']
     assert name.type == 'string'
 
-    tag = ref.properties['tag']
+    tag = items.properties['tag']
     tag = items.properties['tag']
     assert tag.type == 'string'
