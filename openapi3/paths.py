@@ -110,7 +110,7 @@ class Operation(ObjectBase):
         # gather all operations into the spec object
         if self.operationId is not None:
             # TODO - how to store without an operationId?
-            formatted_operation_id = self.operationId.format(" ", "_")
+            formatted_operation_id = self.operationId.replace(" ", "_")
             self._root._operation_map[formatted_operation_id] = self
 
         # TODO - maybe make this generic
