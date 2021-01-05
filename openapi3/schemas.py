@@ -152,7 +152,7 @@ class Schema(ObjectBase):
 
     def _merge(self, other):
         """
-        Merges this Schema with the other, preferring the other schema's values
+        Merges ``other`` into this schema, preferring to use the values in ``other``
         """
         for slot in self.__slots__:
             if slot.startswith("_"):
