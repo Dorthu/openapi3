@@ -1,4 +1,14 @@
+import sys
+
 from .errors import SpecError, ReferenceResolutionError
+
+IS_PYTHON_2 = False
+if sys.version_info[0] == 2:
+    IS_PYTHON_2 = True
+else:
+    # unicode was removed in python3, but we need to support both here, so define
+    # it in python 3 only
+    unicode = str
 
 
 class ObjectBase(object):
@@ -136,6 +146,16 @@ class ObjectBase(object):
                 if not isinstance(object_types, list):
                     # maybe don't accept not-lists
                     object_types = [object_types]
+
+                # if yaml loads a value that includes a unicode character in python2,
+                # that value will come in as a ``unicode`` type instead of a ``str``.
+                # For the purposes of this library, those are the same thing, so in
+                # python2 only, we'll include ``unicode`` for any element that
+                # accepts ``str`` types.
+                if IS_PYTHON_2:
+                    if str in object_types:
+                        object_types += [unicode]
+
 
                 if is_list:
                     if not isinstance(ret, list):
