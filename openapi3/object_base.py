@@ -147,9 +147,11 @@ class ObjectBase(object):
                     # maybe don't accept not-lists
                     object_types = [object_types]
 
-                # in python2, some strings might come in as unicode if they have
-                # unicode-only characters in them.  This should allow us to accept
-                # them just as we would in python3
+                # if yaml loads a value that includes a unicode character in pyton2,
+                # that value will come in as a ``unicode`` type instead of a ``str``.
+                # For the purposes of this library, those are the same thing, so in
+                # python2 only, we'll include ``unicode`` for any element that
+                # accepts ``str`` types.
                 if IS_PYTHON_2:
                     if str in object_types:
                         object_types += [unicode]
