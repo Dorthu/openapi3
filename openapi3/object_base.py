@@ -70,15 +70,33 @@ class ObjectBase(object):
         Returns a string representation of the parsed object
         """
         # TODO - why?
-        return str(self.__dict__())  # pylint: disable=not-callable
+        return "<{} {}>".format(type(self), self.path)
 
     def __dict__(self):
         """
         Returns this object as a dict, removing all empty keys.  This can be used
         to serialize a spec.
         """
-        return {k: getattr(self, k) for k in type(self).__slots__
+        d = {k: getattr(self, k) for k in type(self).__slots__
                 if getattr(self, k) is not None}
+        for k, v in d.items():
+            if hasattr(v, "__dict__"):
+                d[k] = v.__dict__()
+
+        return d
+
+    def __getstate__(self):
+        """
+        Allows pickling objects by returning a dict of all slotted values
+        """
+        return self.__dict__()
+
+    def __setstate__(self, state):
+        """
+        Allows unpickling objects
+        """
+        for k, v in state.items():
+            setattr(self, k, v)
 
     def _required_fields(self, *fields):
         """
