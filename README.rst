@@ -62,6 +62,13 @@ HTTP basic authentication and HTTP digest authentication works like this::
    # Tuple with (username, password) as second argument
    api.authenticate('basicAuth', ('username', 'password'))
 
+Running Tests
+-------------
+
+This project includes a test suite, run via ``pytest``.  To run the test suite,
+ensure that you've installed the dependencies and then run ``pytest`` in the root
+of this project.
+
 Roadmap
 -------
 
@@ -75,3 +82,4 @@ The following features are planned for the future:
 
 .. _OpenAPI 3 Specification: https://openapis.org
 .. _Linode's OpenAPI 3 Specification: https://developers.linode.com/api/v4
+
