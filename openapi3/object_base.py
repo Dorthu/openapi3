@@ -147,7 +147,7 @@ class ObjectBase(object):
                     # maybe don't accept not-lists
                     object_types = [object_types]
 
-                # if yaml loads a value that includes a unicode character in pyton2,
+                # if yaml loads a value that includes a unicode character in python2,
                 # that value will come in as a ``unicode`` type instead of a ``str``.
                 # For the purposes of this library, those are the same thing, so in
                 # python2 only, we'll include ``unicode`` for any element that
