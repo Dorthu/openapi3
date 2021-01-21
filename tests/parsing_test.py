@@ -27,3 +27,10 @@ def test_parsing_broken_refernece(broken_reference):
     """
     with pytest.raises(ReferenceResolutionError):
         spec = OpenAPI(broken_reference)
+
+
+def test_parsing_float_validation(float_validation_expanded):
+    """
+    Tests that `minimum` and similar validators work with floats.
+    """
+    _spec = OpenAPI(float_validation_expanded)

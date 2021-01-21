@@ -73,3 +73,11 @@ def broken_reference():
     Provides the parsed yaml for a spec with a broken reference
     """
     yield _get_parsed_yaml("broken-ref.yaml")
+
+
+@pytest.fixture
+def float_validation_expanded():
+    """
+    Provides the float-validation.yaml spec
+    """
+    yield _get_parsed_yaml("float-validation.yaml")

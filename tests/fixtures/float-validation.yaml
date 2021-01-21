@@ -1,0 +1,20 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Testing float validations
+paths:
+  /foo:
+    get:
+      responses:
+        '200':
+          description: foo
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: number
+                    format: double
+                    minimum: 0.0
+                    maximum: 1.0
