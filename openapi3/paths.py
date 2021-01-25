@@ -391,9 +391,9 @@ class Response(ObjectBase):
 
 class Link(ObjectBase):
     """
-    A `Link Object`_ describes a single Link from an API Operation Response to an API operation Request
+    A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
 
-    .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
+    .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
     """
     __slots__ = ['operationId', 'operationRef', 'description', 'parameters', 'requestBody', 'server']
 
