@@ -386,6 +386,29 @@ class Response(ObjectBase):
         self.description = self._get('description', str)
         raw_content      = self._get('content', dict)
         raw_headers      = self._get('headers', dict)
-        raw_links        = self._get('links', dict)
+        self.links       = self._get('links', ['Link'], is_map=True)
 
-        # TODO - raw_headers and raw_links
+
+class Link(ObjectBase):
+    """
+    A `Link Object`_ describes a single Link from an API Operation Response to an API operation Request
+
+    .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
+    """
+    __slots__ = ['operationId', 'operationRef', 'description', 'parameters', 'requestBody', 'server']
+
+    def _parse_data(self):
+        """
+        Implementation of :any:`ObjectBase._parse_data`
+        """
+        self.operationId  = self._get('operationId', str)
+        self.operationRef = self._get('operationRef', str)
+        self.description  = self._get('description', str)
+        self.parameters   = self._get('parameters', dict)
+        self.requestBody  = self._get('requestBody', dict)
+        self.server       = self._get('server', ['Server'])
+
+        if self.operationId and self.operationRef:
+            raise RuntimeError("operationId and operationRef are mutually exclusive, only one of them is allowed")
+        if not (self.operationId or self.operationRef):
+            raise RuntimeError("operationId and operationRef are mutually exclusive, one of them must be specified")
