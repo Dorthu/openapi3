@@ -33,8 +33,8 @@ class Schema(ObjectBase):
         Implementation of :any:`ObjectBase._parse_data`
         """
         self.title                = self._get('title', str)
-        self.maximum              = self._get('maximum', float)
-        self.minimum              = self._get('minimum', float)
+        self.maximum              = self._get('maximum', [int, float])
+        self.minimum              = self._get('minimum', [int, float])
         self.maxLength            = self._get('maxLength', int)
         self.minLength            = self._get('minLength', int)
         self.pattern              = self._get('pattern', str)

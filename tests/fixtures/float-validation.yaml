@@ -13,7 +13,12 @@ paths:
               schema:
                 type: object
                 properties:
-                  value:
+                  integer:
+                    type: integer
+                    format: int32
+                    minimum: 0
+                    maximum: 1
+                  real:
                     type: number
                     format: double
                     minimum: 0.0
