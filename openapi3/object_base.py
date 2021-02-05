@@ -72,24 +72,20 @@ class ObjectBase(object):
         # TODO - why?
         return "<{} {}>".format(type(self), self.path)
 
-    def __dict__(self):
+    def __getstate__(self):
         """
         Returns this object as a dict, removing all empty keys.  This can be used
         to serialize a spec.
+
+        Allows pickling objects by returning a dict of all slotted values.
         """
         d = {k: getattr(self, k) for k in type(self).__slots__
                 if getattr(self, k) is not None}
         for k, v in d.items():
-            if hasattr(v, "__dict__"):
-                d[k] = v.__dict__()
+            if hasattr(v, "__getstate__"):
+                d[k] = v.__getstate__()
 
         return d
-
-    def __getstate__(self):
-        """
-        Allows pickling objects by returning a dict of all slotted values
-        """
-        return self.__dict__()
 
     def __setstate__(self, state):
         """
