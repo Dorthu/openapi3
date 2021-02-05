@@ -59,9 +59,9 @@ class Schema(ObjectBase):
         self.xml                  = self._get('xml', dict)  # 'XML'
         self.externalDocs         = self._get('externalDocs', dict)  # 'ExternalDocs'
         self.deprecated           = self._get('deprecated', bool)
+        self.example              = self._get('example', [dict, list, str, int, float, bool])
 
         # TODO - Implement the following properties:
-        # self.example
         # self.multipleOf
         # self.not
         # self.uniqueItems

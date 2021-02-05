@@ -27,3 +27,16 @@ def test_parsing_broken_refernece(broken_reference):
     """
     with pytest.raises(ReferenceResolutionError):
         spec = OpenAPI(broken_reference)
+
+
+def test_object_example(obj_example_expanded):
+    """
+    Tests that `example` exists.
+    """
+    spec = OpenAPI(obj_example_expanded)
+    schema = spec.paths['/check-dict'].get.responses['200'].content['application/json'].schema
+    assert isinstance(schema.example, dict)
+    assert isinstance(schema.example['real'], float)
+
+    schema = spec.paths['/check-str'].get.responses['200'].content['text/plain']
+    assert isinstance(schema.example, str)
