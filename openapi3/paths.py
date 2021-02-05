@@ -325,7 +325,7 @@ class SecurityRequirement(ObjectBase):
         """
         return len(dct.keys()) == 1 and isinstance([c for c in dct.values()][0], list)
 
-    def __dict__(self):
+    def __getstate__(self):
         return {self.name: self.types}
 
 
