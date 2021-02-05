@@ -11,6 +11,17 @@ else:
     unicode = str
 
 
+def _asdict(x):
+    if hasattr(x, '__getstate__'):
+        return x.__getstate__()
+    elif isinstance(x, dict):
+        return {k: _asdict(v) for k, v in x.items()}
+    elif isinstance(x, (list, tuple, set)):
+        return x.__class__(_asdict(y) for y in x)
+    else:
+        return x
+
+
 class ObjectBase(object):
     """
     The base class for all schema objects.  Includes helpers for common schema-
@@ -79,13 +90,10 @@ class ObjectBase(object):
 
         Allows pickling objects by returning a dict of all slotted values.
         """
-        d = {k: getattr(self, k) for k in type(self).__slots__
-                if getattr(self, k) is not None}
-        for k, v in d.items():
-            if hasattr(v, "__getstate__"):
-                d[k] = v.__getstate__()
-
-        return d
+        return _asdict({
+            k: getattr(self, k) for k in type(self).__slots__
+            if getattr(self, k) is not None
+        })
 
     def __setstate__(self, state):
         """
