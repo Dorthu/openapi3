@@ -253,8 +253,11 @@ class Operation(ObjectBase):
 
         self._request_handle_parameters(parameters)
 
+        # get settings from environment
+        settings = self._session.merge_environment_settings(self._request.url, {}, None, None, None)
+
         # send the prepared request
-        result = self._session.send(self._request.prepare())
+        result = self._session.send(self._request.prepare(), **settings)
 
         # spec enforces these are strings
         status_code = str(result.status_code)
