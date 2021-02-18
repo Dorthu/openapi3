@@ -16,7 +16,13 @@ class OpenAPI(ObjectBase):
                  '_spec_errors', '_ssl_verify', '_session']
     required_fields=['openapi','info','paths']
 
-    def __init__(self, raw_document, validate=False, ssl_verify=None, use_session=False):
+    def __init__(
+            self,
+            raw_document,
+            validate=False,
+            ssl_verify=None,
+            use_session=False,
+            session_factory=requests.Session):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -49,7 +55,7 @@ class OpenAPI(ObjectBase):
 
         self._session = None
         if use_session:
-            self._session = requests.Session()
+            self._session = session_factory()
 
     # public methods
     def authenticte(self, security_scheme, value):
