@@ -364,7 +364,7 @@ class MediaType(ObjectBase):
         """
         self.schema   = self._get('schema', ['Schema', 'Reference'])
         self.example  = self._get('example', str)  # 'any' type
-        self.examples = self._get('examples', ['Reference'], is_map=True)  # ['Example','Reference']
+        self.examples = self._get('examples', ['Example', 'Reference'], is_map=True)  # ['Example','Reference']
         self.encoding = self._get('encoding', dict)  # Map['Encoding']
 
 
