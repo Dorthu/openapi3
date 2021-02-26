@@ -73,3 +73,11 @@ def broken_reference():
     Provides the parsed yaml for a spec with a broken reference
     """
     yield _get_parsed_yaml("broken-ref.yaml")
+
+
+@pytest.fixture
+def has_bad_parameter_name():
+    """
+    Provides the parsed yaml for a spec with a bad parameter name
+    """
+    yield _get_parsed_yaml("bad-parameter-name.yaml")

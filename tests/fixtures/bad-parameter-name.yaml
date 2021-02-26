@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: This has a mismatched parameter name.
+paths:
+  /example/{name}:
+    get:
+      parameters:
+      - in: path
+        name: different
+        required: true
+        schema:
+          type: string
+      operationId: example
+      responses:
+        '200':
+          description: Success!
+          content:
+            application/json:
+              schema:
+                type: object
