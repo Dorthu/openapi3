@@ -97,7 +97,7 @@ class Parameter(ObjectBase):
         # required is required and must be True if this parameter is in the path
         if self.in_ == "path" and self.required is not True:
             err_msg = 'Parameter {} must be required since it is in the path'
-            raise SpecError(err_msg.format(self.get_path()))
+            raise SpecError(err_msg.format(self.get_path()), path=self.path)
 
 
 class Operation(ObjectBase):
@@ -134,7 +134,7 @@ class Operation(ObjectBase):
         if self.operationId is not None:
             # TODO - how to store without an operationId?
             formatted_operation_id = self.operationId.replace(" ", "_")
-            self._root._operation_map[formatted_operation_id] = self
+            self._root._register_operation(formatted_operation_id, self)
 
         # TODO - maybe make this generic
         if self.security is None:
