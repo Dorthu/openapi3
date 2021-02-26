@@ -27,3 +27,11 @@ def test_parsing_broken_refernece(broken_reference):
     """
     with pytest.raises(ReferenceResolutionError):
         spec = OpenAPI(broken_reference)
+
+def test_parsing_wrong_parameter_name(has_bad_parameter_name):
+    """
+    Tests that parsing fails if parameter name for path parameters aren't
+    actually in the path.
+    """
+    with pytest.raises(SpecError, match="Parameter name not found in path: different"):
+        spec = OpenAPI(has_bad_parameter_name)

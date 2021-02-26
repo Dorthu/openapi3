@@ -1,4 +1,5 @@
 import json
+import re
 import requests
 
 try:
@@ -9,6 +10,18 @@ except ImportError:
 from .errors import SpecError
 from .object_base import ObjectBase
 from .schemas import Model
+
+
+def _validate_parameters(instance):
+    """
+    Ensures that all parameters for this path are valid
+    """
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9]+)}', instance.path[1])
+
+    for c in instance.parameters:
+        if c.in_ == 'path':
+            if c.name not in allowed_path_parameters:
+                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance.path)
 
 
 class Path(ObjectBase):
@@ -42,6 +55,16 @@ class Path(ObjectBase):
         if self.parameters is None:
             # this will be iterated over later
             self.parameters = []
+
+    def _resolve_references(self):
+        """
+        Overloaded _resolve_references to allow us to verify parameters after
+        we've got all references settled.
+        """
+        super(__class__, self)._resolve_references()
+
+        # this will raise if parameters are invalid
+        _validate_parameters(self)
 
 
 class Parameter(ObjectBase):
@@ -125,6 +148,16 @@ class Operation(ObjectBase):
 
         # Store request object
         self._request = requests.Request()
+
+    def _resolve_references(self):
+        """
+        Overloaded _resolve_references to allow us to verify parameters after
+        we've got all references settled.
+        """
+        super(__class__, self)._resolve_references()
+
+        # this will raise if parameters are invalid
+        _validate_parameters(self)
 
     def _request_handle_secschemes(self, security_requirement, value):
         ss = self._root.components.securitySchemes[security_requirement.name]
