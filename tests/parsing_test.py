@@ -28,6 +28,7 @@ def test_parsing_broken_refernece(broken_reference):
     with pytest.raises(ReferenceResolutionError):
         spec = OpenAPI(broken_reference)
 
+
 def test_parsing_wrong_parameter_name(has_bad_parameter_name):
     """
     Tests that parsing fails if parameter name for path parameters aren't
@@ -35,3 +36,11 @@ def test_parsing_wrong_parameter_name(has_bad_parameter_name):
     """
     with pytest.raises(SpecError, match="Parameter name not found in path: different"):
         spec = OpenAPI(has_bad_parameter_name)
+
+
+def test_parsing_dupe_operation_id(dupe_op_id):
+    """
+    Tests taht duplicate operation Ids are an error
+    """
+    with pytest.raises(SpecError, match="Duplicate operationId dupe"):
+        spec = OpenAPI(dupe_op_id)
