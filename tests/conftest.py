@@ -89,3 +89,11 @@ def dupe_op_id():
     A spec with a duplicate operation ID
     """
     yield _get_parsed_yaml("dupe-operation-ids.yaml")
+
+
+@pytest.fixture
+def parameter_with_underscores():
+    """
+    A valid spec with underscores in a path parameter
+    """
+    yield _get_parsed_yaml("parameter-with-underscores.yaml")

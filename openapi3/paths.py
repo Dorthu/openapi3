@@ -16,7 +16,7 @@ def _validate_parameters(instance):
     """
     Ensures that all parameters for this path are valid
     """
-    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9]+)}', instance.path[1])
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', instance.path[1])
 
     for c in instance.parameters:
         if c.in_ == 'path':
@@ -130,6 +130,10 @@ class Operation(ObjectBase):
         raw_servers       = self._get('servers', list)
         # self.callbacks  = self._get('callbacks', dict) TODO
 
+        # default parameters to an empty list for processing later
+        if self.parameters is None:
+            self.parameters = []
+
         # gather all operations into the spec object
         if self.operationId is not None:
             # TODO - how to store without an operationId?
@@ -139,9 +143,6 @@ class Operation(ObjectBase):
         # TODO - maybe make this generic
         if self.security is None:
             self.security = self._root._get('security',  ['SecurityRequirement'], is_list=True) or []
-
-        if self.parameters is None:
-            self.parameters = []
 
         # Store session object
         self._session = requests.Session()

@@ -44,3 +44,10 @@ def test_parsing_dupe_operation_id(dupe_op_id):
     """
     with pytest.raises(SpecError, match="Duplicate operationId dupe"):
         spec = OpenAPI(dupe_op_id)
+
+
+def test_parsing_parameter_name_with_underscores(parameter_with_underscores):
+    """
+    Tests that path parameters with underscores in them are accepted
+    """
+    spec = OpenAPI(parameter_with_underscores)
