@@ -16,7 +16,7 @@ def _validate_parameters(instance):
     """
     Ensures that all parameters for this path are valid
     """
-    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9]+)}', instance.path[1])
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', instance.path[1])
 
     for c in instance.parameters:
         if c.in_ == 'path':
