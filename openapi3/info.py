@@ -30,6 +30,7 @@ class Contact(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#contactObject
     """
     __slots__ = ['name', 'url', 'email']
+    required_fields = ['name', 'url', 'email']
 
     def _parse_data(self):
         """

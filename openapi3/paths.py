@@ -1,4 +1,5 @@
 import json
+import re
 import requests
 
 try:
@@ -9,6 +10,18 @@ except ImportError:
 from .errors import SpecError
 from .object_base import ObjectBase
 from .schemas import Model
+
+
+def _validate_parameters(instance):
+    """
+    Ensures that all parameters for this path are valid
+    """
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', instance.path[1])
+
+    for c in instance.parameters:
+        if c.in_ == 'path':
+            if c.name not in allowed_path_parameters:
+                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance.path)
 
 
 class Path(ObjectBase):
@@ -43,6 +56,16 @@ class Path(ObjectBase):
             # this will be iterated over later
             self.parameters = []
 
+    def _resolve_references(self):
+        """
+        Overloaded _resolve_references to allow us to verify parameters after
+        we've got all references settled.
+        """
+        super(__class__, self)._resolve_references()
+
+        # this will raise if parameters are invalid
+        _validate_parameters(self)
+
 
 class Parameter(ObjectBase):
     """
@@ -74,7 +97,7 @@ class Parameter(ObjectBase):
         # required is required and must be True if this parameter is in the path
         if self.in_ == "path" and self.required is not True:
             err_msg = 'Parameter {} must be required since it is in the path'
-            raise SpecError(err_msg.format(self.get_path()))
+            raise SpecError(err_msg.format(self.get_path()), path=self.path)
 
 
 class Operation(ObjectBase):
@@ -107,24 +130,35 @@ class Operation(ObjectBase):
         raw_servers       = self._get('servers', list)
         # self.callbacks  = self._get('callbacks', dict) TODO
 
+        # default parameters to an empty list for processing later
+        if self.parameters is None:
+            self.parameters = []
+
         # gather all operations into the spec object
         if self.operationId is not None:
             # TODO - how to store without an operationId?
             formatted_operation_id = self.operationId.replace(" ", "_")
-            self._root._operation_map[formatted_operation_id] = self
+            self._root._register_operation(formatted_operation_id, self)
 
         # TODO - maybe make this generic
         if self.security is None:
             self.security = self._root._get('security',  ['SecurityRequirement'], is_list=True) or []
-
-        if self.parameters is None:
-            self.parameters = []
 
         # Store session object
         self._session = requests.Session()
 
         # Store request object
         self._request = requests.Request()
+
+    def _resolve_references(self):
+        """
+        Overloaded _resolve_references to allow us to verify parameters after
+        we've got all references settled.
+        """
+        super(__class__, self)._resolve_references()
+
+        # this will raise if parameters are invalid
+        _validate_parameters(self)
 
     def _request_handle_secschemes(self, security_requirement, value):
         ss = self._root.components.securitySchemes[security_requirement.name]

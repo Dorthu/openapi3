@@ -75,6 +75,29 @@ def broken_reference():
     yield _get_parsed_yaml("broken-ref.yaml")
 
 
+def has_bad_parameter_name():
+    """
+    Provides the parsed yaml for a spec with a bad parameter name
+    """
+    yield _get_parsed_yaml("bad-parameter-name.yaml")
+
+
+@pytest.fixture
+def dupe_op_id():
+    """
+    A spec with a duplicate operation ID
+    """
+    yield _get_parsed_yaml("dupe-operation-ids.yaml")
+
+
+@pytest.fixture
+def parameter_with_underscores():
+    """
+    A valid spec with underscores in a path parameter
+    """
+    yield _get_parsed_yaml("parameter-with-underscores.yaml")
+
+
 @pytest.fixture
 def float_validation_expanded():
     """

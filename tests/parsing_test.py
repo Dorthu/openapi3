@@ -29,6 +29,30 @@ def test_parsing_broken_refernece(broken_reference):
         spec = OpenAPI(broken_reference)
 
 
+def test_parsing_wrong_parameter_name(has_bad_parameter_name):
+    """
+    Tests that parsing fails if parameter name for path parameters aren't
+    actually in the path.
+    """
+    with pytest.raises(SpecError, match="Parameter name not found in path: different"):
+        spec = OpenAPI(has_bad_parameter_name)
+
+
+def test_parsing_dupe_operation_id(dupe_op_id):
+    """
+    Tests that duplicate operation Ids are an error
+    """
+    with pytest.raises(SpecError, match="Duplicate operationId dupe"):
+        spec = OpenAPI(dupe_op_id)
+
+
+def test_parsing_parameter_name_with_underscores(parameter_with_underscores):
+    """
+    Tests that path parameters with underscores in them are accepted
+    """
+    spec = OpenAPI(parameter_with_underscores)
+
+
 def test_parsing_float_validation(float_validation_expanded):
     """
     Tests that `minimum` and similar validators work with floats.
