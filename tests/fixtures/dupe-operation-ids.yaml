@@ -1,0 +1,25 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: This has a duplicate operationId
+paths:
+  /example:
+    get:
+      operationId: dupe
+      responses:
+        '200':
+          description: The response
+          content:
+            application/json:
+              schema:
+                type: object
+  /example2:
+    get:
+      operationId: dupe
+      responses:
+        '200':
+          description: The response
+          content:
+            application/json:
+              schema:
+                type: object

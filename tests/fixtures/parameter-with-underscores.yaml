@@ -1,0 +1,21 @@
+openapi: 3.1.0
+info:
+  version: 1.0.0
+  title: test spec
+paths:
+  /test/{parameter_with_underscores}:
+    parameters:
+      - name: parameter_with_underscores
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: test
+      responses:
+        '200':
+          description: test
+          content:
+            application/json:
+              schema:
+                type: object

@@ -1,7 +1,7 @@
 import requests
 
 from .object_base import ObjectBase, Map
-from .errors import ReferenceResolutionError
+from .errors import ReferenceResolutionError, SpecError
 
 
 class OpenAPI(ObjectBase):
@@ -121,6 +121,20 @@ class OpenAPI(ObjectBase):
         return self._spec_errors
 
     # private methods
+    def _register_operation(self, operation_id, operation):
+        """
+        Adds an Operation to this spec's _operation_map, raising an error if the
+        OperationId has already been registered.
+
+        :param operation_id: The operation ID to register
+        :type operation_id: str
+        :param operation: The operation to register
+        :type operation: Operation
+        """
+        if operation_id in self._operation_map:
+            raise SpecError("Duplicate operationId {}".format(operation_id), path=operation.path)
+        self._operation_map[operation_id] = operation
+
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
