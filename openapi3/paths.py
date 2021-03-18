@@ -188,6 +188,7 @@ class Operation(ObjectBase):
 
     def _request_handle_parameters(self, parameters={}):
         # Parameters
+        path_parameters = {}
         accepted_parameters = {}
         p = self.parameters + self._root.paths[self.path[-2]].parameters
 
@@ -206,7 +207,10 @@ class Operation(ObjectBase):
                 continue
 
             if spec.in_ == 'path':
-                self._request.url = self._request.url.format(**{name: value})
+                # The string method `format` is incapable of partial updates,
+                # as such we need to collect all the path parameters before
+                # applying them to the format string.
+                path_parameters[name] = value
 
             if spec.in_ == 'query':
                 self._request.params[name]  = value
@@ -216,6 +220,8 @@ class Operation(ObjectBase):
 
             if spec.in_ == 'cookie':
                 self._request.cookies[name] = value
+
+        self._request.url = self._request.url.format(**path_parameters)
 
     def _request_handle_body(self, data):
         if 'application/json' in self.requestBody.content:
