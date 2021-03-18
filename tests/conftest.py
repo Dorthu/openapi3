@@ -112,3 +112,11 @@ def float_validation_expanded():
     Provides the float-validation.yaml spec
     """
     yield _get_parsed_yaml("float-validation.yaml")
+
+
+@pytest.fixture
+def has_bad_parameter_name():
+    """
+    Provides a spec with a bad parameter name
+    """
+    yield _get_parsed_yaml("bad-parameter-name.yaml")
