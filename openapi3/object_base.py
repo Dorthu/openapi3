@@ -11,6 +11,17 @@ else:
     unicode = str
 
 
+def _asdict(x):
+    if hasattr(x, '__getstate__'):
+        return x.__getstate__()
+    elif isinstance(x, dict):
+        return {k: _asdict(v) for k, v in x.items()}
+    elif isinstance(x, (list, tuple, set)):
+        return x.__class__(_asdict(y) for y in x)
+    else:
+        return x
+
+
 class ObjectBase(object):
     """
     The base class for all schema objects.  Includes helpers for common schema-
@@ -72,24 +83,16 @@ class ObjectBase(object):
         # TODO - why?
         return "<{} {}>".format(type(self), self.path)
 
-    def __dict__(self):
+    def __getstate__(self):
         """
         Returns this object as a dict, removing all empty keys.  This can be used
         to serialize a spec.
-        """
-        d = {k: getattr(self, k) for k in type(self).__slots__
-                if getattr(self, k) is not None}
-        for k, v in d.items():
-            if hasattr(v, "__dict__"):
-                d[k] = v.__dict__()
 
-        return d
-
-    def __getstate__(self):
+        Allows pickling objects by returning a dict of all slotted values.
         """
-        Allows pickling objects by returning a dict of all slotted values
-        """
-        return self.__dict__()
+        return _asdict({
+            k: getattr(self, k) for k in type(self).__slots__ if hasattr(self, k)
+        })
 
     def __setstate__(self, state):
         """
