@@ -53,6 +53,19 @@ def test_parsing_parameter_name_with_underscores(parameter_with_underscores):
     spec = OpenAPI(parameter_with_underscores)
 
 
+def test_object_example(obj_example_expanded):
+    """
+    Tests that `example` exists.
+    """
+    spec = OpenAPI(obj_example_expanded)
+    schema = spec.paths['/check-dict'].get.responses['200'].content['application/json'].schema
+    assert isinstance(schema.example, dict)
+    assert isinstance(schema.example['real'], float)
+
+    schema = spec.paths['/check-str'].get.responses['200'].content['text/plain']
+    assert isinstance(schema.example, str)
+
+    
 def test_parsing_float_validation(float_validation_expanded):
     """
     Tests that `minimum` and similar validators work with floats.

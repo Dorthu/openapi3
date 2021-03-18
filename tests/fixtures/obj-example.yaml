@@ -1,0 +1,30 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Object example validations
+paths:
+  /check-dict:
+    get:
+      responses:
+        '200':
+          description: Checking example dict
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  integer:
+                    type: integer
+                  real:
+                    type: number
+                example:
+                  integer: 42
+                  real: 0.5
+  /check-str:
+    get:
+      responses:
+        '200':
+          description: Checking example string
+          content:
+            'text/plain':
+                example: 'Hello'
