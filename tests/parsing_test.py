@@ -64,3 +64,16 @@ def test_object_example(obj_example_expanded):
 
     schema = spec.paths['/check-str'].get.responses['200'].content['text/plain']
     assert isinstance(schema.example, str)
+
+    
+def test_parsing_float_validation(float_validation_expanded):
+    """
+    Tests that `minimum` and similar validators work with floats.
+    """
+    spec = OpenAPI(float_validation_expanded)
+    properties = spec.paths['/foo'].get.responses['200'].content['application/json'].schema.properties
+
+    assert isinstance(properties['integer'].minimum, int)
+    assert isinstance(properties['integer'].maximum, int)
+    assert isinstance(properties['real'].minimum, float)
+    assert isinstance(properties['real'].maximum, float)

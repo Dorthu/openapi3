@@ -75,7 +75,6 @@ def broken_reference():
     yield _get_parsed_yaml("broken-ref.yaml")
 
 
-@pytest.fixture
 def has_bad_parameter_name():
     """
     Provides the parsed yaml for a spec with a bad parameter name
@@ -105,3 +104,11 @@ def obj_example_expanded():
     Provides the obj-example.yaml spec
     """
     yield _get_parsed_yaml("obj-example.yaml")
+
+    
+@pytest.fixture
+def float_validation_expanded():
+    """
+    Provides the float-validation.yaml spec
+    """
+    yield _get_parsed_yaml("float-validation.yaml")
