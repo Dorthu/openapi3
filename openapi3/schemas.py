@@ -59,7 +59,7 @@ class Schema(ObjectBase):
         self.xml                  = self._get('xml', dict)  # 'XML'
         self.externalDocs         = self._get('externalDocs', dict)  # 'ExternalDocs'
         self.deprecated           = self._get('deprecated', bool)
-        self.example              = self._get('example', [dict, list, str, int, float, bool])
+        self.example              = self._get('example', "*")
 
         # TODO - Implement the following properties:
         # self.multipleOf

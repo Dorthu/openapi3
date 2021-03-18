@@ -143,7 +143,9 @@ class ObjectBase(object):
         :type field: str
         :param object_types: The types of Objects that are accepted.  One of
                              these types will be returned, or the spec will be
-                             considered invalid.
+                             considered invalid.  If the magic string '*' is
+                             passed in, it must be the only accepted type, and
+                             all types will be accepted.
         :type object_types: list[str or Type]
         :param is_list: If true, this should return a List of object of the give
                         types.
@@ -164,6 +166,9 @@ class ObjectBase(object):
                 if not isinstance(object_types, list):
                     # maybe don't accept not-lists
                     object_types = [object_types]
+
+                if '*' in object_types and len(object_types) != 1:
+                    raise ValueError("Fields that accept any type must not specify any other types!")
 
                 # if yaml loads a value that includes a unicode character in python2,
                 # that value will come in as a ``unicode`` type instead of a ``str``.
@@ -196,6 +201,10 @@ class ObjectBase(object):
                     found_type = False
 
                     for t in object_types:
+                        if t == "*":
+                            found_type = True
+                            break
+
                         if t == str:
                             # try to parse everything else first
                             continue
