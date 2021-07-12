@@ -293,8 +293,11 @@ class Operation(ObjectBase):
 
         self._request_handle_parameters(parameters)
 
+        if session is None:
+            session = self._session
+
         # send the prepared request
-        result = self._session.send(self._request.prepare())
+        result = session.send(self._request.prepare())
 
         # spec enforces these are strings
         status_code = str(result.status_code)
