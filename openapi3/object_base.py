@@ -231,9 +231,17 @@ class ObjectBase(object):
                             found_type = True
 
                     if not found_type:
+                        if len(object_types) == 1:
+                            if isinstance(object_types[0], str):
+                                expected_type = ObjectBase.get_object_type(object_types[0])
+                                raise SpecError('Expected {}.{} to be of type {}, with required fields {}'.format(
+                                        self.get_path(), field, object_types[0],
+                                        expected_type.required_fields),
+                                    path=self.path,
+                                    element=self)
                         raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
-                            self.get_path(), field, ','.join([str(c) for c in object_types]),
-                            type(ret)),
+                                self.get_path(), field, ','.join([str(c) for c in object_types]),
+                                type(ret)),
                             path=self.path,
                             element=self)
         except SpecError as e:

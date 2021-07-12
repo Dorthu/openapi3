@@ -17,7 +17,7 @@ def test_parsing_fails(broken):
     """
     Tests that broken specs fail to parse
     """
-    with pytest.raises(SpecError):
+    with pytest.raises(SpecError, match=r"Expected .info to be of type Info, with required fields \['title', 'version'\]" ):
         spec = OpenAPI(broken)
 
 
