@@ -24,7 +24,8 @@ class Schema(ObjectBase):
                  'allOf', 'oneOf', 'anyOf', 'not', 'items', 'properties',
                  'additionalProperties', 'description', 'format', 'default',
                  'nullable', 'discriminator', 'readOnly', 'writeOnly', 'xml',
-                 'externalDocs', 'example', 'deprecated', '_model_type',
+                 'externalDocs', 'example', 'deprecated', 'contentEncoding',
+                 'contentMediaType', 'contentSchema', '_model_type',
                  '_request_model_type', '_resolved_allOfs']
     required_fields = []
 
@@ -60,6 +61,9 @@ class Schema(ObjectBase):
         self.externalDocs         = self._get('externalDocs', dict)  # 'ExternalDocs'
         self.deprecated           = self._get('deprecated', bool)
         self.example              = self._get('example', "*")
+        self.contentEncoding      = self._get('contentEncoding', str)
+        self.contentMediaType     = self._get('contentMediaType', str)
+        self.contentSchema        = self._get('contentSchema', str)
 
         # TODO - Implement the following properties:
         # self.multipleOf
