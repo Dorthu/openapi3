@@ -120,3 +120,19 @@ def has_bad_parameter_name():
     Provides a spec with a bad parameter name
     """
     yield _get_parsed_yaml("bad-parameter-name.yaml")
+
+
+@pytest.fixture
+def with_links():
+    """
+    Provides a spec with links defined
+    """
+    yield _get_parsed_yaml("with-links.yaml")
+
+
+@pytest.fixture
+def with_broken_links():
+    """
+    Provides a spec with broken links defined
+    """
+    yield _get_parsed_yaml("with-broken-links.yaml")

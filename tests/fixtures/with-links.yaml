@@ -1,0 +1,53 @@
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: Example spec with valid links
+paths:
+  /with-links:
+    get:
+      operationId: withLinks
+      responses:
+        '200':
+          description: This has links
+          content:
+            applicaton/json:
+              schema:
+                type: object
+                properties:
+                  test:
+                    type: string
+                    description: A test response fields
+                    example: foobar
+          links:
+            exampleWithOperationId:
+              operationId: withLinksTwo
+              parameters:
+                param: baz
+  /with-links-two/{param}:
+    parameters:
+      - name: param
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: withLinksTwo
+      responses:
+        '200':
+          description: This has links too
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  test2:
+                    type: string
+                    description: Another test response
+                    example: foobaz
+          links:
+            exampleWithRef:
+              $ref: '#/components/links/exampleWithOperationRef'
+components:
+  links:
+    exampleWithOperationRef:
+      operationRef: '/with-links'

@@ -77,3 +77,37 @@ def test_parsing_float_validation(float_validation_expanded):
     assert isinstance(properties['integer'].maximum, int)
     assert isinstance(properties['real'].minimum, float)
     assert isinstance(properties['real'].maximum, float)
+
+
+def test_parsing_with_links(with_links):
+    """
+    Tests that "links" parses correctly
+    """
+    spec = OpenAPI(with_links)
+
+    assert "exampleWithOperationRef" in spec.components.links
+    assert spec.components.links["exampleWithOperationRef"].operationRef == "/with-links"
+
+    response_a = spec.paths["/with-links"].get.responses["200"]
+    assert "exampleWithOperationId" in response_a.links
+    assert response_a.links["exampleWithOperationId"].operationId == "withLinksTwo"
+
+    response_b = spec.paths["/with-links-two/{param}"].get.responses["200"]
+    assert "exampleWithRef" in response_b.links
+    assert response_b.links["exampleWithRef"] == spec.components.links["exampleWithOperationRef"]
+
+
+def test_parsing_broken_links(with_broken_links):
+    """
+    Tests that broken "links" values error properly
+    """
+    spec = OpenAPI(with_broken_links, validate=True)
+
+    errors = spec.errors()
+
+    assert len(errors) == 2
+    error_strs = [str(e) for e in errors]
+    assert sorted([
+        "operationId and operationRef are mutually exclusive, only one of them is allowed",
+        "operationId and operationRef are mutually exclusive, one of them must be specified",
+    ]) == sorted(error_strs)
