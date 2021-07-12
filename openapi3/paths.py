@@ -426,7 +426,7 @@ class Response(ObjectBase):
         self.description = self._get('description', str)
         raw_content      = self._get('content', dict)
         raw_headers      = self._get('headers', dict)
-        self.links       = self._get('links', ['Link'], is_map=True)
+        self.links       = self._get('links', ['Link', 'Reference'], is_map=True)
 
 
 class Link(ObjectBase):
@@ -449,6 +449,6 @@ class Link(ObjectBase):
         self.server       = self._get('server', ['Server'])
 
         if self.operationId and self.operationRef:
-            raise RuntimeError("operationId and operationRef are mutually exclusive, only one of them is allowed")
+            raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
         if not (self.operationId or self.operationRef):
-            raise RuntimeError("operationId and operationRef are mutually exclusive, one of them must be specified")
+            raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")
