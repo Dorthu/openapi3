@@ -22,6 +22,60 @@ def _asdict(x):
         return x
 
 
+def raise_on_unknown_type(parent, field, object_types, found):
+    """
+    Raises a SpecError describing a situation where an unknown type was given.
+    This function attempts to produce as useful an error as possible based on the
+    type of types that were expected.
+
+    :param parent: The parent element who was attempting to parse the field
+    :type parent: Subclass of ObjectBase
+    :param field: The field we were trying to parse
+    :type field: str
+    :param object_types: The types allowed for this field
+    :type object_types: List of str or Class
+    :param found: The value that was found (and did not match any expected type)
+    :type found: any
+
+    :raises: A SpecError describing the failure
+    """
+    if len(object_types) == 1:
+        if isinstance(object_types[0], str):
+            expected_type = ObjectBase.get_object_type(object_types[0])
+            raise SpecError('Expected {}.{} to be of type {}, with required fields {}'.format(
+                    parent.get_path(),
+                    field,
+                    object_types[0],
+                    expected_type.required_fields,
+                ),
+                path=parent.path,
+                element=parent,
+            )
+    elif len(object_types) == 2 and len([c for c in object_types if isinstance(c, str)]) == 2 and "Reference" in object_types:
+        # we can give a similar error here as above
+        expected_type_str = [c for c in object_types if c != "Reference"][0]
+        expected_type = ObjectBase.get_object_type(expected_type_str)
+        raise SpecError("Expected {}.{} to be of type {} or Reference, but did not find required fields {} or '$ref'".format(
+                parent.get_path(),
+                field,
+                expected_type_str,
+                expected_type.required_fields,
+            ),
+            path=parent.path,
+            element=parent,
+        )
+    print(object_types)
+    raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
+                parent.get_path(),
+                field,
+                ','.join([str(c) for c in object_types],
+            ),
+            type(found)
+        ),
+        path=parent.path,
+        element=parent,
+    )
+
 class ObjectBase(object):
     """
     The base class for all schema objects.  Includes helpers for common schema-
@@ -231,19 +285,7 @@ class ObjectBase(object):
                             found_type = True
 
                     if not found_type:
-                        if len(object_types) == 1:
-                            if isinstance(object_types[0], str):
-                                expected_type = ObjectBase.get_object_type(object_types[0])
-                                raise SpecError('Expected {}.{} to be of type {}, with required fields {}'.format(
-                                        self.get_path(), field, object_types[0],
-                                        expected_type.required_fields),
-                                    path=self.path,
-                                    element=self)
-                        raise SpecError('Expected {}.{} to be one of [{}], got {}'.format(
-                                self.get_path(), field, ','.join([str(c) for c in object_types]),
-                                type(ret)),
-                            path=self.path,
-                            element=self)
+                        raise_on_unknown_type(self, field, object_types, ret)
         except SpecError as e:
             if self._root.validation_mode:
                 self._root.log_spec_error(e)
@@ -540,10 +582,7 @@ class Map(dict):
                     found_type = True
 
             if not found_type:
-                raise SpecError('Expected {}.{} to be one of [{}], but found {}'.format(
-                    '.'.join(path), k, object_types, v),
-                    path=self.path,
-                    element=self)
+                raise_on_unknown_type(self, k, object_types, v)
 
         self.update(dct)
 
@@ -584,3 +623,12 @@ class Map(dict):
                 self[key] = resolved_value
             else:
                 value._resolve_references()
+
+    def get_path(self):
+        """
+        Get the full path for this element in the spec
+
+        :returns: The path in the spec for this element
+        :rtype: str
+        """
+        return '.'.join(self.path)
