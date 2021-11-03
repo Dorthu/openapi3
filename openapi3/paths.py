@@ -61,7 +61,7 @@ class Path(ObjectBase):
         Overloaded _resolve_references to allow us to verify parameters after
         we've got all references settled.
         """
-        super(__class__, self)._resolve_references()
+        super(self.__class__, self)._resolve_references()
 
         # this will raise if parameters are invalid
         _validate_parameters(self)
@@ -155,7 +155,7 @@ class Operation(ObjectBase):
         Overloaded _resolve_references to allow us to verify parameters after
         we've got all references settled.
         """
-        super(__class__, self)._resolve_references()
+        super(self.__class__, self)._resolve_references()
 
         # this will raise if parameters are invalid
         _validate_parameters(self)
