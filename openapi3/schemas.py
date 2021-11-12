@@ -200,6 +200,19 @@ class Schema(ObjectBase):
         """
         Merges ``other`` into this schema, preferring to use the values in ``other``
         """
+        # Clone the other object so that we're never merging a referenced object.
+        # This will ensure that an allOf like this:
+        #
+        # allOf:
+        # - $ref: '#/components/schema/Example'
+        # - type: object
+        #   properties:
+        #     foo:
+        #       type string
+        #
+        # Does not add or modify "foo" on components.schemas['Example']
+        other = other._clone()
+
         for slot in self.__slots__:
             if slot.startswith("_"):
                 # skip private members
