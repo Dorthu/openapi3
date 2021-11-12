@@ -514,7 +514,7 @@ class ObjectBase(object):
                         resolved_value._original_ref = value
                         resolved_list.append(resolved_value)
                     else:
-                        if issubclass(type(value), ObjectBase) or isinstance(value, Map):
+                        if issubclass(type(item), ObjectBase) or isinstance(item, Map):
                             item._resolve_references()
                         resolved_list.append(item)
 
