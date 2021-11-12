@@ -1,0 +1,41 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: This has component schema that is referenced twice, once from an allOf
+paths:
+  /just-example:
+    get:
+      operationId: justExampleRef
+      responses:
+        '200':
+          description: It worked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Example'
+  /allof-example:
+    get:
+      operationId: allOfExample
+      responses:
+        '200':
+          description: It worked
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/Example'
+                - type: object
+                  properties:
+                    bar:
+                      type: string
+                      description: Should only appear in this operation
+                      example: bar
+components:
+  schemas:
+    Example:
+      type: object
+      properties:
+        foo:
+          type: string
+          description: A string
+          example: foo
