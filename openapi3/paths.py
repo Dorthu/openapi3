@@ -307,7 +307,9 @@ class Operation(ObjectBase):
 
         # find the response model in spec we received
         expected_response = None
-        if status_code in self.responses:
+        if status_code == 204:
+            return
+        elif status_code in self.responses:
             expected_response = self.responses[status_code]
         elif 'default' in self.responses:
             expected_response = self.responses['default']
@@ -319,6 +321,8 @@ class Operation(ObjectBase):
             err_var = result.status_code, self.operationId, ','.join(self.responses.keys())
 
             raise RuntimeError(err_msg.format(*err_var))
+        elif expected_response.content is None and 'Content-Type' not in result.headers:
+            return
 
         content_type   = result.headers['Content-Type']
         expected_media = expected_response.content.get(content_type, None)
