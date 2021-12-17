@@ -307,9 +307,7 @@ class Operation(ObjectBase):
 
         # find the response model in spec we received
         expected_response = None
-        if status_code == 204:
-            return
-        elif status_code in self.responses:
+        if status_code in self.responses:
             expected_response = self.responses[status_code]
         elif 'default' in self.responses:
             expected_response = self.responses['default']
@@ -321,7 +319,11 @@ class Operation(ObjectBase):
             err_var = result.status_code, self.operationId, ','.join(self.responses.keys())
 
             raise RuntimeError(err_msg.format(*err_var))
-        elif expected_response.content is None and 'Content-Type' not in result.headers:
+
+        # if we got a 204 back, and we expected a possible 204 from this endpoint
+        # (or there was a default), and the expected response included no content
+        # (as a 204 would), we can stop here and return nothing
+        if result.status_code == 204 and expected_response.content is None:
             return
 
         content_type   = result.headers['Content-Type']
