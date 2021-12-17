@@ -116,7 +116,10 @@ class Schema(ObjectBase):
             # TODO - perhaps assert that the type of data matches the type we
             # expected
             return data
-        return self.get_type()(data, self)
+        elif self.type == "array":
+            return [self.items.get_type()(i, self.items) for i in data]
+        else:
+            return self.get_type()(data, self)
 
     def get_request_type(self):
         """
