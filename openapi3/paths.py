@@ -320,10 +320,9 @@ class Operation(ObjectBase):
 
             raise RuntimeError(err_msg.format(*err_var))
 
-        # if we got a 204 back, and we expected a possible 204 from this endpoint
-        # (or there was a default), and the expected response included no content
-        # (as a 204 would), we can stop here and return nothing
-        if result.status_code == 204 and expected_response.content is None:
+        # if we got back a valid response code (or there was a default) and no
+        # response content was expected, return None
+        if expected_response.content is None:
             return
 
         content_type   = result.headers['Content-Type']
