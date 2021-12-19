@@ -217,75 +217,76 @@ class ObjectBase(object):
         self._accessed_members.append(field)
 
         ret = self.raw_element.get(field, None)
+        if ret is None:
+            return None
 
         try:
-            if ret is not None:
-                if not isinstance(object_types, list):
-                    # maybe don't accept not-lists
-                    object_types = [object_types]
+            if not isinstance(object_types, list):
+                # maybe don't accept not-lists
+                object_types = [object_types]
 
-                if '*' in object_types and len(object_types) != 1:
-                    raise ValueError("Fields that accept any type must not specify any other types!")
+            if '*' in object_types and len(object_types) != 1:
+                raise ValueError("Fields that accept any type must not specify any other types!")
 
-                # if yaml loads a value that includes a unicode character in python2,
-                # that value will come in as a ``unicode`` type instead of a ``str``.
-                # For the purposes of this library, those are the same thing, so in
-                # python2 only, we'll include ``unicode`` for any element that
-                # accepts ``str`` types.
-                if IS_PYTHON_2:
-                    if str in object_types:
-                        object_types += [unicode]
+            # if yaml loads a value that includes a unicode character in python2,
+            # that value will come in as a ``unicode`` type instead of a ``str``.
+            # For the purposes of this library, those are the same thing, so in
+            # python2 only, we'll include ``unicode`` for any element that
+            # accepts ``str`` types.
+            if IS_PYTHON_2:
+                if str in object_types:
+                    object_types += [unicode]
 
 
-                if is_list:
-                    if not isinstance(ret, list):
-                        raise SpecError('Expected {}.{} to be a list of [{}], got {}'.format(
-                            self.get_path, field, ','.join([str(c) for c in object_types]),
-                            type(ret)),
-                            path=self.path,
-                            element=self)
-                    ret = self.parse_list(ret, object_types, field)
-                elif is_map:
-                    if not isinstance(ret, dict):
-                        raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
-                            self.get_path, field, ','.join([str(c) for c in object_types]),
-                            type(ret)),
-                            path=self.path,
-                            element=self)
-                    ret = Map(self.path + [field], ret, object_types, self._root)
-                else:
-                    accepts_string = str in object_types
-                    found_type = False
+            if is_list:
+                if not isinstance(ret, list):
+                    raise SpecError('Expected {}.{} to be a list of [{}], got {}'.format(
+                        self.get_path, field, ','.join([str(c) for c in object_types]),
+                        type(ret)),
+                        path=self.path,
+                        element=self)
+                ret = self.parse_list(ret, object_types, field)
+            elif is_map:
+                if not isinstance(ret, dict):
+                    raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
+                        self.get_path, field, ','.join([str(c) for c in object_types]),
+                        type(ret)),
+                        path=self.path,
+                        element=self)
+                ret = Map(self.path + [field], ret, object_types, self._root)
+            else:
+                accepts_string = str in object_types
+                found_type = False
 
-                    for t in object_types:
-                        if t == "*":
+                for t in object_types:
+                    if t == "*":
+                        found_type = True
+                        break
+
+                    if t == str:
+                        # try to parse everything else first
+                        continue
+
+                    if isinstance(t, str):
+                        # we were given the name of a subclass of ObjectBase,
+                        # attempt to parse ret as that type
+                        python_type = ObjectBase.get_object_type(t)
+
+                        if python_type.can_parse(ret):
+                            ret = python_type(self.path + [field], ret, self._root)
                             found_type = True
                             break
+                    elif isinstance(ret, t):
+                        # it's already the type we need
+                        found_type = True
+                        break
 
-                        if t == str:
-                            # try to parse everything else first
-                            continue
+                if not found_type:
+                    if accepts_string and isinstance(ret, str):
+                        found_type = True
 
-                        if isinstance(t, str):
-                            # we were given the name of a subclass of ObjectBase,
-                            # attempt to parse ret as that type
-                            python_type = ObjectBase.get_object_type(t)
-
-                            if python_type.can_parse(ret):
-                                ret = python_type(self.path + [field], ret, self._root)
-                                found_type = True
-                                break
-                        elif isinstance(ret, t):
-                            # it's already the type we need
-                            found_type = True
-                            break
-
-                    if not found_type:
-                        if accepts_string and isinstance(ret, str):
-                            found_type = True
-
-                    if not found_type:
-                        raise_on_unknown_type(self, field, object_types, ret)
+                if not found_type:
+                    raise_on_unknown_type(self, field, object_types, ret)
         except SpecError as e:
             if self._root.validation_mode:
                 self._root.log_spec_error(e)
