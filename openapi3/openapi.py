@@ -64,6 +64,12 @@ class OpenAPI(ObjectBase):
 
         TODO - this should support more than just HTTP Auth
         """
+
+        # authentication is optional and can be disabled
+        if security_scheme is None:
+            self._security = None
+            return
+
         if security_scheme not in self.components.securitySchemes:
             raise ValueError('{} does not accept security scheme {}'.format(
                 self.info.title, security_scheme))

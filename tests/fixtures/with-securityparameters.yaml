@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+servers:
+  - url: http://127.0.0.1/api
+
+security:
+  - {}
+  - cookieAuth: []
+
+paths:
+  /api/v1/auth/info/:
+    get:
+      operationId: api_v1_auth_login_info
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+          description: ''
+          
+  /api/v1/auth/login/:
+    post:
+      operationId: api_v1_auth_login_create
+      description: |-
+        Check the credentials and return the REST Token
+        if the credentials are valid and authenticated.
+        Calls Django Auth login method to register User ID
+        in Django session framework
+
+        Accept the following POST parameters: username, password
+        Return the REST Framework Token Object's key.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+          description: ''
+      security:
+      - cookieAuth: []
+      - tokenAuth: []
+      - paramAuth: []
+      - basicAuth: []
+      - digestAuth: []
+      - bearerAuth: []
+      - {}
+
+components:
+  schemas:
+    Login:
+      type: string
+    LoginRequest:
+      type: string
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: Session
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
+    paramAuth:
+      type: apiKey
+      in: query
+      name: auth
+    basicAuth:
+      type: http
+      scheme: basic
+    digestAuth:
+      type: http
+      scheme: digest
+    bearerAuth:
+      type: http
+      scheme: bearer
+

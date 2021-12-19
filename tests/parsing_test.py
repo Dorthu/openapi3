@@ -111,3 +111,9 @@ def test_parsing_broken_links(with_broken_links):
         "operationId and operationRef are mutually exclusive, only one of them is allowed",
         "operationId and operationRef are mutually exclusive, one of them must be specified",
     ]) == sorted(error_strs)
+
+
+def test_securityparameters(with_securityparameters):
+    spec = OpenAPI(with_securityparameters, validate=True)
+    errors = spec.errors()
+    assert len(errors) == 0

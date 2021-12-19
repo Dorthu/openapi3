@@ -1,7 +1,14 @@
 """
 This file tests that paths are parsed and populated correctly
 """
+import base64
+import uuid
+
+from unittest.mock import patch, MagicMock
+from urllib.parse import urlparse
+
 import pytest
+import requests.auth
 
 from openapi3 import OpenAPI
 from openapi3.schemas import Schema
@@ -88,3 +95,62 @@ def test_operation_populated(petstore_expanded_spec):
     assert con2.schema is not None
     # again, test ref resolution elsewhere
     assert type(con2.schema) == Schema
+
+
+def test_securityparameters(with_securityparameters):
+    api = OpenAPI(with_securityparameters)
+    r = patch("requests.sessions.Session.send")
+
+    auth=str(uuid.uuid4())
+
+    # global security
+    api.authenticate('cookieAuth', auth)
+    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+
+
+    # path
+    api.authenticate('tokenAuth', auth)
+    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert r.call_args.args[0].headers['Authorization'] == auth
+
+    api.authenticate('paramAuth', auth)
+    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+
+    parsed_url = urlparse(r.call_args.args[0].url)
+    parsed_url.query == auth
+
+    api.authenticate('cookieAuth', auth)
+    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert r.call_args.args[0].headers["Cookie"] == "Session=%s" % (auth,)
+
+    api.authenticate('basicAuth', (auth, auth))
+    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+    r.call_args.args[0].headers["Authorization"].split(" ")[1] == base64.b64encode((auth + ':' + auth).encode()).decode()
+
+    api.authenticate('digestAuth', (auth,auth))
+    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert requests.auth.HTTPDigestAuth.handle_401 == r.call_args.args[0].hooks["response"][0].__func__
+
+    api.authenticate('bearerAuth', auth)
+    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert r.call_args.args[0].headers["Authorization"] == "Bearer %s" % (auth,)
+
+    api.authenticate(None, None)
+    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+        api.call_api_v1_auth_login_create(data={}, parameters={})

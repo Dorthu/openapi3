@@ -136,3 +136,10 @@ def with_broken_links():
     Provides a spec with broken links defined
     """
     yield _get_parsed_yaml("with-broken-links.yaml")
+
+@pytest.fixture
+def with_securityparameters():
+    """
+    Provides a spec with security parameters
+    """
+    yield _get_parsed_yaml("with-securityparameters.yaml")
