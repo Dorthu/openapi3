@@ -186,6 +186,9 @@ class Operation(ObjectBase):
                 # apiKey in query header data
                 self._request.headers[ss.name] = value
 
+            if ss.in_ == 'cookie':
+                self._request.cookies ={ss.name:value}
+
     def _request_handle_parameters(self, parameters={}):
         # Parameters
         path_parameters = {}
@@ -356,17 +359,22 @@ class SecurityRequirement(ObjectBase):
     def _parse_data(self):
         """
         """
-        # these only ever have one key
-        self.name  = [c for c in self.raw_element.keys()][0]
-        self.types = self._get(self.name, str, is_list=True)
+        # usually these only ever have one key
+        if len(self.raw_element.keys()) == 1:
+            self.name  = [c for c in self.raw_element.keys()][0]
+            self.types = self._get(self.name, str, is_list=True)
+        elif len(self.raw_element.keys()) == 0:
+            # optional
+            self.name = self.types = None
+
 
     @classmethod
     def can_parse(cls, dct):
         """
         This needs to ignore can_parse since the objects it's parsing are not
-        regular - they must always have only one key though.
+        regular - they must always have only one key though or be empty for Optional Security Requirements
         """
-        return len(dct.keys()) == 1 and isinstance([c for c in dct.values()][0], list)
+        return len(dct.keys()) == 1 and isinstance([c for c in dct.values()][0], list) or len(dct.keys()) == 0
 
     def __getstate__(self):
         return {self.name: self.types}

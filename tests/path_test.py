@@ -1,7 +1,13 @@
 """
 This file tests that paths are parsed and populated correctly
 """
+import base64
+import uuid
+
+from yarl import URL
+
 import pytest
+import requests.auth
 
 from openapi3 import OpenAPI
 from openapi3.schemas import Schema
@@ -88,3 +94,47 @@ def test_operation_populated(petstore_expanded_spec):
     assert con2.schema is not None
     # again, test ref resolution elsewhere
     assert type(con2.schema) == Schema
+
+
+def test_securityparameters(mocker, with_securityparameters):
+    api = OpenAPI(with_securityparameters)
+    r = mocker.patch("requests.sessions.Session.send")
+
+    auth=str(uuid.uuid4())
+
+    api.authenticate('tokenAuth', auth)
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type": "application/json"})
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert r.call_args.args[0].headers['Authorization'] == auth
+
+    api.authenticate('paramAuth', auth)
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type": "application/json"})
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+
+    assert URL(r.call_args.args[0].url).query['auth'] == auth
+
+    api.authenticate('cookieAuth', auth)
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert r.call_args.args[0].headers["Cookie"] == "Session=%s" % (auth,)
+
+    api.authenticate('basicAuth', (auth, auth))
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+    r.call_args.args[0].headers["Authorization"].split(" ")[1] == base64.b64encode((auth + ':' + auth).encode()).decode()
+
+    api.authenticate('digestAuth', (auth,auth))
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert requests.auth.HTTPDigestAuth.handle_401 == r.call_args.args[0].hooks["response"][0].__func__
+
+    api.authenticate('bearerAuth', auth)
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+    assert r.call_args.args[0].headers["Authorization"] == "Bearer %s" % (auth,)
+
+    api.authenticate(None, None)
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type":"application/json"})
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+
+    mocker.resetall()
