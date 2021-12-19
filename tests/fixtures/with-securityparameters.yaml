@@ -4,7 +4,23 @@ info:
   version: 0.0.0
 servers:
   - url: http://127.0.0.1/api
+
+security:
+  - {}
+  - cookieAuth: []
+
 paths:
+  /api/v1/auth/info/:
+    get:
+      operationId: api_v1_auth_login_info
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+          description: ''
+          
   /api/v1/auth/login/:
     post:
       operationId: api_v1_auth_login_create
@@ -39,6 +55,7 @@ paths:
       - digestAuth: []
       - bearerAuth: []
       - {}
+
 components:
   schemas:
     Login:

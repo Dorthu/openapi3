@@ -102,6 +102,13 @@ def test_securityparameters(mocker, with_securityparameters):
 
     auth=str(uuid.uuid4())
 
+    # global security
+    api.authenticate('cookieAuth', auth)
+    r.return_value = mocker.Mock(status_code=200, headers={"Content-Type":"application/json"})
+    api.call_api_v1_auth_login_create(data={}, parameters={})
+
+
+    # path
     api.authenticate('tokenAuth', auth)
     r.return_value = mocker.Mock(status_code=200, headers={"Content-Type": "application/json"})
     api.call_api_v1_auth_login_create(data={}, parameters={})
