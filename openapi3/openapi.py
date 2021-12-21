@@ -11,18 +11,28 @@ class OpenAPI(ObjectBase):
 
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
     """
-    __slots__ = ['openapi','info','servers','paths','components','security','tags',
-                 'externalDocs','_operation_map','_security', 'validation_mode',
-                 '_spec_errors', '_ssl_verify', '_session']
-    required_fields=['openapi','info','paths']
+
+    __slots__ = [
+        "openapi",
+        "info",
+        "servers",
+        "paths",
+        "components",
+        "security",
+        "tags",
+        "externalDocs",
+        "_operation_map",
+        "_security",
+        "validation_mode",
+        "_spec_errors",
+        "_ssl_verify",
+        "_session",
+    ]
+    required_fields = ["openapi", "info", "paths"]
 
     def __init__(
-            self,
-            raw_document,
-            validate=False,
-            ssl_verify=None,
-            use_session=False,
-            session_factory=requests.Session):
+        self, raw_document, validate=False, ssl_verify=None, use_session=False, session_factory=requests.Session
+    ):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -71,8 +81,7 @@ class OpenAPI(ObjectBase):
             return
 
         if security_scheme not in self.components.securitySchemes:
-            raise ValueError('{} does not accept security scheme {}'.format(
-                self.info.title, security_scheme))
+            raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
 
         self._security = {security_scheme: value}
 
@@ -94,12 +103,12 @@ class OpenAPI(ObjectBase):
         for part in path:
             if isinstance(node, Map):
                 if part not in node:  # pylint: disable=unsupported-membership-test
-                    err_msg = 'Invalid path {} in Reference'.format(path)
+                    err_msg = "Invalid path {} in Reference".format(path)
                     raise ReferenceResolutionError(err_msg)
                 node = node.get(part)
             else:
                 if not hasattr(node, part):
-                    err_msg = 'Invalid path {} in Reference'.format(path)
+                    err_msg = "Invalid path {} in Reference".format(path)
                     raise ReferenceResolutionError(err_msg)
                 node = getattr(node, part)
 
@@ -115,8 +124,7 @@ class OpenAPI(ObjectBase):
         :type error: SpecError
         """
         if not self.validation_mode:
-            raise RuntimeError('This client is not in Validation Mode, cannot '
-                               'record errors!')
+            raise RuntimeError("This client is not in Validation Mode, cannot " "record errors!")
         self._spec_errors.append(error)
 
     def errors(self):
@@ -128,8 +136,7 @@ class OpenAPI(ObjectBase):
         :rtype: list[SpecError]
         """
         if not self.validation_mode:
-            raise RuntimeError('This client is not in Validation Mode, cannot '
-                               'return errors!')
+            raise RuntimeError("This client is not in Validation Mode, cannot " "return errors!")
         return self._spec_errors
 
     # private methods
@@ -153,14 +160,14 @@ class OpenAPI(ObjectBase):
         """
         self._operation_map = {}
 
-        self.components   = self._get('components', ['Components'])
-        self.externalDocs = self._get('externalDocs', dict)
-        self.info         = self._get('info', 'Info')
-        self.openapi      = self._get('openapi', str)
-        self.paths        = self._get('paths', ['Path'], is_map=True)
-        self.security     = self._get('security', ['SecurityRequirement'], is_list=True)
-        self.servers      = self._get('servers', ['Server'], is_list=True)
-        self.tags         = self._get('tags', ['Tag'], is_list=True)
+        self.components = self._get("components", ["Components"])
+        self.externalDocs = self._get("externalDocs", dict)
+        self.info = self._get("info", "Info")
+        self.openapi = self._get("openapi", str)
+        self.paths = self._get("paths", ["Path"], is_map=True)
+        self.security = self._get("security", ["SecurityRequirement"], is_list=True)
+        self.servers = self._get("servers", ["Server"], is_list=True)
+        self.tags = self._get("tags", ["Tag"], is_list=True)
 
         # now that we've parsed _all_ the data, resolve all references
         self._resolve_references()
@@ -180,8 +187,7 @@ class OpenAPI(ObjectBase):
         """
         base_url = self.servers[0].url
 
-        return OperationCallable(operation, base_url, self._security, self._ssl_verify,
-                                 self._session)
+        return OperationCallable(operation, base_url, self._security, self._ssl_verify, self._session)
 
     def __getattribute__(self, attr):
         """
@@ -202,13 +208,12 @@ class OpenAPI(ObjectBase):
         :rtype: any
         :raises AttributeError: if the requested attribute does not exist
         """
-        if attr.startswith('call_'):
-            _, operationId = attr.split('_', 1)
+        if attr.startswith("call_"):
+            _, operationId = attr.split("_", 1)
             if operationId in self._operation_map:
                 return self._get_callable(self._operation_map[operationId].request)
             else:
-                raise AttributeError('{} has no operation {}'.format(
-                    self.info.title, operationId))
+                raise AttributeError("{} has no operation {}".format(self.info.title, operationId))
 
         return object.__getattribute__(self, attr)
 
@@ -221,6 +226,7 @@ class OperationCallable:
     with the configured values included.  This class is not intended to be used
     directly.
     """
+
     def __init__(self, operation, base_url, security, ssl_verify, session):
         self.operation = operation
         self.base_url = base_url
@@ -230,8 +236,7 @@ class OperationCallable:
 
     def __call__(self, *args, **kwargs):
         if self.ssl_verify is not None:
-            kwargs['verify'] = self.ssl_verify
+            kwargs["verify"] = self.ssl_verify
         if self.session:
-            kwargs['session'] = self.session
-        return self.operation(self.base_url, *args, security=self.security,
-                              **kwargs)
+            kwargs["session"] = self.session
+        return self.operation(self.base_url, *args, security=self.security, **kwargs)

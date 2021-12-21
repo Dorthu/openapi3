@@ -17,13 +17,13 @@ def main():
     if errors:
         # print errors
         for e in errors:
-            print('{}: {}'.format('.'.join(e.path), e.message[:300]))
+            print("{}: {}".format(".".join(e.path), e.message[:300]))
         print()
-        print('{} errors'.format(len(errors)))
-        sys.exit(1) # exit with error status
+        print("{} errors".format(len(errors)))
+        sys.exit(1)  # exit with error status
     else:
-        print('OK')
+        print("OK")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
