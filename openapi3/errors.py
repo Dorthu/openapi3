@@ -14,3 +14,7 @@ class ReferenceResolutionError(SpecError):
     This error class is used when resolving a reference fails, usually because
     of a malformed path in the reference.
     """
+
+
+class ModelError(ValueError):
+    """The data supplied to the Model mismatches the models attributes"""
