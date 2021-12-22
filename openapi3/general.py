@@ -1,7 +1,8 @@
 import dataclasses
+from typing import Optional
 from .object_base import ObjectBase
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class ExternalDocumentation(ObjectBase):
     """
     An `External Documentation Object`_ references external resources for extended
@@ -9,13 +10,15 @@ class ExternalDocumentation(ObjectBase):
 
     .. _External Documentation Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#externalDocumentationObject
     """
-    __slos__ = ['description', 'url']
+#    __slos__ = ['description', 'url']
     required_fields = 'url'
 
-    description: str
-    url: str
+    url: str = dataclasses.field(default=None)
 
-@dataclasses.dataclass(init=False)
+    description: Optional[str] = dataclasses.field(default=None)
+
+
+@dataclasses.dataclass
 class Reference(ObjectBase):
     """
     A `Reference Object`_ designates a reference to another node in the specification.
@@ -23,10 +26,10 @@ class Reference(ObjectBase):
     .. _Reference Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#referenceObject
     """
     # can't start a variable name with a $
-    __slots__ = ['ref']
+#    __slots__ = ['ref']
     required_fields = ['$ref']
 
-    ref: str
+    ref: str = dataclasses.field(default=None)
 
     def _parse_data(self):
         self.ref = self._get("$ref", str)

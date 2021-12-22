@@ -1,5 +1,5 @@
 import dataclasses
-from typing import ForwardRef, Union, List
+from typing import ForwardRef, Union, List, Optional
 import json
 import re
 import requests
@@ -25,7 +25,7 @@ def _validate_parameters(instance):
             if c.name not in allowed_path_parameters:
                 raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance.path)
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class Path(ObjectBase):
     """
     A Path object, as defined `here`_.  Path objects represent URL paths that
@@ -33,21 +33,20 @@ class Path(ObjectBase):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#paths-object
     """
-    __slots__ = ['summary', 'description', 'get', 'put', 'post', 'delete',
-                 'options', 'head', 'patch', 'trace', 'servers', 'parameters']
+    delete: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    description: Optional[str] = dataclasses.field(default=None)
+    get: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    head: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    options: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
 
-    delete: ForwardRef('Operation')
-    description: str
-    get: ForwardRef('Operation')
-    head: ForwardRef('Operation')
-    options: ForwardRef('Operation')
-    parameters: List[Union['Parameter', 'Reference']] # = []
-    patch: ForwardRef('Operation')
-    post: ForwardRef('Operation')
-    put: ForwardRef('Operation')
-    servers: List['Server']
-    summary: str
-    trace: ForwardRef('Operation')
+    patch: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    post: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    put: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    servers: Optional[List['Server']] = dataclasses.field(default=None)
+    summary: Optional[str] = dataclasses.field(default=None)
+    trace: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+
+    parameters: Optional[List[Union['Parameter', 'Reference']]] = dataclasses.field(default_factory=list)
 
     def _parse_data(self):
         """
@@ -70,32 +69,37 @@ class Path(ObjectBase):
         _validate_parameters(self)
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class Parameter(ObjectBase):
     """
     A `Parameter Object`_ defines a single operation parameter.
 
     .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#parameterObject
     """
-    __slots__ = ['name', 'in', 'in_', 'description', 'required', 'deprecated',
-                 'allowEmptyValue', 'style', 'explode', 'allowReserved',
-                 'schema', 'example', 'examples']
+#    __slots__ = ['name', 'in', 'in_', 'description', 'required', 'deprecated',
+#                 'allowEmptyValue', 'style', 'explode', 'allowReserved',
+#                 'schema', 'example', 'examples']
     required_fields = ['name', 'in']
 
-    deprecated: bool
-    description: str
-    example: str
-    examples: Map[str, Union['Example','Reference']]
-    explode: bool
-    in_: str  # TODO must be one of ["query","header","path","cookie"]
-    name: str
-    required: bool
-    schema: Union['Schema', 'Reference']
-    style: str
+    in_: str = dataclasses.field(default=None)  # TODO must be one of ["query","header","path","cookie"]
+    name: str = dataclasses.field(default=None)
+
+    deprecated: Optional[bool] = dataclasses.field(default=None)
+    description: Optional[str] = dataclasses.field(default=None)
+    example: Optional[str] = dataclasses.field(default=None)
+    examples: Optional[Map[str, Union['Example','Reference']]] = dataclasses.field(default=None)
+    explode: Optional[bool] = dataclasses.field(default=None)
+    required: Optional[bool] = dataclasses.field(default=None)
+    schema: Optional[Union['Schema', 'Reference']] = dataclasses.field(default=None)
+    style: Optional[str] = dataclasses.field(default=None)
 
     # allow empty or reserved values in Parameter data
-    allowEmptyValue: bool
-    allowReserved: bool
+    allowEmptyValue: Optional[bool] = dataclasses.field(default=None)
+    allowReserved: Optional[bool] = dataclasses.field(default=None)
+
+    @classmethod
+    def can_parse(cls, dct):
+        return super().can_parse(dct)
 
     def _parse_data(self):
         super()._parse_data()
@@ -107,29 +111,29 @@ class Parameter(ObjectBase):
             raise SpecError(err_msg.format(self.get_path()), path=self.path)
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class Operation(ObjectBase):
     """
     An Operation object as defined `here`_
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject
     """
-    __slots__ = ['tags', 'summary', 'description', 'externalDocs', 'security',
-                 'operationId', 'parameters', 'requestBody', 'responses',
-                 'callbacks', 'deprecated', 'servers', '_session', '_request']
+#    __slots__ = ['tags', 'summary', 'description', 'externalDocs', 'security',
+#                 'operationId', 'parameters', 'requestBody', 'responses',
+#                 'callbacks', 'deprecated', 'servers', '_session', '_request']
     required_fields = ['responses']
 
-    deprecated: bool
-    description: str
-    externalDocs: ForwardRef('ExternalDocumentation')
-    operationId: str
-    parameters: List[Union['Parameter', 'Reference']]
-    requestBody: Union['RequestBody', 'Reference']
-    responses: Map[str, Union['Response', 'Reference']]
-    security: List['SecurityRequirement']
-    servers: List['Server']
-    summary: str
-    tags: List[str]
+    responses: Map[str, Union['Response', 'Reference']] = dataclasses.field(default=None)
+    deprecated: Optional[bool] = dataclasses.field(default=None)
+    description: Optional[str] = dataclasses.field(default=None)
+    externalDocs: Optional[ForwardRef('ExternalDocumentation')] = dataclasses.field(default=None)
+    operationId: Optional[str] = dataclasses.field(default=None)
+    parameters: Optional[List[Union['Parameter', 'Reference']]] = dataclasses.field(default_factory=list)
+    requestBody: Optional[Union['RequestBody', 'Reference']] = dataclasses.field(default=None)
+    security: Optional[List['SecurityRequirement']] = dataclasses.field(default_factory=list)
+    servers: Optional[List['Server']] = dataclasses.field(default=None)
+    summary: Optional[str] = dataclasses.field(default=None)
+    tags: Optional[List[str]] = dataclasses.field(default=None)
 
     def _parse_data(self):
         """
@@ -138,19 +142,11 @@ class Operation(ObjectBase):
         super()._parse_data()
         # callbacks: dict TODO
 
-        # default parameters to an empty list for processing later
-        if self.parameters is None:
-            self.parameters = []
-
         # gather all operations into the spec object
         if self.operationId is not None:
             # TODO - how to store without an operationId?
             formatted_operation_id = self.operationId.replace(" ", "_")
             self._root._register_operation(formatted_operation_id, self)
-
-        # TODO - maybe make this generic
-        if self.security is None:
-            self.security = []
 
         # Store session object
         self._session = requests.Session()
@@ -355,18 +351,18 @@ class Operation(ObjectBase):
             raise NotImplementedError()
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class SecurityRequirement(ObjectBase):
     """
     A `SecurityRequirement`_ object describes security schemes for API access.
 
     .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
     """
-    ___slots__ = ['name', 'types']
-    required_fields = []
+#    ___slots__ = ['name', 'types']
+#    required_fields = []
 
-    name: str
-    types: List[str]
+    name: Optional[str] = dataclasses.field(default=None)
+    types: Optional[List[str]] = dataclasses.field(default=None)
 
     def _parse_data(self):
         """
@@ -392,22 +388,22 @@ class SecurityRequirement(ObjectBase):
         return {self.name: self.types}
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class RequestBody(ObjectBase):
     """
     A `RequestBody`_ object describes a single request body.
 
     .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
     """
-    __slots__ = ['description', 'content', 'required']
+#    __slots__ = ['description', 'content', 'required']
     required_fields = ['content']
 
-    description: str
-    content: Map[str, ForwardRef('MediaType')]
-    required: bool
+    content: Map[str, ForwardRef('MediaType')] = dataclasses.field(default=None)
+    description: Optional[str] = dataclasses.field(default=None)
+    required: Optional[bool] = dataclasses.field(default=None)
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class MediaType(ObjectBase):
     """
     A `MediaType`_ object provides schema and examples for the media type identified
@@ -415,16 +411,16 @@ class MediaType(ObjectBase):
 
     .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
     """
-    __slots__ = ['schema', 'example', 'examples', 'encoding']
+#    __slots__ = ['schema', 'example', 'examples', 'encoding']
     required_fields = []
 
-    schema: Union['Schema', 'Reference']
-    example: str  # 'any' type
-    examples: Map[str, Union['Example', 'Reference']]
-    encoding: Map[str, ForwardRef('Encoding')]
+    schema: Optional[Union['Schema', 'Reference']] = dataclasses.field(default=None)
+    example: Optional[str] = dataclasses.field(default=None)  # 'any' type
+    examples: Optional[Map[str, Union['Example', 'Reference']]] = dataclasses.field(default=None)
+    encoding: Optional[Map[str, ForwardRef('Encoding')]] = dataclasses.field(default=None)
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class Response(ObjectBase):
     """
     A `Response Object`_ describes a single response from an API Operation,
@@ -432,29 +428,29 @@ class Response(ObjectBase):
 
     .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
     """
-    __slots__ = ['description', 'headers', 'content', 'links']
+#    __slots__ = ['description', 'headers', 'content', 'links']
     required_fields = ['description']
 
-    content: Map[str, ForwardRef('MediaType')]
-    description: str
-    links: Map[str, Union['Link', 'Reference']]
+    description: str = dataclasses.field(default=None)
+    content: Optional[Map[str, ForwardRef('MediaType')]] = dataclasses.field(default=None)
+    links: Optional[Map[str, Union['Link', 'Reference']]] = dataclasses.field(default=None)
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class Link(ObjectBase):
     """
     A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
 
     .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
     """
-    __slots__ = ['operationId', 'operationRef', 'description', 'parameters', 'requestBody', 'server']
+#    __slots__ = ['operationId', 'operationRef', 'description', 'parameters', 'requestBody', 'server']
 
-    operationId: str
-    operationRef: str
-    description: str
-    parameters: dict
-    requestBody: dict
-    server: ForwardRef('Server')
+    operationId: Optional[str] = dataclasses.field(default=None)
+    operationRef: Optional[str] = dataclasses.field(default=None)
+    description: Optional[str] = dataclasses.field(default=None)
+    parameters: Optional[dict] = dataclasses.field(default=None)
+    requestBody: Optional[dict] = dataclasses.field(default=None)
+    server: Optional[ForwardRef('Server')] = dataclasses.field(default=None)
 
     def _parse_data(self):
         """

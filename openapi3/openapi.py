@@ -1,5 +1,5 @@
 import dataclasses
-from typing import ForwardRef, Any, List
+from typing import ForwardRef, Any, List, Optional
 
 import requests
 
@@ -14,19 +14,20 @@ class OpenAPI(ObjectBase):
 
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
     """
-    __slots__ = ['openapi','info','servers','paths','components','security','tags',
-                 'externalDocs','_operation_map','_security', 'validation_mode',
-                 '_spec_errors', '_ssl_verify', '_session']
+#    __slots__ = ['openapi','info','servers','paths','components','security','tags',
+#                 'externalDocs','_operation_map','_security', 'validation_mode',
+#                 '_spec_errors', '_ssl_verify', '_session']
     required_fields=['openapi','info','paths']
 
-    components: ForwardRef('Components')
-    externalDocs: Map[Any, Any]
-    info: ForwardRef('Info')
-    openapi: str
-    paths: Map[str, ForwardRef('Path')]
-    security: List['SecurityRequirement']
-    servers: List['Server']
-    tags: List['Tag']
+    openapi: str = dataclasses.field(default=None)
+    info: ForwardRef('Info') = dataclasses.field(default=None)
+    paths: Map[str, ForwardRef('Path')] = dataclasses.field(default=None)
+
+    components: Optional[ForwardRef('Components')] = dataclasses.field(default=None)
+    externalDocs: Optional[Map[Any, Any]] = dataclasses.field(default=None)
+    security: Optional[List['SecurityRequirement']] = dataclasses.field(default=None)
+    servers: Optional[List['Server']] = dataclasses.field(default=None)
+    tags: Optional[List['Tag']] = dataclasses.field(default=None)
 
     def __init__(
             self,
@@ -59,7 +60,7 @@ class OpenAPI(ObjectBase):
             self._spec_errors = []
 
         # as the document root, we have no path
-        super(OpenAPI, self).__init__([], raw_document, self)
+        super(OpenAPI, self).create([], raw_document, self, obj=self)
 
         self._security = {}
 

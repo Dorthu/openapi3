@@ -1,9 +1,9 @@
 import dataclasses
-from typing import Union
+from typing import Union, Optional
 
 from .object_base import ObjectBase
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class Example(ObjectBase):
     """
     A `Example Object`_ holds a reusable set of different aspects of the OAS
@@ -11,9 +11,9 @@ class Example(ObjectBase):
 
     .. _Example Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#exampleObject
     """
-    __slots__ = ['summary', 'description', 'value', 'externalValue']
+#    __slots__ = ['summary', 'description', 'value', 'externalValue']
 
-    summary: str
-    description: str
-    value: Union['Reference', dict, str] # 'any' type
-    externalValue: str
+    summary: Optional[str] = dataclasses.field(default=None)
+    description: Optional[str] = dataclasses.field(default=None)
+    value: Optional[Union['Reference', dict, str]] = dataclasses.field(default=None) # 'any' type
+    externalValue: Optional[str] = dataclasses.field(default=None)
