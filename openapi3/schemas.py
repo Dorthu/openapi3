@@ -1,3 +1,6 @@
+from typing import Union, List
+import dataclasses
+
 from .errors import SpecError
 from .general import Reference  # need this for Model below
 from .object_base import ObjectBase, Map
@@ -11,6 +14,7 @@ TYPE_LOOKUP = {
 }
 
 
+@dataclasses.dataclass(init=False)
 class Schema(ObjectBase):
     """
     The `Schema Object`_ allows the definition of input and output data types.
@@ -29,42 +33,43 @@ class Schema(ObjectBase):
                  '_request_model_type', '_resolved_allOfs']
     required_fields = []
 
+    title: str
+    maximum: Union[int, float]
+    minimum: Union[int, float]
+    maxLength: int
+    minLength: int
+    pattern: str
+    maxItems: int
+    minItems: int
+    required: List[str]
+    enum: list
+    type: str
+    allOf: List[Union["Schema", "Reference"]]
+    oneOf: list
+    anyOf: list
+    items: Union['Schema', 'Reference']
+    properties: Map[str, Union['Schema', 'Reference']]
+    additionalProperties: [bool, dict]
+    description: str
+    format: str
+    default: str  # TODO - str as a default?
+    nullable: bool
+    discriminator: dict  # 'Discriminator'
+    readOnly: bool
+    writeOnly: bool
+    xml: dict  # 'XML'
+    externalDocs: dict  # 'ExternalDocs'
+    deprecated: bool
+    example: object
+    contentEncoding: str
+    contentMediaType: str
+    contentSchema: str
+
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        self.title                = self._get('title', str)
-        self.maximum              = self._get('maximum', [int, float])
-        self.minimum              = self._get('minimum', [int, float])
-        self.maxLength            = self._get('maxLength', int)
-        self.minLength            = self._get('minLength', int)
-        self.pattern              = self._get('pattern', str)
-        self.maxItems             = self._get('maxItems', int)
-        self.minItems             = self._get('minItmes', int)
-        self.required             = self._get('required', list)
-        self.enum                 = self._get('enum', list)
-        self.type                 = self._get('type', str)
-        self.allOf                = self._get('allOf', ['Schema','Reference'], is_list=True)
-        self.oneOf                = self._get('oneOf', list)
-        self.anyOf                = self._get('anyOf', list)
-        self.items                = self._get('items', ['Schema', 'Reference'])
-        self.properties           = self._get('properties', ['Schema', 'Reference'], is_map=True)
-        self.additionalProperties = self._get('additionalProperties', [bool, dict])
-        self.description          = self._get('description', str)
-        self.format               = self._get('format', str)
-        self.default              = self._get('default', TYPE_LOOKUP.get(self.type, str))  # TODO - str as a default?
-        self.nullable             = self._get('nullable', bool)
-        self.discriminator        = self._get('discriminator', dict)  # 'Discriminator'
-        self.readOnly             = self._get('readOnly', bool)
-        self.writeOnly            = self._get('writeOnly', bool)
-        self.xml                  = self._get('xml', dict)  # 'XML'
-        self.externalDocs         = self._get('externalDocs', dict)  # 'ExternalDocs'
-        self.deprecated           = self._get('deprecated', bool)
-        self.example              = self._get('example', "*")
-        self.contentEncoding      = self._get('contentEncoding', str)
-        self.contentMediaType     = self._get('contentMediaType', str)
-        self.contentSchema        = self._get('contentSchema', str)
-
+        super()._parse_data()
         # TODO - Implement the following properties:
         # self.multipleOf
         # self.not
@@ -154,6 +159,9 @@ class Schema(ObjectBase):
 
         if self.allOf:
             for c in self.allOf:
+#            for c in typing.get_args(self.allOf):
+#                assert isinstance(c, typing.ForwardRef)
+#                c = ObjectBase.get_object_type(c.__forward_arg__)
                 if isinstance(c, Schema):
                     self._merge(c)
 
@@ -251,3 +259,5 @@ class Model:
                 continue
             yield s, getattr(self, s)
         return
+
+

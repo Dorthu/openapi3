@@ -1,9 +1,12 @@
+import dataclasses
+from typing import ForwardRef, Any, List
+
 import requests
 
 from .object_base import ObjectBase, Map
 from .errors import ReferenceResolutionError, SpecError
 
-
+@dataclasses.dataclass(init=False)
 class OpenAPI(ObjectBase):
     """
     This class represents the root of the OpenAPI schema document, as defined
@@ -15,6 +18,15 @@ class OpenAPI(ObjectBase):
                  'externalDocs','_operation_map','_security', 'validation_mode',
                  '_spec_errors', '_ssl_verify', '_session']
     required_fields=['openapi','info','paths']
+
+    components: ForwardRef('Components')
+    externalDocs: Map[Any, Any]
+    info: ForwardRef('Info')
+    openapi: str
+    paths: Map[str, ForwardRef('Path')]
+    security: List['SecurityRequirement']
+    servers: List['Server']
+    tags: List['Tag']
 
     def __init__(
             self,
@@ -58,7 +70,7 @@ class OpenAPI(ObjectBase):
             self._session = session_factory()
 
     # public methods
-    def authenticte(self, security_scheme, value):
+    def authenticate(self, security_scheme, value):
         """
         Authenticates all subsequent requests with the given arguments.
 
@@ -76,14 +88,12 @@ class OpenAPI(ObjectBase):
 
         self._security = {security_scheme: value}
 
-    authenticate = authenticte
-
     def resolve_path(self, path):
         """
         Given a $ref path, follows the document tree and returns the given attribute.
 
         :param path: The path down the spec tree to follow
-        :type path: list[str]
+        :type path: List[str]
 
         :returns: The node requested
         :rtype: ObjectBase
@@ -125,7 +135,7 @@ class OpenAPI(ObjectBase):
         This should not be called if not in Validation Mode.
 
         :returns: The errors encountered during the parsing of this spec.
-        :rtype: list[SpecError]
+        :rtype: List[SpecError]
         """
         if not self.validation_mode:
             raise RuntimeError('This client is not in Validation Mode, cannot '
@@ -153,14 +163,7 @@ class OpenAPI(ObjectBase):
         """
         self._operation_map = {}
 
-        self.components   = self._get('components', ['Components'])
-        self.externalDocs = self._get('externalDocs', dict)
-        self.info         = self._get('info', 'Info')
-        self.openapi      = self._get('openapi', str)
-        self.paths        = self._get('paths', ['Path'], is_map=True)
-        self.security     = self._get('security', ['SecurityRequirement'], is_list=True)
-        self.servers      = self._get('servers', ['Server'], is_list=True)
-        self.tags         = self._get('tags', ['Tag'], is_list=True)
+        super()._parse_data()
 
         # now that we've parsed _all_ the data, resolve all references
         self._resolve_references()

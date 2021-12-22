@@ -1,7 +1,7 @@
-from .errors import SpecError
+import dataclasses
 from .object_base import ObjectBase, Map
 
-
+@dataclasses.dataclass(init=False)
 class SecurityScheme(ObjectBase):
     """
     A `Security Scheme`_ defines a security scheme that can be used by the operations.
@@ -12,15 +12,15 @@ class SecurityScheme(ObjectBase):
                  'bearerFormat', 'flows', 'openIdConnectUrl']
     required_fields = ['type']
 
+    bearerFormat: str
+    description: str
+    flows: Map[str, str]  # TODO
+    in_: str
+    name: str
+    openIdConnectUrl: str
+    scheme: str
+    type: str
+
     def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self.bearerFormat     = self._get('bearerFormat', [str])
-        self.description      = self._get('description', [str])
-        self.flows            = self._get('flows', dict)  # ['OAuthFlows']) TODO
-        self.in_              = self._get('in', str)
-        self.name             = self._get('name', [str])
-        self.openIdConnectUrl = self._get('openIdConnectUrl', [str])
-        self.scheme           = self._get('scheme', [str])
-        self.type             = self._get('type', [str])
+        super()._parse_data()
+        self.in_ = self._get("in", str)

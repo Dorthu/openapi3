@@ -1,3 +1,5 @@
+import dataclasses
+from typing import ForwardRef, Union, List
 import json
 import re
 import requests
@@ -8,7 +10,7 @@ except ImportError:
     from urllib import urlencode
 
 from .errors import SpecError
-from .object_base import ObjectBase
+from .object_base import ObjectBase, Map
 from .schemas import Model
 
 
@@ -23,7 +25,7 @@ def _validate_parameters(instance):
             if c.name not in allowed_path_parameters:
                 raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance.path)
 
-
+@dataclasses.dataclass(init=False)
 class Path(ObjectBase):
     """
     A Path object, as defined `here`_.  Path objects represent URL paths that
@@ -34,24 +36,25 @@ class Path(ObjectBase):
     __slots__ = ['summary', 'description', 'get', 'put', 'post', 'delete',
                  'options', 'head', 'patch', 'trace', 'servers', 'parameters']
 
+    delete: ForwardRef('Operation')
+    description: str
+    get: ForwardRef('Operation')
+    head: ForwardRef('Operation')
+    options: ForwardRef('Operation')
+    parameters: List[Union['Parameter', 'Reference']] # = []
+    patch: ForwardRef('Operation')
+    post: ForwardRef('Operation')
+    put: ForwardRef('Operation')
+    servers: List['Server']
+    summary: str
+    trace: ForwardRef('Operation')
+
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
         # TODO - handle possible $ref
-        self.delete      = self._get('delete', 'Operation')
-        self.description = self._get('description', str)
-        self.get         = self._get('get', 'Operation')
-        self.head        = self._get('head', 'Operation')
-        self.options     = self._get('options', 'Operation')
-        self.parameters  = self._get('parameters', ['Parameter', 'Reference'], is_list=True)
-        self.patch       = self._get('patch', 'Operation')
-        self.post        = self._get('post', 'Operation')
-        self.put         = self._get('put', 'Operation')
-        self.servers     = self._get('servers', ['Server'], is_list=True)
-        self.summary     = self._get('summary', str)
-        self.trace       = self._get('trace', 'Operation')
-
+        super()._parse_data()
         if self.parameters is None:
             # this will be iterated over later
             self.parameters = []
@@ -67,6 +70,7 @@ class Path(ObjectBase):
         _validate_parameters(self)
 
 
+@dataclasses.dataclass(init=False)
 class Parameter(ObjectBase):
     """
     A `Parameter Object`_ defines a single operation parameter.
@@ -78,21 +82,24 @@ class Parameter(ObjectBase):
                  'schema', 'example', 'examples']
     required_fields = ['name', 'in']
 
-    def _parse_data(self):
-        self.deprecated  = self._get('deprecated', bool)
-        self.description = self._get('description', str)
-        self.example     = self._get('example', str)
-        self.examples    = self._get('examples', dict)  # Map[str: ['Example','Reference']]
-        self.explode     = self._get('explode', bool)
-        self.in_         = self._get('in', str)  # TODO must be one of ["query","header","path","cookie"]
-        self.name        = self._get('name', str)
-        self.required    = self._get('required', bool)
-        self.schema      = self._get('schema', ['Schema', 'Reference'])
-        self.style       = self._get('style', str)
+    deprecated: bool
+    description: str
+    example: str
+    examples: Map[str, Union['Example','Reference']]
+    explode: bool
+    in_: str  # TODO must be one of ["query","header","path","cookie"]
+    name: str
+    required: bool
+    schema: Union['Schema', 'Reference']
+    style: str
 
-        # allow empty or reserved values in Parameter data
-        self.allowEmptyValue = self._get('allowEmptyValue', bool)
-        self.allowReserved   = self._get('allowReserved', bool)
+    # allow empty or reserved values in Parameter data
+    allowEmptyValue: bool
+    allowReserved: bool
+
+    def _parse_data(self):
+        super()._parse_data()
+        self.in_ = self._get("in", str)
 
         # required is required and must be True if this parameter is in the path
         if self.in_ == "path" and self.required is not True:
@@ -100,6 +107,7 @@ class Parameter(ObjectBase):
             raise SpecError(err_msg.format(self.get_path()), path=self.path)
 
 
+@dataclasses.dataclass(init=False)
 class Operation(ObjectBase):
     """
     An Operation object as defined `here`_
@@ -111,24 +119,24 @@ class Operation(ObjectBase):
                  'callbacks', 'deprecated', 'servers', '_session', '_request']
     required_fields = ['responses']
 
+    deprecated: bool
+    description: str
+    externalDocs: ForwardRef('ExternalDocumentation')
+    operationId: str
+    parameters: List[Union['Parameter', 'Reference']]
+    requestBody: Union['RequestBody', 'Reference']
+    responses: Map[str, Union['Response', 'Reference']]
+    security: List['SecurityRequirement']
+    servers: List['Server']
+    summary: str
+    tags: List[str]
+
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        raw_servers       = self._get('servers', list)
-        self.deprecated   = self._get('deprecated', bool)
-        self.description  = self._get('description', str)
-        self.externalDocs = self._get('externalDocs', 'ExternalDocumentation')
-        self.operationId  = self._get('operationId', str)
-        self.parameters   = self._get('parameters', ['Parameter', 'Reference'], is_list=True)
-        self.requestBody  = self._get('requestBody', ['RequestBody', 'Reference'])
-        self.responses    = self._get('responses', ['Response', 'Reference'], is_map=True)
-        self.security     = self._get('security', ['SecurityRequirement'], is_list=True)
-        self.servers      = self._get('servers', ['Server'], is_list=True)
-        self.summary      = self._get('summary', str)
-        self.tags         = self._get('tags', list)
-        raw_servers       = self._get('servers', list)
-        # self.callbacks  = self._get('callbacks', dict) TODO
+        super()._parse_data()
+        # callbacks: dict TODO
 
         # default parameters to an empty list for processing later
         if self.parameters is None:
@@ -142,7 +150,7 @@ class Operation(ObjectBase):
 
         # TODO - maybe make this generic
         if self.security is None:
-            self.security = self._root._get('security',  ['SecurityRequirement'], is_list=True) or []
+            self.security = []
 
         # Store session object
         self._session = requests.Session()
@@ -347,6 +355,7 @@ class Operation(ObjectBase):
             raise NotImplementedError()
 
 
+@dataclasses.dataclass(init=False)
 class SecurityRequirement(ObjectBase):
     """
     A `SecurityRequirement`_ object describes security schemes for API access.
@@ -356,13 +365,16 @@ class SecurityRequirement(ObjectBase):
     ___slots__ = ['name', 'types']
     required_fields = []
 
+    name: str
+    types: List[str]
+
     def _parse_data(self):
         """
         """
         # usually these only ever have one key
         if len(self.raw_element.keys()) == 1:
             self.name  = [c for c in self.raw_element.keys()][0]
-            self.types = self._get(self.name, str, is_list=True)
+            self.types = self._get(self.name, List[str])
         elif len(self.raw_element.keys()) == 0:
             # optional
             self.name = self.types = None
@@ -380,6 +392,7 @@ class SecurityRequirement(ObjectBase):
         return {self.name: self.types}
 
 
+@dataclasses.dataclass(init=False)
 class RequestBody(ObjectBase):
     """
     A `RequestBody`_ object describes a single request body.
@@ -389,16 +402,12 @@ class RequestBody(ObjectBase):
     __slots__ = ['description', 'content', 'required']
     required_fields = ['content']
 
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self.description = self._get('description', str)
-        self.content     = self._get('content', ['MediaType'], is_map=True)
-        raw_content      = self._get('content', dict)
-        self.required    = self._get('required', bool)
+    description: str
+    content: Map[str, ForwardRef('MediaType')]
+    required: bool
 
 
+@dataclasses.dataclass(init=False)
 class MediaType(ObjectBase):
     """
     A `MediaType`_ object provides schema and examples for the media type identified
@@ -409,16 +418,13 @@ class MediaType(ObjectBase):
     __slots__ = ['schema', 'example', 'examples', 'encoding']
     required_fields = []
 
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self.schema   = self._get('schema', ['Schema', 'Reference'])
-        self.example  = self._get('example', str)  # 'any' type
-        self.examples = self._get('examples', ['Example', 'Reference'], is_map=True)
-        self.encoding = self._get('encoding', dict)  # Map['Encoding']
+    schema: Union['Schema', 'Reference']
+    example: str  # 'any' type
+    examples: Map[str, Union['Example', 'Reference']]
+    encoding: Map[str, ForwardRef('Encoding')]
 
 
+@dataclasses.dataclass(init=False)
 class Response(ObjectBase):
     """
     A `Response Object`_ describes a single response from an API Operation,
@@ -429,17 +435,12 @@ class Response(ObjectBase):
     __slots__ = ['description', 'headers', 'content', 'links']
     required_fields = ['description']
 
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self.content     = self._get('content', ['MediaType'], is_map=True)
-        self.description = self._get('description', str)
-        raw_content      = self._get('content', dict)
-        raw_headers      = self._get('headers', dict)
-        self.links       = self._get('links', ['Link', 'Reference'], is_map=True)
+    content: Map[str, ForwardRef('MediaType')]
+    description: str
+    links: Map[str, Union['Link', 'Reference']]
 
 
+@dataclasses.dataclass(init=False)
 class Link(ObjectBase):
     """
     A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
@@ -448,18 +449,21 @@ class Link(ObjectBase):
     """
     __slots__ = ['operationId', 'operationRef', 'description', 'parameters', 'requestBody', 'server']
 
+    operationId: str
+    operationRef: str
+    description: str
+    parameters: dict
+    requestBody: dict
+    server: ForwardRef('Server')
+
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        self.operationId  = self._get('operationId', str)
-        self.operationRef = self._get('operationRef', str)
-        self.description  = self._get('description', str)
-        self.parameters   = self._get('parameters', dict)
-        self.requestBody  = self._get('requestBody', dict)
-        self.server       = self._get('server', ['Server'])
+        super()._parse_data()
 
         if self.operationId and self.operationRef:
             raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
+
         if not (self.operationId or self.operationRef):
             raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")

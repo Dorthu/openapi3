@@ -1,4 +1,9 @@
 import sys
+import typing
+
+
+
+import dataclasses
 
 from .errors import SpecError, ReferenceResolutionError
 
@@ -165,10 +170,7 @@ class ObjectBase(object):
 
         :raises SpecError: if any of the required fields are not present.
         """
-        missing_fields = []
-        for field in fields:
-            if field not in self.raw_element:
-                missing_fields.append(field)
+        missing_fields = set(fields) - set(self.raw_element)
 
         if missing_fields:
             raise SpecError('Missing required fields: {}'.format(
@@ -188,9 +190,11 @@ class ObjectBase(object):
         are parsed and then an assertion is made that all keys in the
         raw_element were accessed - if not, the schema is considered invalid.
         """
-        raise NotImplementedError('You must implement this method in subclasses!')
+        for field in dataclasses.fields(self):
+            v = self._get(field.name, field.type)
+            setattr(self, field.name, v)
 
-    def _get(self, field, object_types, is_list=False, is_map=False):
+    def _get(self, field, object_type):
         """
         Retrieves a value from this object's raw element, and returns None if
         it is not present.  Use :any:`_required_fields` to ensure all required
@@ -198,19 +202,8 @@ class ObjectBase(object):
 
         :param field: The field name to retrieve
         :type field: str
-        :param object_types: The types of Objects that are accepted.  One of
-                             these types will be returned, or the spec will be
-                             considered invalid.  If the magic string '*' is
-                             passed in, it must be the only accepted type, and
-                             all types will be accepted.
-        :type object_types: list[str or Type]
-        :param is_list: If true, this should return a List of object of the give
-                        types.
-        :param is_list: bool
-        :param is_map: If true, this must return a :any:`Map` of object of the given
-                       types
-        :type is_map: bool
-
+        :param object_type: The type
+        :type object_type: typing
         :returns: object_type if given, otherwise the type parsed from the spec
                   file
         """
@@ -221,50 +214,44 @@ class ObjectBase(object):
             return None
 
         try:
-            if not isinstance(object_types, list):
-                # maybe don't accept not-lists
-                object_types = [object_types]
-
-            if '*' in object_types and len(object_types) != 1:
-                raise ValueError("Fields that accept any type must not specify any other types!")
-
-            # if yaml loads a value that includes a unicode character in python2,
-            # that value will come in as a ``unicode`` type instead of a ``str``.
-            # For the purposes of this library, those are the same thing, so in
-            # python2 only, we'll include ``unicode`` for any element that
-            # accepts ``str`` types.
-            if IS_PYTHON_2:
-                if str in object_types:
-                    object_types += [unicode]
-
-
-            if is_list:
+            origin = typing.get_origin(object_type) or object_type
+            if origin == list:
                 if not isinstance(ret, list):
-                    raise SpecError('Expected {}.{} to be a list of [{}], got {}'.format(
-                        self.get_path, field, ','.join([str(c) for c in object_types]),
+                    raise SpecError('Expected {}.{} to be a list of {}, got {}'.format(
+                        self.get_path, field, object_type,
                         type(ret)),
                         path=self.path,
                         element=self)
-                ret = self.parse_list(ret, object_types, field)
-            elif is_map:
+                ret = self.parse_list(ret, object_type, field)
+            elif origin == Map:
                 if not isinstance(ret, dict):
                     raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
-                        self.get_path, field, ','.join([str(c) for c in object_types]),
+                        self.get_path, field, object_type,
                         type(ret)),
                         path=self.path,
                         element=self)
-                ret = Map(self.path + [field], ret, object_types, self._root)
+                ret = Map(self.path + [field], ret, object_type, self._root)
             else:
-                accepts_string = str in object_types
-                found_type = False
+                if origin == typing.Union:
+                    types = []
+                    for t in typing.get_args(object_type):
+                        if isinstance(t, typing.ForwardRef):
+                            types.append(t.__forward_arg__)
+                        else:
+                            types.append(t)
+                elif isinstance(origin, typing.ForwardRef):
+                    types = [origin.__forward_arg__]
+                else:
+                    types = [object_type]
 
-                for t in object_types:
-                    if t == "*":
-                        found_type = True
+
+                accepts_string = False
+                for t in types:
+                    if t == typing.Any:
                         break
 
                     if t == str:
-                        # try to parse everything else first
+                        accepts_string = True
                         continue
 
                     if isinstance(t, str):
@@ -274,19 +261,16 @@ class ObjectBase(object):
 
                         if python_type.can_parse(ret):
                             ret = python_type(self.path + [field], ret, self._root)
-                            found_type = True
                             break
+
                     elif isinstance(ret, t):
                         # it's already the type we need
-                        found_type = True
                         break
-
-                if not found_type:
+                else:
                     if accepts_string and isinstance(ret, str):
-                        found_type = True
-
-                if not found_type:
-                    raise_on_unknown_type(self, field, object_types, ret)
+                        pass
+                    else:
+                        raise_on_unknown_type(self, field, types, ret)
         except SpecError as e:
             if self._root.validation_mode:
                 self._root.log_spec_error(e)
@@ -374,8 +358,14 @@ class ObjectBase(object):
         :raises ValueError: if no Type with that name was found
         """
         if not hasattr(cls, '_subclass_map'):
+            def resolve(c, d):
+                r = {t.__name__: t for t in c.__subclasses__()}
+                for k,v in r.items():
+                    resolve(v, d)
+                d.update(r)
+                return d
             # generate subclass map on first call
-            setattr(cls, '_subclass_map', {t.__name__: t for t in cls.__subclasses__()})
+            setattr(cls, '_subclass_map', resolve(cls, {}))
 
         # TODO - why?
         if typename not in cls._subclass_map:  # pylint: disable=no-member
@@ -392,17 +382,15 @@ class ObjectBase(object):
         """
         return '.'.join(self.path)
 
-    def parse_list(self, raw_list, object_types, field=None):
+    def parse_list(self, raw_list, object_type, field=None):
         """
         Given a list of Objects, iterates over the list and creates the relevant
         Objects, returning the resulting list.
 
         :param raw_list: The list to parse
         :type raw_list: list[dict]
-        :param object_types: A list of subclass names to attempt to parse the
-                             objects to.  The list does not need to consist of
-                             only one of these types.
-        :type object_type: list[str]
+        :param object_type: typing
+        :type object_type: typeing.Type
         :param field: The field to append to self.get_path() when determining path
                       for created objects.
         :type field: str
@@ -413,15 +401,12 @@ class ObjectBase(object):
         if raw_list is None:
             return None
 
-        if not isinstance(object_types, list):
-            object_types = [object_types]
-
         real_path = self.path[:]
         if field:
             real_path += [field]
 
-        python_types = [ObjectBase.get_object_type(t) if isinstance(t, str) else t
-                        for t in object_types]
+        python_types = self.types_of(object_type)
+
 
         result = []
         for i, cur in enumerate(raw_list):
@@ -439,11 +424,36 @@ class ObjectBase(object):
 
             if not found_type:
                 raise SpecError('Could not parse {}.{}, expected to be one of [{}]'.format(
-                    '.'.join(real_path), i, object_types),
+                    '.'.join(real_path), i, python_types),
                     path=self.path,
                     element=self)
 
         return result
+
+    @staticmethod
+    def _resolve_type(obj, value):
+        # we found a reference - attempt to resolve it
+        reference_path = value.ref
+        if not reference_path.startswith('#/'):
+            raise ReferenceResolutionError('Invalid reference path {}'.format(
+                reference_path),
+                path=obj.path,
+                element=obj)
+
+        reference_path = reference_path.split('/')[1:]
+
+        try:
+            resolved_value = obj._root.resolve_path(reference_path)
+        except ReferenceResolutionError as e:
+            # add metadata to the error
+            e.path = obj.path
+            e.element = obj
+            raise
+
+        # FIXME - will break if multiple things reference the same
+        # node
+        resolved_value._original_ref = value
+        return resolved_value
 
     def _resolve_references(self):
         """
@@ -460,29 +470,7 @@ class ObjectBase(object):
             value = getattr(self, slot)
 
             if isinstance(value, reference_type):
-                # we found a reference - attempt to resolve it
-                reference_path = value.ref
-                if not reference_path.startswith('#/'):
-                    raise ReferenceResolutionError('Invalid reference path {}'.format(
-                        reference_path),
-                        path=self.path,
-                        element=self)
-
-                reference_path = reference_path.split('/')[1:]
-
-                try:
-                    resolved_value = self._root.resolve_path(reference_path)
-                except ReferenceResolutionError as e:
-                    # add metadata to the error
-                    e.path = self.path
-                    e.element = self
-                    raise
-
-                # FIXME - will break if multiple things reference the same
-                # node
-                resolved_value._original_ref = value
-
-                # resolved
+                resolved_value = self._resolve_type(self, value)
                 setattr(self, slot, resolved_value)
             elif issubclass(type(value), ObjectBase) or isinstance(value, Map):
                 # otherwise, continue resolving down the tree
@@ -492,18 +480,7 @@ class ObjectBase(object):
                 resolved_list = []
                 for item in value:
                     if isinstance(item, reference_type):
-                        # TODO - this is duplicated code
-                        reference_path = item.ref.split('/')[1:]
-
-                        try:
-                            resolved_value = self._root.resolve_path(reference_path)
-                        except ReferenceResolutionError as e:
-                            # add metadata to the error
-                            e.path = self.path
-                            e.element = self
-                            raise
-
-                        resolved_value._original_ref = value
+                        resolved_value = self._resolve_type(self, item)
                         resolved_list.append(resolved_value)
                     else:
                         if issubclass(type(value), ObjectBase) or isinstance(value, Map):
@@ -525,8 +502,9 @@ class ObjectBase(object):
                 continue
 
             value = getattr(self, slot)
-
-            if issubclass(type(value), ObjectBase):
+            if value is None:
+                continue
+            elif issubclass(type(value), ObjectBase):
                 value._resolve_allOfs()
             elif issubclass(type(value), Map):
                 for _, c in value.items():
@@ -535,6 +513,34 @@ class ObjectBase(object):
                 for c in value:
                     if issubclass(type(c), ObjectBase) or issubclass(type(c), Map):
                         c._resolve_allOfs()
+            elif isinstance(value, (int, str, dict)):
+                continue
+            else:
+                raise TypeError(value)
+
+    @staticmethod
+    def types_of(object_type, expected=None):
+        def resolve(t):
+            if typing.get_origin(t) == typing.Union:
+                t = typing.get_args(t)
+            else:
+                t = [t]
+
+            t = [ObjectBase.get_object_type(i.__forward_arg__) if isinstance(i, typing.ForwardRef) else i for i in t]
+            return t
+
+        if expected:
+            assert typing.get_origin(object_type) == expected
+
+        if typing.get_origin(object_type) == list:
+            python_types = typing.get_args(object_type)[0]
+            return resolve(python_types)
+
+        if typing.get_origin(object_type) == Map:
+            args = typing.get_args(object_type)
+            return resolve(args[0]),resolve(args[1])
+
+        raise TypeError(object_type)
 
 
 class Map(dict):
@@ -544,7 +550,7 @@ class Map(dict):
     """
     __slots__ = ['dct', 'path', 'raw_element', '_root']
 
-    def __init__(self, path, raw_element, object_types, root):
+    def __init__(self, path, raw_element, object_type, root):
         """
         Creates a dict containing the parsed objects from the raw element
 
@@ -553,23 +559,15 @@ class Map(dict):
         :param raw_element: The raw spec data for this map.  The keys must all
                             be strings.
         :type raw_element: dict
-        :param object_types: A list of strings accepted by
-                             :any:`ObjectBase.get_object_type`, or the python
-                             types to parse.
-        :type object_types: list[str or Type]
+        :param object_type: typing
+        :type object_type: typing
         """
         self.path = path
         self.raw_element = raw_element
         self._root = root
 
-        python_types = []
+        python_types = ObjectBase.types_of(object_type, Map)[1]
         dct = {}
-
-        for t in object_types:
-            if isinstance(t, str):
-                python_types.append(ObjectBase.get_object_type(t))
-            else:
-                python_types.append(t)
 
         for k, v in self.raw_element.items():
             found_type = False
@@ -583,7 +581,7 @@ class Map(dict):
                     found_type = True
 
             if not found_type:
-                raise_on_unknown_type(self, k, object_types, v)
+                raise_on_unknown_type(self, k, python_types, v)
 
         self.update(dct)
 
@@ -597,31 +595,7 @@ class Map(dict):
 
         for key, value in self.items():
             if isinstance(value, reference_type):
-                # TODO - this is repeated code
-                # we found a reference - attempt to resolve it
-                reference_path = value.ref
-                if not reference_path.startswith('#/'):
-                    raise ReferenceResolutionError('Invalid reference path {}'.format(
-                        reference_path),
-                        path=self.path,
-                        element=self)
-
-                reference_path = reference_path.split('/')[1:]
-
-                try:
-                    resolved_value = self._root.resolve_path(reference_path)
-                except ReferenceResolutionError as e:
-                    # add metadata to the error
-                    e.path = self.path
-                    e.element = self
-                    raise
-
-                # FIXME - will break if multiple things reference the same
-                # node
-                resolved_value._original_ref = value
-
-                # resolved
-                self[key] = resolved_value
+                self[key] = ObjectBase._resolve_type(self, value)
             else:
                 value._resolve_references()
 
@@ -633,3 +607,5 @@ class Map(dict):
         :rtype: str
         """
         return '.'.join(self.path)
+
+
