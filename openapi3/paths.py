@@ -1,3 +1,5 @@
+import dataclasses
+from typing import ForwardRef, Union, List
 import json
 import re
 import requests
@@ -8,7 +10,7 @@ except ImportError:
     from urllib import urlencode
 
 from .errors import SpecError
-from .object_base import ObjectBase
+from .object_base import ObjectBase, Map
 from .schemas import Model
 
 
@@ -16,14 +18,14 @@ def _validate_parameters(instance):
     """
     Ensures that all parameters for this path are valid
     """
-    allowed_path_parameters = re.findall(r"{([a-zA-Z0-9\-\._~]+)}", instance.path[1])
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', instance.path[1])
 
     for c in instance.parameters:
-        if c.in_ == "path":
+        if c.in_ == 'path':
             if c.name not in allowed_path_parameters:
-                raise SpecError("Parameter name not found in path: {}".format(c.name), path=instance.path)
+                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance.path)
 
-
+@dataclasses.dataclass(init=False)
 class Path(ObjectBase):
     """
     A Path object, as defined `here`_.  Path objects represent URL paths that
@@ -31,40 +33,28 @@ class Path(ObjectBase):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#paths-object
     """
+    __slots__ = ['summary', 'description', 'get', 'put', 'post', 'delete',
+                 'options', 'head', 'patch', 'trace', 'servers', 'parameters']
 
-    __slots__ = [
-        "summary",
-        "description",
-        "get",
-        "put",
-        "post",
-        "delete",
-        "options",
-        "head",
-        "patch",
-        "trace",
-        "servers",
-        "parameters",
-    ]
+    delete: ForwardRef('Operation')
+    description: str
+    get: ForwardRef('Operation')
+    head: ForwardRef('Operation')
+    options: ForwardRef('Operation')
+    parameters: List[Union['Parameter', 'Reference']] # = []
+    patch: ForwardRef('Operation')
+    post: ForwardRef('Operation')
+    put: ForwardRef('Operation')
+    servers: List['Server']
+    summary: str
+    trace: ForwardRef('Operation')
 
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
         # TODO - handle possible $ref
-        self.delete = self._get("delete", "Operation")
-        self.description = self._get("description", str)
-        self.get = self._get("get", "Operation")
-        self.head = self._get("head", "Operation")
-        self.options = self._get("options", "Operation")
-        self.parameters = self._get("parameters", ["Parameter", "Reference"], is_list=True)
-        self.patch = self._get("patch", "Operation")
-        self.post = self._get("post", "Operation")
-        self.put = self._get("put", "Operation")
-        self.servers = self._get("servers", ["Server"], is_list=True)
-        self.summary = self._get("summary", str)
-        self.trace = self._get("trace", "Operation")
-
+        super()._parse_data()
         if self.parameters is None:
             # this will be iterated over later
             self.parameters = []
@@ -80,95 +70,73 @@ class Path(ObjectBase):
         _validate_parameters(self)
 
 
+@dataclasses.dataclass(init=False)
 class Parameter(ObjectBase):
     """
     A `Parameter Object`_ defines a single operation parameter.
 
     .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#parameterObject
     """
+    __slots__ = ['name', 'in', 'in_', 'description', 'required', 'deprecated',
+                 'allowEmptyValue', 'style', 'explode', 'allowReserved',
+                 'schema', 'example', 'examples']
+    required_fields = ['name', 'in']
 
-    __slots__ = [
-        "name",
-        "in",
-        "in_",
-        "description",
-        "required",
-        "deprecated",
-        "allowEmptyValue",
-        "style",
-        "explode",
-        "allowReserved",
-        "schema",
-        "example",
-        "examples",
-    ]
-    required_fields = ["name", "in"]
+    deprecated: bool
+    description: str
+    example: str
+    examples: Map[str, Union['Example','Reference']]
+    explode: bool
+    in_: str  # TODO must be one of ["query","header","path","cookie"]
+    name: str
+    required: bool
+    schema: Union['Schema', 'Reference']
+    style: str
+
+    # allow empty or reserved values in Parameter data
+    allowEmptyValue: bool
+    allowReserved: bool
 
     def _parse_data(self):
-        self.deprecated = self._get("deprecated", bool)
-        self.description = self._get("description", str)
-        self.example = self._get("example", [str, int, bool, float])  # Spec notes 'Any' but just limited to primitives
-        self.examples = self._get("examples", dict)  # Map[str: ['Example','Reference']]
-        self.explode = self._get("explode", bool)
-        self.in_ = self._get("in", str)  # TODO must be one of ["query","header","path","cookie"]
-        self.name = self._get("name", str)
-        self.required = self._get("required", bool)
-        self.schema = self._get("schema", ["Schema", "Reference"])
-        self.style = self._get("style", str)
-
-        # allow empty or reserved values in Parameter data
-        self.allowEmptyValue = self._get("allowEmptyValue", bool)
-        self.allowReserved = self._get("allowReserved", bool)
+        super()._parse_data()
+        self.in_ = self._get("in", str)
 
         # required is required and must be True if this parameter is in the path
         if self.in_ == "path" and self.required is not True:
-            err_msg = "Parameter {} must be required since it is in the path"
+            err_msg = 'Parameter {} must be required since it is in the path'
             raise SpecError(err_msg.format(self.get_path()), path=self.path)
 
 
+@dataclasses.dataclass(init=False)
 class Operation(ObjectBase):
     """
     An Operation object as defined `here`_
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject
     """
+    __slots__ = ['tags', 'summary', 'description', 'externalDocs', 'security',
+                 'operationId', 'parameters', 'requestBody', 'responses',
+                 'callbacks', 'deprecated', 'servers', '_session', '_request']
+    required_fields = ['responses']
 
-    __slots__ = [
-        "tags",
-        "summary",
-        "description",
-        "externalDocs",
-        "security",
-        "operationId",
-        "parameters",
-        "requestBody",
-        "responses",
-        "callbacks",
-        "deprecated",
-        "servers",
-        "_session",
-        "_request",
-    ]
-    required_fields = ["responses"]
+    deprecated: bool
+    description: str
+    externalDocs: ForwardRef('ExternalDocumentation')
+    operationId: str
+    parameters: List[Union['Parameter', 'Reference']]
+    requestBody: Union['RequestBody', 'Reference']
+    responses: Map[str, Union['Response', 'Reference']]
+    security: List['SecurityRequirement']
+    servers: List['Server']
+    summary: str
+    tags: List[str]
 
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        raw_servers = self._get("servers", list)
-        self.deprecated = self._get("deprecated", bool)
-        self.description = self._get("description", str)
-        self.externalDocs = self._get("externalDocs", "ExternalDocumentation")
-        self.operationId = self._get("operationId", str)
-        self.parameters = self._get("parameters", ["Parameter", "Reference"], is_list=True)
-        self.requestBody = self._get("requestBody", ["RequestBody", "Reference"])
-        self.responses = self._get("responses", ["Response", "Reference"], is_map=True)
-        self.security = self._get("security", ["SecurityRequirement"], is_list=True)
-        self.servers = self._get("servers", ["Server"], is_list=True)
-        self.summary = self._get("summary", str)
-        self.tags = self._get("tags", list)
-        raw_servers = self._get("servers", list)
-        # self.callbacks  = self._get('callbacks', dict) TODO
+        super()._parse_data()
+        # callbacks: dict TODO
 
         # default parameters to an empty list for processing later
         if self.parameters is None:
@@ -182,7 +150,7 @@ class Operation(ObjectBase):
 
         # TODO - maybe make this generic
         if self.security is None:
-            self.security = self._root._get("security", ["SecurityRequirement"], is_list=True) or []
+            self.security = []
 
         # Store session object
         self._session = requests.Session()
@@ -203,31 +171,31 @@ class Operation(ObjectBase):
     def _request_handle_secschemes(self, security_requirement, value):
         ss = self._root.components.securitySchemes[security_requirement.name]
 
-        if ss.type == "http" and ss.scheme == "basic":
+        if ss.type == 'http' and ss.scheme == 'basic':
             self._request.auth = requests.auth.HTTPBasicAuth(*value)
 
-        if ss.type == "http" and ss.scheme == "digest":
+        if ss.type == 'http' and ss.scheme == 'digest':
             self._request.auth = requests.auth.HTTPDigestAuth(*value)
 
-        if ss.type == "http" and ss.scheme == "bearer":
-            header = ss.bearerFormat or "Bearer {}"
-            self._request.headers["Authorization"] = header.format(value)
+        if ss.type == 'http' and ss.scheme == 'bearer':
+            header = ss.bearerFormat or 'Bearer {}'
+            self._request.headers['Authorization'] = header.format(value)
 
-        if ss.type == "mutualTLS":
+        if ss.type == 'mutualTLS':
             # TLS Client certificates (mutualTLS)
             self._request.cert = value
 
-        if ss.type == "apiKey":
-            if ss.in_ == "query":
+        if ss.type == 'apiKey':
+            if ss.in_ == 'query':
                 # apiKey in query parameter
-                self._request.params[ss.name] = value
+                self._request.params[ss.name]  = value
 
-            if ss.in_ == "header":
+            if ss.in_ == 'header':
                 # apiKey in query header data
                 self._request.headers[ss.name] = value
 
-            if ss.in_ == "cookie":
-                self._request.cookies = {ss.name: value}
+            if ss.in_ == 'cookie':
+                self._request.cookies ={ss.name:value}
 
     def _request_handle_parameters(self, parameters={}):
         # Parameters
@@ -244,30 +212,30 @@ class Operation(ObjectBase):
                 value = parameters[name]
             except KeyError:
                 if spec.required and name not in parameters:
-                    err_msg = "Required parameter {} not provided".format(name)
+                    err_msg = 'Required parameter {} not provided'.format(name)
                     raise ValueError(err_msg)
 
                 continue
 
-            if spec.in_ == "path":
+            if spec.in_ == 'path':
                 # The string method `format` is incapable of partial updates,
                 # as such we need to collect all the path parameters before
                 # applying them to the format string.
                 path_parameters[name] = value
 
-            if spec.in_ == "query":
-                self._request.params[name] = value
+            if spec.in_ == 'query':
+                self._request.params[name]  = value
 
-            if spec.in_ == "header":
+            if spec.in_ == 'header':
                 self._request.headers[name] = value
 
-            if spec.in_ == "cookie":
+            if spec.in_ == 'cookie':
                 self._request.cookies[name] = value
 
         self._request.url = self._request.url.format(**path_parameters)
 
     def _request_handle_body(self, data):
-        if "application/json" in self.requestBody.content:
+        if 'application/json' in self.requestBody.content:
             if isinstance(data, dict) or isinstance(data, list):
                 body = json.dumps(data)
 
@@ -279,11 +247,12 @@ class Operation(ObjectBase):
                 body = json.dumps(data_dict, default=converter)
 
             self._request.data = body
-            self._request.headers["Content-Type"] = "application/json"
+            self._request.headers['Content-Type'] = 'application/json'
         else:
             raise NotImplementedError()
 
-    def request(self, base_url, security={}, data=None, parameters={}, verify=True, session=None, raw_response=False):
+    def request(self, base_url, security={}, data=None, parameters={}, verify=True,
+                session=None, raw_response=False):
         """
         Sends an HTTP request as described by this Path
 
@@ -322,15 +291,13 @@ class Operation(ObjectBase):
                         self._request_handle_secschemes(r, value)
 
             if security_requirement is None:
-                err_msg = """No security requirement satisfied (accepts {}) \
-                          """.format(
-                    ", ".join(self.security.keys())
-                )
+                err_msg = '''No security requirement satisfied (accepts {}) \
+                          '''.format(', '.join(self.security.keys()))
                 raise ValueError(err_msg)
 
         if self.requestBody:
             if self.requestBody.required and data is None:
-                err_msg = "Request Body is required but none was provided."
+                err_msg = 'Request Body is required but none was provided.'
                 raise ValueError(err_msg)
 
             self._request_handle_body(data)
@@ -350,74 +317,68 @@ class Operation(ObjectBase):
         expected_response = None
         if status_code in self.responses:
             expected_response = self.responses[status_code]
-        elif "default" in self.responses:
-            expected_response = self.responses["default"]
+        elif 'default' in self.responses:
+            expected_response = self.responses['default']
 
         if expected_response is None:
             # TODO - custom exception class that has the response object in it
-            err_msg = """Unexpected response {} from {} (expected one of {}, \
-                         no default is defined"""
-            err_var = result.status_code, self.operationId, ",".join(self.responses.keys())
+            err_msg = '''Unexpected response {} from {} (expected one of {}, \
+                         no default is defined'''
+            err_var = result.status_code, self.operationId, ','.join(self.responses.keys())
 
             raise RuntimeError(err_msg.format(*err_var))
 
-        # if we got back a valid response code (or there was a default) and no
-        # response content was expected, return None
-        if expected_response.content is None:
-            return
-
-        content_type = result.headers["Content-Type"]
-        if ';' in content_type:
-            # if the content type that came in included an encoding, we'll ignore
-            # it for now (requests has already parsed it for us) and only look at
-            # the MIME type when determining if an expected content type was returned.
-            content_type = content_type.split(';')[0].strip()
-
+        content_type   = result.headers['Content-Type']
         expected_media = expected_response.content.get(content_type, None)
 
-        if expected_media is None and "/" in content_type:
+        if expected_media is None and '/' in content_type:
             # accept media type ranges in the spec. the most specific matching
             # type should always be chosen, but if we do not have a match here
             # a generic range should be accepted if one if provided
             # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
 
-            generic_type = content_type.split("/")[0] + "/*"
+            generic_type   = content_type.split('/')[0] + '/*'
             expected_media = expected_response.content.get(generic_type, None)
 
         if expected_media is None:
-            err_msg = """Unexpected Content-Type {} returned for operation {} \
-                         (expected one of {})"""
-            err_var = result.headers["Content-Type"], self.operationId, ",".join(expected_response.content.keys())
+            err_msg = '''Unexpected Content-Type {} returned for operation {} \
+                         (expected one of {})'''
+            err_var = result.headers['Content-Type'], self.operationId, ','.join(expected_response.content.keys())
 
             raise RuntimeError(err_msg.format(*err_var))
 
         response_data = None
 
-        if content_type.lower() == "application/json":
+        if content_type.lower() == 'application/json':
             return expected_media.schema.model(result.json())
         else:
             raise NotImplementedError()
 
 
+@dataclasses.dataclass(init=False)
 class SecurityRequirement(ObjectBase):
     """
     A `SecurityRequirement`_ object describes security schemes for API access.
 
     .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
     """
-
-    ___slots__ = ["name", "types"]
+    ___slots__ = ['name', 'types']
     required_fields = []
 
+    name: str
+    types: List[str]
+
     def _parse_data(self):
-        """ """
+        """
+        """
         # usually these only ever have one key
         if len(self.raw_element.keys()) == 1:
-            self.name = [c for c in self.raw_element.keys()][0]
-            self.types = self._get(self.name, str, is_list=True)
+            self.name  = [c for c in self.raw_element.keys()][0]
+            self.types = self._get(self.name, List[str])
         elif len(self.raw_element.keys()) == 0:
             # optional
             self.name = self.types = None
+
 
     @classmethod
     def can_parse(cls, dct):
@@ -431,26 +392,22 @@ class SecurityRequirement(ObjectBase):
         return {self.name: self.types}
 
 
+@dataclasses.dataclass(init=False)
 class RequestBody(ObjectBase):
     """
     A `RequestBody`_ object describes a single request body.
 
     .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
     """
+    __slots__ = ['description', 'content', 'required']
+    required_fields = ['content']
 
-    __slots__ = ["description", "content", "required"]
-    required_fields = ["content"]
-
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self.description = self._get("description", str)
-        self.content = self._get("content", ["MediaType"], is_map=True)
-        raw_content = self._get("content", dict)
-        self.required = self._get("required", bool)
+    description: str
+    content: Map[str, ForwardRef('MediaType')]
+    required: bool
 
 
+@dataclasses.dataclass(init=False)
 class MediaType(ObjectBase):
     """
     A `MediaType`_ object provides schema and examples for the media type identified
@@ -458,20 +415,16 @@ class MediaType(ObjectBase):
 
     .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
     """
-
-    __slots__ = ["schema", "example", "examples", "encoding"]
+    __slots__ = ['schema', 'example', 'examples', 'encoding']
     required_fields = []
 
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self.schema = self._get("schema", ["Schema", "Reference"])
-        self.example = self._get("example", str)  # 'any' type
-        self.examples = self._get("examples", ["Example", "Reference"], is_map=True)
-        self.encoding = self._get("encoding", dict)  # Map['Encoding']
+    schema: Union['Schema', 'Reference']
+    example: str  # 'any' type
+    examples: Map[str, Union['Example', 'Reference']]
+    encoding: Map[str, ForwardRef('Encoding')]
 
 
+@dataclasses.dataclass(init=False)
 class Response(ObjectBase):
     """
     A `Response Object`_ describes a single response from an API Operation,
@@ -479,42 +432,38 @@ class Response(ObjectBase):
 
     .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
     """
+    __slots__ = ['description', 'headers', 'content', 'links']
+    required_fields = ['description']
 
-    __slots__ = ["description", "headers", "content", "links"]
-    required_fields = ["description"]
-
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self.content = self._get("content", ["MediaType"], is_map=True)
-        self.description = self._get("description", str)
-        raw_content = self._get("content", dict)
-        raw_headers = self._get("headers", dict)
-        self.links = self._get("links", ["Link", "Reference"], is_map=True)
+    content: Map[str, ForwardRef('MediaType')]
+    description: str
+    links: Map[str, Union['Link', 'Reference']]
 
 
+@dataclasses.dataclass(init=False)
 class Link(ObjectBase):
     """
     A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
 
     .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
     """
+    __slots__ = ['operationId', 'operationRef', 'description', 'parameters', 'requestBody', 'server']
 
-    __slots__ = ["operationId", "operationRef", "description", "parameters", "requestBody", "server"]
+    operationId: str
+    operationRef: str
+    description: str
+    parameters: dict
+    requestBody: dict
+    server: ForwardRef('Server')
 
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        self.operationId = self._get("operationId", str)
-        self.operationRef = self._get("operationRef", str)
-        self.description = self._get("description", str)
-        self.parameters = self._get("parameters", dict)
-        self.requestBody = self._get("requestBody", dict)
-        self.server = self._get("server", ["Server"])
+        super()._parse_data()
 
         if self.operationId and self.operationRef:
             raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
+
         if not (self.operationId or self.operationRef):
             raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")

@@ -1,104 +1,75 @@
-from .errors import SpecError, ModelError
+from typing import Union, List
+import dataclasses
+
+from .errors import SpecError
 from .general import Reference  # need this for Model below
 from .object_base import ObjectBase, Map
 
 TYPE_LOOKUP = {
-    "array": list,
-    "integer": int,
-    "object": dict,
-    "string": str,
-    "boolean": bool,
+    'array': list,
+    'integer': int,
+    'object': dict,
+    'string': str,
+    'boolean': bool,
 }
 
 
+@dataclasses.dataclass(init=False)
 class Schema(ObjectBase):
     """
     The `Schema Object`_ allows the definition of input and output data types.
 
     .. _Schema Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#schemaObject
     """
-
-    __slots__ = [
-        "title",
-        "multipleOf",
-        "maximum",
-        "exclusiveMaximum",
-        "minimum",
-        "exclusiveMinimum",
-        "maxLength",
-        "minLength",
-        "pattern",
-        "maxItems",
-        "minItems",
-        "uniqueItems",
-        "maxProperties",
-        "minProperties",
-        "required",
-        "enum",
-        "type",
-        "allOf",
-        "oneOf",
-        "anyOf",
-        "not",
-        "items",
-        "properties",
-        "additionalProperties",
-        "description",
-        "format",
-        "default",
-        "nullable",
-        "discriminator",
-        "readOnly",
-        "writeOnly",
-        "xml",
-        "externalDocs",
-        "example",
-        "deprecated",
-        "contentEncoding",
-        "contentMediaType",
-        "contentSchema",
-        "_model_type",
-        "_request_model_type",
-        "_resolved_allOfs",
-    ]
+    __slots__ = ['title', 'multipleOf', 'maximum', 'exclusiveMaximum',
+                 'minimum', 'exclusiveMinimum', 'maxLength', 'minLength',
+                 'pattern', 'maxItems', 'minItems', 'uniqueItems',
+                 'maxProperties', 'minProperties', 'required', 'enum', 'type',
+                 'allOf', 'oneOf', 'anyOf', 'not', 'items', 'properties',
+                 'additionalProperties', 'description', 'format', 'default',
+                 'nullable', 'discriminator', 'readOnly', 'writeOnly', 'xml',
+                 'externalDocs', 'example', 'deprecated', 'contentEncoding',
+                 'contentMediaType', 'contentSchema', '_model_type',
+                 '_request_model_type', '_resolved_allOfs']
     required_fields = []
+
+    title: str
+    maximum: Union[int, float]
+    minimum: Union[int, float]
+    maxLength: int
+    minLength: int
+    pattern: str
+    maxItems: int
+    minItems: int
+    required: List[str]
+    enum: list
+    type: str
+    allOf: List[Union["Schema", "Reference"]]
+    oneOf: list
+    anyOf: list
+    items: Union['Schema', 'Reference']
+    properties: Map[str, Union['Schema', 'Reference']]
+    additionalProperties: [bool, dict]
+    description: str
+    format: str
+    default: str  # TODO - str as a default?
+    nullable: bool
+    discriminator: dict  # 'Discriminator'
+    readOnly: bool
+    writeOnly: bool
+    xml: dict  # 'XML'
+    externalDocs: dict  # 'ExternalDocs'
+    deprecated: bool
+    example: object
+    contentEncoding: str
+    contentMediaType: str
+    contentSchema: str
 
     def _parse_data(self):
         """
         Implementation of :any:`ObjectBase._parse_data`
         """
-        self.title = self._get("title", str)
-        self.maximum = self._get("maximum", [int, float])
-        self.minimum = self._get("minimum", [int, float])
-        self.maxLength = self._get("maxLength", int)
-        self.minLength = self._get("minLength", int)
-        self.pattern = self._get("pattern", str)
-        self.maxItems = self._get("maxItems", int)
-        self.minItems = self._get("minItmes", int)
-        self.required = self._get("required", list)
-        self.enum = self._get("enum", list)
-        self.type = self._get("type", str)
-        self.allOf = self._get("allOf", ["Schema", "Reference"], is_list=True)
-        self.oneOf = self._get("oneOf", list)
-        self.anyOf = self._get("anyOf", list)
-        self.items = self._get("items", ["Schema", "Reference"])
-        self.properties = self._get("properties", ["Schema", "Reference"], is_map=True)
-        self.additionalProperties = self._get("additionalProperties", [bool, dict])
-        self.description = self._get("description", str)
-        self.format = self._get("format", str)
-        self.default = self._get("default", TYPE_LOOKUP.get(self.type, str))  # TODO - str as a default?
-        self.nullable = self._get("nullable", bool)
-        self.discriminator = self._get("discriminator", dict)  # 'Discriminator'
-        self.readOnly = self._get("readOnly", bool)
-        self.writeOnly = self._get("writeOnly", bool)
-        self.xml = self._get("xml", dict)  # 'XML'
-        self.externalDocs = self._get("externalDocs", dict)  # 'ExternalDocs'
-        self.deprecated = self._get("deprecated", bool)
-        self.example = self._get("example", "*")
-        self.contentEncoding = self._get("contentEncoding", str)
-        self.contentMediaType = self._get("contentMediaType", str)
-        self.contentSchema = self._get("contentSchema", str)
-
+        super()._parse_data()
         # TODO - Implement the following properties:
         # self.multipleOf
         # self.not
@@ -110,8 +81,9 @@ class Schema(ObjectBase):
 
         self._resolved_allOfs = False
 
-        if self.type == "array" and self.items is None:
-            raise SpecError('{}: items is required when type is "array"'.format(self.get_path()))
+        if self.type == 'array' and self.items is None:
+            raise SpecError('{}: items is required when type is "array"'.format(
+                self.get_path()))
 
     def get_type(self):
         """
@@ -128,11 +100,9 @@ class Schema(ObjectBase):
         # this is defined in ObjectBase.__init__ as all slots are
         if self._model_type is None:  # pylint: disable=access-member-before-definition
             type_name = self.title or self.path[-1]
-            self._model_type = type(
-                type_name,
-                (Model,),
-                {"__slots__": self.properties.keys()},  # pylint: disable=attribute-defined-outside-init
-            )
+            self._model_type = type(type_name, (Model,), {  # pylint: disable=attribute-defined-outside-init
+                '__slots__': self.properties.keys()
+            })
 
         return self._model_type
 
@@ -146,7 +116,7 @@ class Schema(ObjectBase):
         :returns: A new :any:`Model` created in this Schema's type from the data.
         :rtype: self.get_type()
         """
-        if self.properties is None and self.type in ("string", "number"):  # more simple types
+        if self.properties is None and self.type in ('string', 'number'):  # more simple types
             # if this schema represents a simple type, simply return the data
             # TODO - perhaps assert that the type of data matches the type we
             # expected
@@ -164,13 +134,9 @@ class Schema(ObjectBase):
         # this is defined in ObjectBase.__init__ as all slots are
         if self._request_model_type is None:  # pylint: disable=access-member-before-definition
             type_name = self.title or self.path[-1]
-            self._request_model_type = type(
-                type_name + "Request",
-                (Model,),
-                {  # pylint: disable=attribute-defined-outside-init
-                    "__slots__": [k for k, v in self.properties.items() if not v.readOnly]
-                },
-            )
+            self._request_model_type = type(type_name + 'Request', (Model,), {  # pylint: disable=attribute-defined-outside-init
+                '__slots__': [k for k, v in self.properties.items() if not v.readOnly]
+            })
 
         return self._request_model_type
 
@@ -193,6 +159,9 @@ class Schema(ObjectBase):
 
         if self.allOf:
             for c in self.allOf:
+#            for c in typing.get_args(self.allOf):
+#                assert isinstance(c, typing.ForwardRef)
+#                c = ObjectBase.get_object_type(c.__forward_arg__)
                 if isinstance(c, Schema):
                     self._merge(c)
 
@@ -200,19 +169,6 @@ class Schema(ObjectBase):
         """
         Merges ``other`` into this schema, preferring to use the values in ``other``
         """
-        # Clone the other object so that we're never merging a referenced object.
-        # This will ensure that an allOf like this:
-        #
-        # allOf:
-        # - $ref: '#/components/schema/Example'
-        # - type: object
-        #   properties:
-        #     foo:
-        #       type string
-        #
-        # Does not add or modify "foo" on components.schemas['Example']
-        other = other._clone()
-
         for slot in self.__slots__:
             if slot.startswith("_"):
                 # skip private members
@@ -258,8 +214,7 @@ class Model:
     are generated from Schema objects by called :any:`Schema.model` with the
     contents of a response.
     """
-
-    __slots__ = ["_raw_data", "_schema"]
+    __slots__ = ['_raw_data', '_schema']
 
     def __init__(self, data, schema):
         """
@@ -271,25 +226,21 @@ class Model:
         :type data: dict
         """
         self._raw_data = data
-        self._schema = schema
+        self._schema   = schema
 
         for s in self.__slots__:
             # initialize all slots to None
             setattr(self, s, None)
 
-        keys = set(data.keys()) - frozenset(self.__slots__)
-        if keys:
-            raise ModelError("Schema {} got unexpected attribute keys {}".format(self.__class__.__name__, keys))
-
         # collect the data into this model
         for k, v in data.items():
             prop = schema.properties[k]
 
-            if prop.type == "array":
+            if prop.type == 'array':
                 # handle arrays
                 item_schema = prop.items
                 setattr(self, k, [item_schema.model(c) for c in v])
-            elif prop.type == "object":
+            elif prop.type == 'object':
                 # handle nested objects
                 object_schema = prop
                 setattr(self, k, object_schema.model(v))
@@ -304,7 +255,9 @@ class Model:
 
     def __iter__(self):
         for s in self.__slots__:
-            if s.startswith("_"):
+            if s.startswith('_'):
                 continue
             yield s, getattr(self, s)
         return
+
+
