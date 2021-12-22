@@ -45,17 +45,16 @@ def raise_on_unknown_type(parent, field, object_types, found):
     :raises: A SpecError describing the failure
     """
     if len(object_types) == 1:
-        if isinstance(object_types[0], str):
-            expected_type = ObjectBase.get_object_type(object_types[0])
-            raise SpecError('Expected {}.{} to be of type {}, with required fields {}'.format(
-                    parent.get_path(),
-                    field,
-                    object_types[0],
-                    expected_type.required_fields,
-                ),
-                path=parent.path,
-                element=parent,
-            )
+        expected_type = object_types[0]
+        raise SpecError('Expected {}.{} to be of type {}, with required fields {}'.format(
+                parent.get_path(),
+                field,
+                expected_type.__name__,
+                expected_type.required_fields,
+            ),
+            path=parent.path,
+            element=parent,
+        )
     elif len(object_types) == 2 and len([c for c in object_types if isinstance(c, str)]) == 2 and "Reference" in object_types:
         # we can give a similar error here as above
         expected_type_str = [c for c in object_types if c != "Reference"][0]
@@ -90,7 +89,8 @@ class ObjectBase(object):
                  'extensions', '_original_ref']
     required_fields = []
 
-    def __init__(self, path, raw_element, root):
+    @classmethod
+    def create(cls, path, raw_element, root, obj=None):
         """
         Creates a new Object for a OpenAPI schema with a reference to its own
         path in the schema.
@@ -104,36 +104,39 @@ class ObjectBase(object):
         :type root: OpenAPI
         """
         # init empty slots
-        for k in type(self).__slots__:
-            if k in ('_spec_errors', 'validation_mode'):
-                # allow these two fields to keep their values
-                continue
-            setattr(self, k, None)
+        obj = obj or cls()
+#        for k in type(obj).__slots__:
+#            if k in ('_spec_errors', 'validation_mode'):
+#                # allow these two fields to keep their values
+#                continue
+#            setattr(obj, k, None)
 
-        self.path = path
-        self.raw_element = raw_element
-        self._root = root
+        obj.path = path
+        obj.raw_element = raw_element
+        obj._root = root
 
-        self._accessed_members = []
-        self.extensions = {}
+        obj._accessed_members = []
+        obj.extensions = {}
 
         # TODO - add strict mode that errors if all members were not accessed
-        self.strict = False
+        obj.strict = False
 
         # parse our own element
         try:
-            self._required_fields(*type(self).required_fields)
-            self._parse_data()
+            obj._required_fields(*type(obj).required_fields)
+            obj._parse_data()
         except SpecError as e:
-            if self._root.validation_mode:
-                self._root.log_spec_error(e)
+            if obj._root.validation_mode:
+                obj._root.log_spec_error(e)
             else:
                 raise
 
         # TODO - this may not be appropriate in all cases
-        self._parse_spec_extensions()
+        obj._parse_spec_extensions()
 
         # TODO - assert that all keys of raw_element were accessed
+
+        return obj
 
     def __repr__(self):
         """
@@ -192,7 +195,8 @@ class ObjectBase(object):
         """
         for field in dataclasses.fields(self):
             v = self._get(field.name, field.type)
-            setattr(self, field.name, v)
+            if v is not None:
+                setattr(self, field.name, v)
 
     def _get(self, field, object_type):
         """
@@ -208,13 +212,23 @@ class ObjectBase(object):
                   file
         """
         self._accessed_members.append(field)
-
+        c = object_type
         ret = self.raw_element.get(field, None)
         if ret is None:
             return None
 
         try:
+            types = self.types_of(object_type)
             origin = typing.get_origin(object_type) or object_type
+
+            # decapsule Optional
+            if origin == typing.Union:
+                args = typing.get_args(object_type)
+                if len(args) == 2 and args[1] == None.__class__:
+                    object_type = args[0]
+                    origin = typing.get_origin(args[0]) or origin
+
+
             if origin == list:
                 if not isinstance(ret, list):
                     raise SpecError('Expected {}.{} to be a list of {}, got {}'.format(
@@ -232,19 +246,6 @@ class ObjectBase(object):
                         element=self)
                 ret = Map(self.path + [field], ret, object_type, self._root)
             else:
-                if origin == typing.Union:
-                    types = []
-                    for t in typing.get_args(object_type):
-                        if isinstance(t, typing.ForwardRef):
-                            types.append(t.__forward_arg__)
-                        else:
-                            types.append(t)
-                elif isinstance(origin, typing.ForwardRef):
-                    types = [origin.__forward_arg__]
-                else:
-                    types = [object_type]
-
-
                 accepts_string = False
                 for t in types:
                     if t == typing.Any:
@@ -254,13 +255,13 @@ class ObjectBase(object):
                         accepts_string = True
                         continue
 
-                    if isinstance(t, str):
+                    if issubclass(t, ObjectBase):
                         # we were given the name of a subclass of ObjectBase,
                         # attempt to parse ret as that type
-                        python_type = ObjectBase.get_object_type(t)
+                        python_type = t #ObjectBase.get_object_type(t)
 
                         if python_type.can_parse(ret):
-                            ret = python_type(self.path + [field], ret, self._root)
+                            ret = python_type.create(self.path + [field], ret, self._root)
                             break
 
                     elif isinstance(ret, t):
@@ -314,21 +315,17 @@ class ObjectBase(object):
         # will be able to parse this value, an appropriate error is returned)
         if not isinstance(dct, dict):
             return False
+        fields = set(map(lambda x: x.name.rstrip("_"), dataclasses.fields(cls)))
         # ensure that the dict's keys are valid in our slots
-        for key in dct.keys():
-            if key.startswith('x-'):
-                # ignore spec extensions
-                continue
 
-            if not cls.key_contained(key, cls.__slots__):
-                # it has something we don't - probably not a match
-                return False
+        keys = [key for key in filter(lambda x: not x.startswith("x-"), dct.keys())]
+        keys = set(keys)
 
-        # then, ensure that all required fields are present
-        for key in cls.required_fields:
-            if not cls.key_contained(key, dct):
-                # it doesn't have everything we need - probably not a match
-                return False
+        if keys - (set(cls.__slots__) | fields):
+            return False
+
+        if set(cls.required_fields) - keys:
+            return False
 
         return True
 
@@ -414,7 +411,7 @@ class ObjectBase(object):
 
             for cur_type in python_types:
                 if issubclass(cur_type, ObjectBase) and cur_type.can_parse(cur):
-                    result.append(cur_type(real_path + [str(i)], cur, self._root))
+                    result.append(cur_type.create(real_path + [str(i)], cur, self._root))
                     found_type = True
                     continue
                 elif isinstance(cur, cur_type):
@@ -463,10 +460,8 @@ class ObjectBase(object):
         # don't circular import
         reference_type = ObjectBase.get_object_type('Reference')
 
-        for slot in self.__slots__:
-            if slot.startswith('_'):
-                # don't parse private members
-                continue
+        for slot in filter(lambda x: not x.startswith("_"),
+                           map(lambda x: x.name, dataclasses.fields(self))):
             value = getattr(self, slot)
 
             if isinstance(value, reference_type):
@@ -496,7 +491,7 @@ class ObjectBase(object):
         Types can override this to handle allOf handling themselves.  Types that
         do so should call the parent class' _resolve_allOf when they do
         """
-        for slot in self.__slots__:
+        for slot in map(lambda x: x.name, dataclasses.fields(self)):
             if slot.startswith("_"):
                 # no need to handle private members
                 continue
@@ -526,11 +521,22 @@ class ObjectBase(object):
             else:
                 t = [t]
 
-            t = [ObjectBase.get_object_type(i.__forward_arg__) if isinstance(i, typing.ForwardRef) else i for i in t]
-            return t
+            r = []
+            for tt in t:
+                if isinstance(tt, typing.ForwardRef):
+                    r.append(ObjectBase.get_object_type(tt.__forward_arg__))
+                else:
+                    if typing.get_origin(t) == typing.Union:
+                        r.extend(resolve(t))
+                    else:
+                        r.append(tt)
+            return r
 
         if expected:
             assert typing.get_origin(object_type) == expected
+
+        if object_type in frozenset([str, int, float, dict, bool, typing.Any]):
+            return [object_type]
 
         if typing.get_origin(object_type) == list:
             python_types = typing.get_args(object_type)[0]
@@ -540,7 +546,14 @@ class ObjectBase(object):
             args = typing.get_args(object_type)
             return resolve(args[0]),resolve(args[1])
 
+        if isinstance(object_type, typing.ForwardRef):
+            return resolve(object_type)
+
+        if typing.get_origin(object_type) == typing.Union:
+            return resolve(object_type)
+
         raise TypeError(object_type)
+
 
 
 class Map(dict):
@@ -574,7 +587,7 @@ class Map(dict):
 
             for t in python_types:
                 if issubclass(t, ObjectBase) and t.can_parse(v):
-                    dct[k] = t(path + [k], v, self._root)
+                    dct[k] = t.create(path + [k], v, self._root)
                     found_type = True
                 elif isinstance(v, t):
                     dct[k] = v

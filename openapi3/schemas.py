@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import Union, List, Any, Optional
 import dataclasses
 
 from .errors import SpecError
@@ -14,56 +14,60 @@ TYPE_LOOKUP = {
 }
 
 
-@dataclasses.dataclass(init=False)
+@dataclasses.dataclass
 class Schema(ObjectBase):
     """
     The `Schema Object`_ allows the definition of input and output data types.
 
     .. _Schema Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#schemaObject
     """
-    __slots__ = ['title', 'multipleOf', 'maximum', 'exclusiveMaximum',
-                 'minimum', 'exclusiveMinimum', 'maxLength', 'minLength',
-                 'pattern', 'maxItems', 'minItems', 'uniqueItems',
-                 'maxProperties', 'minProperties', 'required', 'enum', 'type',
-                 'allOf', 'oneOf', 'anyOf', 'not', 'items', 'properties',
-                 'additionalProperties', 'description', 'format', 'default',
-                 'nullable', 'discriminator', 'readOnly', 'writeOnly', 'xml',
-                 'externalDocs', 'example', 'deprecated', 'contentEncoding',
-                 'contentMediaType', 'contentSchema', '_model_type',
-                 '_request_model_type', '_resolved_allOfs']
+#    __slots__ = ['title', 'multipleOf', 'maximum', 'exclusiveMaximum',
+#                 'minimum', 'exclusiveMinimum', 'maxLength', 'minLength',
+#                 'pattern', 'maxItems', 'minItems', 'uniqueItems',
+#                 'maxProperties', 'minProperties', 'required', 'enum', 'type',
+#                 'allOf', 'oneOf', 'anyOf', 'not', 'items', 'properties',
+#                 'additionalProperties', 'description', 'format', 'default',
+#                 'nullable', 'discriminator', 'readOnly', 'writeOnly', 'xml',
+#                 'externalDocs', 'example', 'deprecated', 'contentEncoding',
+#                 'contentMediaType', 'contentSchema', '_model_type',
+#                 '_request_model_type', '_resolved_allOfs']
     required_fields = []
 
-    title: str
-    maximum: Union[int, float]
-    minimum: Union[int, float]
-    maxLength: int
-    minLength: int
-    pattern: str
-    maxItems: int
-    minItems: int
-    required: List[str]
-    enum: list
-    type: str
-    allOf: List[Union["Schema", "Reference"]]
-    oneOf: list
-    anyOf: list
-    items: Union['Schema', 'Reference']
-    properties: Map[str, Union['Schema', 'Reference']]
-    additionalProperties: [bool, dict]
-    description: str
-    format: str
-    default: str  # TODO - str as a default?
-    nullable: bool
-    discriminator: dict  # 'Discriminator'
-    readOnly: bool
-    writeOnly: bool
-    xml: dict  # 'XML'
-    externalDocs: dict  # 'ExternalDocs'
-    deprecated: bool
-    example: object
-    contentEncoding: str
-    contentMediaType: str
-    contentSchema: str
+    title: Optional[str] = dataclasses.field(default=None)
+    maximum: Optional[Union[int, float]] = dataclasses.field(default=None)
+    minimum: Optional[Union[int, float]] = dataclasses.field(default=None)
+    maxLength: Optional[int] = dataclasses.field(default=None)
+    minLength: Optional[int] = dataclasses.field(default=None)
+    pattern: Optional[str] = dataclasses.field(default=None)
+    maxItems: Optional[int] = dataclasses.field(default=None)
+    minItems: Optional[int] = dataclasses.field(default=None)
+    required: Optional[List[str]] = dataclasses.field(default_factory=list)
+    enum: Optional[list] = dataclasses.field(default=None)
+    type: Optional[str] = dataclasses.field(default=None)
+    allOf: Optional[List[Union["Schema", "Reference"]]] = dataclasses.field(default=None)
+    oneOf: Optional[list] = dataclasses.field(default=None)
+    anyOf: Optional[list] = dataclasses.field(default=None)
+    items: Optional[Union['Schema', 'Reference']] = dataclasses.field(default=None)
+    properties: Optional[Map[str, Union['Schema', 'Reference']]] = dataclasses.field(default=None)
+    additionalProperties: Optional[Union[bool, dict]] = dataclasses.field(default=None)
+    description: Optional[str] = dataclasses.field(default=None)
+    format: Optional[str] = dataclasses.field(default=None)
+    default: Optional[str] = dataclasses.field(default=None)  # TODO - str as a default?
+    nullable: Optional[bool] = dataclasses.field(default=None)
+    discriminator: Optional[dict] = dataclasses.field(default=None)  # 'Discriminator'
+    readOnly: Optional[bool] = dataclasses.field(default=None)
+    writeOnly: Optional[bool] = dataclasses.field(default=None)
+    xml: Optional[dict] = dataclasses.field(default=None)  # 'XML'
+    externalDocs: Optional[dict] = dataclasses.field(default=None)  # 'ExternalDocs'
+    deprecated: Optional[bool] = dataclasses.field(default=None)
+    example: Optional[Any] = dataclasses.field(default=None)
+    contentEncoding: Optional[str] = dataclasses.field(default=None)
+    contentMediaType: Optional[str] = dataclasses.field(default=None)
+    contentSchema: Optional[str] = dataclasses.field(default=None)
+
+    _model_type: object = dataclasses.field(default=None)
+    _request_model_type: object = dataclasses.field(default=None)
+    _resolved_allOfs: object = dataclasses.field(default=None)
 
     def _parse_data(self):
         """
@@ -169,7 +173,7 @@ class Schema(ObjectBase):
         """
         Merges ``other`` into this schema, preferring to use the values in ``other``
         """
-        for slot in self.__slots__:
+        for slot in map(lambda x: x.name, dataclasses.fields(self)):
             if slot.startswith("_"):
                 # skip private members
                 continue
