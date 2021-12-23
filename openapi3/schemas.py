@@ -21,17 +21,6 @@ class Schema(ObjectBase):
 
     .. _Schema Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#schemaObject
     """
-#    __slots__ = ['title', 'multipleOf', 'maximum', 'exclusiveMaximum',
-#                 'minimum', 'exclusiveMinimum', 'maxLength', 'minLength',
-#                 'pattern', 'maxItems', 'minItems', 'uniqueItems',
-#                 'maxProperties', 'minProperties', 'required', 'enum', 'type',
-#                 'allOf', 'oneOf', 'anyOf', 'not', 'items', 'properties',
-#                 'additionalProperties', 'description', 'format', 'default',
-#                 'nullable', 'discriminator', 'readOnly', 'writeOnly', 'xml',
-#                 'externalDocs', 'example', 'deprecated', 'contentEncoding',
-#                 'contentMediaType', 'contentSchema', '_model_type',
-#                 '_request_model_type', '_resolved_allOfs']
-    required_fields = []
 
     title: Optional[str] = dataclasses.field(default=None)
     maximum: Optional[Union[int, float]] = dataclasses.field(default=None)

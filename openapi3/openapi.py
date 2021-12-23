@@ -14,10 +14,6 @@ class OpenAPI(ObjectBase):
 
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
     """
-#    __slots__ = ['openapi','info','servers','paths','components','security','tags',
-#                 'externalDocs','_operation_map','_security', 'validation_mode',
-#                 '_spec_errors', '_ssl_verify', '_session']
-    required_fields=['openapi','info','paths']
 
     openapi: str = dataclasses.field(default=None)
     info: ForwardRef('Info') = dataclasses.field(default=None)
