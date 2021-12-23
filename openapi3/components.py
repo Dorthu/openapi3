@@ -11,8 +11,6 @@ class Components(ObjectBase):
 
     .. _Components Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#componentsObject
     """
-#    __slots__ = ['schemas', 'responses', 'parameters', 'examples', 'headers',
-#                 'requestBodies', 'securitySchemes', 'links', 'callback']
 
     examples: Optional[Map[str, Union['Example', 'Reference']]] = dataclasses.field(default=None)
     parameters: Optional[Map[str, Union['Parameter', 'Reference']]] = dataclasses.field(default=None)

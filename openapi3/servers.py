@@ -10,8 +10,6 @@ class Server(ObjectBase):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#serverObject
     """
-#    __slots__ = ['url', 'description', 'variables']
-    required_fields = ['url']
 
     url: str = dataclasses.field(default=None)
     description: Optional[str] = dataclasses.field(default=None)
@@ -25,8 +23,6 @@ class ServerVariable(ObjectBase):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#server-variable-object
     """
-#    __slots__ = ['enum', 'default', 'description']
-    required_fields = ['default']
 
     default: str = dataclasses.field(default=None)
     description: Optional[str] = dataclasses.field(default=None)

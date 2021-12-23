@@ -10,8 +10,6 @@ class ExternalDocumentation(ObjectBase):
 
     .. _External Documentation Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#externalDocumentationObject
     """
-#    __slos__ = ['description', 'url']
-    required_fields = 'url'
 
     url: str = dataclasses.field(default=None)
 
@@ -25,10 +23,7 @@ class Reference(ObjectBase):
 
     .. _Reference Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#referenceObject
     """
-    # can't start a variable name with a $
-#    __slots__ = ['ref']
-    required_fields = ['$ref']
-
+    _required_fields_cache = frozenset(['$ref'])
     ref: str = dataclasses.field(default=None)
 
     def _parse_data(self):

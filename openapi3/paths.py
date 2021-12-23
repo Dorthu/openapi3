@@ -76,10 +76,6 @@ class Parameter(ObjectBase):
 
     .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#parameterObject
     """
-#    __slots__ = ['name', 'in', 'in_', 'description', 'required', 'deprecated',
-#                 'allowEmptyValue', 'style', 'explode', 'allowReserved',
-#                 'schema', 'example', 'examples']
-    required_fields = ['name', 'in']
 
     in_: str = dataclasses.field(default=None)  # TODO must be one of ["query","header","path","cookie"]
     name: str = dataclasses.field(default=None)
@@ -118,10 +114,6 @@ class Operation(ObjectBase):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject
     """
-#    __slots__ = ['tags', 'summary', 'description', 'externalDocs', 'security',
-#                 'operationId', 'parameters', 'requestBody', 'responses',
-#                 'callbacks', 'deprecated', 'servers', '_session', '_request']
-    required_fields = ['responses']
 
     responses: Map[str, Union['Response', 'Reference']] = dataclasses.field(default=None)
     deprecated: Optional[bool] = dataclasses.field(default=None)
@@ -358,8 +350,6 @@ class SecurityRequirement(ObjectBase):
 
     .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
     """
-#    ___slots__ = ['name', 'types']
-#    required_fields = []
 
     name: Optional[str] = dataclasses.field(default=None)
     types: Optional[List[str]] = dataclasses.field(default=None)
@@ -395,8 +385,6 @@ class RequestBody(ObjectBase):
 
     .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
     """
-#    __slots__ = ['description', 'content', 'required']
-    required_fields = ['content']
 
     content: Map[str, ForwardRef('MediaType')] = dataclasses.field(default=None)
     description: Optional[str] = dataclasses.field(default=None)
@@ -411,8 +399,6 @@ class MediaType(ObjectBase):
 
     .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
     """
-#    __slots__ = ['schema', 'example', 'examples', 'encoding']
-    required_fields = []
 
     schema: Optional[Union['Schema', 'Reference']] = dataclasses.field(default=None)
     example: Optional[str] = dataclasses.field(default=None)  # 'any' type
@@ -428,8 +414,6 @@ class Response(ObjectBase):
 
     .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
     """
-#    __slots__ = ['description', 'headers', 'content', 'links']
-    required_fields = ['description']
 
     description: str = dataclasses.field(default=None)
     content: Optional[Map[str, ForwardRef('MediaType')]] = dataclasses.field(default=None)
@@ -443,7 +427,6 @@ class Link(ObjectBase):
 
     .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
     """
-#    __slots__ = ['operationId', 'operationRef', 'description', 'parameters', 'requestBody', 'server']
 
     operationId: Optional[str] = dataclasses.field(default=None)
     operationRef: Optional[str] = dataclasses.field(default=None)

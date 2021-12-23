@@ -9,9 +9,6 @@ class SecurityScheme(ObjectBase):
 
     .. _Security Scheme: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securitySchemeObject
     """
-#    __slots__ = ['type', 'description', 'name', 'in', 'in_', 'scheme',
-#                 'bearerFormat', 'flows', 'openIdConnectUrl']
-    required_fields = ['type']
 
     type: str = dataclasses.field(default=None)
 
@@ -22,7 +19,6 @@ class SecurityScheme(ObjectBase):
     name: Optional[str] = dataclasses.field(default=None)
     openIdConnectUrl: Optional[str] = dataclasses.field(default=None)
     scheme: Optional[str] = dataclasses.field(default=None)
-
 
     def _parse_data(self):
         super()._parse_data()

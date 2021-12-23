@@ -11,7 +11,6 @@ class Example(ObjectBase):
 
     .. _Example Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#exampleObject
     """
-#    __slots__ = ['summary', 'description', 'value', 'externalValue']
 
     summary: Optional[str] = dataclasses.field(default=None)
     description: Optional[str] = dataclasses.field(default=None)

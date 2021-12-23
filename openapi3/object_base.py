@@ -50,7 +50,7 @@ def raise_on_unknown_type(parent, field, object_types, found):
                 parent.get_path(),
                 field,
                 expected_type.__name__,
-                expected_type.required_fields,
+                sorted(expected_type.required_fields),
             ),
             path=parent.path,
             element=parent,
@@ -80,6 +80,16 @@ def raise_on_unknown_type(parent, field, object_types, found):
         element=parent,
     )
 
+def isoptional(x):
+    if x.name[0] == '_':
+        return True
+    if typing.get_origin(x.type) != typing.Union:
+        return False
+    args = typing.get_args(x.type)
+    if None.__class__ not in args:
+        return False
+    return True
+
 class ObjectBase(object):
     """
     The base class for all schema objects.  Includes helpers for common schema-
@@ -87,7 +97,16 @@ class ObjectBase(object):
     """
     __slots__ = ['path', 'raw_element', '_accessed_members', 'strict', '_root',
                  'extensions', '_original_ref']
-    required_fields = []
+
+    @classmethod
+    @property
+    def required_fields(cls):
+        try:
+            return cls._required_fields_cache
+        except AttributeError:
+            fields = [x for x in map(lambda x: x.name.rstrip("_"), filter(lambda x: not isoptional(x), dataclasses.fields(cls)))]
+            cls._required_fields_cache = frozenset(fields)
+        return cls._required_fields_cache
 
     @classmethod
     def create(cls, path, raw_element, root, obj=None):
@@ -321,10 +340,10 @@ class ObjectBase(object):
         keys = [key for key in filter(lambda x: not x.startswith("x-"), dct.keys())]
         keys = set(keys)
 
-        if keys - (set(cls.__slots__) | fields):
+        if keys - fields:
             return False
 
-        if set(cls.required_fields) - keys:
+        if cls.required_fields - keys:
             return False
 
         return True
