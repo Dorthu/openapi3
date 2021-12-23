@@ -5,3 +5,4 @@ from . import info, servers, paths, general, schemas, components, security, tag,
 from .errors import SpecError, ReferenceResolutionError
 
 __all__ = ['OpenAPI', 'SpecError', 'ReferenceResolutionError']
+

@@ -1,30 +1,20 @@
 import dataclasses
 from typing import ForwardRef, Any, List, Optional
 
+from pydantic import Field, ValidationError
 import requests
 
 from .object_base import ObjectBase, Map
 from .errors import ReferenceResolutionError, SpecError
 
-@dataclasses.dataclass(init=False)
-class OpenAPI(ObjectBase):
-    """
-    This class represents the root of the OpenAPI schema document, as defined
-    in `the spec`_
+from .info import Info
+from .paths import Path, SecurityRequirement
+from .components import Components
+from .servers import Server
+from .tag import Tag
 
-    .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
-    """
 
-    openapi: str = dataclasses.field(default=None)
-    info: ForwardRef('Info') = dataclasses.field(default=None)
-    paths: Map[str, ForwardRef('Path')] = dataclasses.field(default=None)
-
-    components: Optional[ForwardRef('Components')] = dataclasses.field(default=None)
-    externalDocs: Optional[Map[Any, Any]] = dataclasses.field(default=None)
-    security: Optional[List['SecurityRequirement']] = dataclasses.field(default=None)
-    servers: Optional[List['Server']] = dataclasses.field(default=None)
-    tags: Optional[List['Tag']] = dataclasses.field(default=None)
-
+class OpenAPI:
     def __init__(
             self,
             raw_document,
@@ -49,22 +39,34 @@ class OpenAPI(ObjectBase):
         :param use_session: Should we use a consistant session between API calls
         :type use_session: bool
         """
-        # do this first so super().__init__ can see it
-        self.validation_mode = validate
 
-        if validate:
-            self._spec_errors = []
-
-        # as the document root, we have no path
-        super(OpenAPI, self).create([], raw_document, self, obj=self)
-
-        self._security = {}
+        self._spec = OpenAPISpec.parse_obj(raw_document)
+#        self._spec.resolve_path("#/components/responses/Missing".split('/')[1:])
+        self._spec._resolve_references(self._spec)
 
         self._ssl_verify = ssl_verify
 
         self._session = None
         if use_session:
             self._session = session_factory()
+
+    @property
+    def paths(self):
+        return self._spec.path
+
+    @property
+    def components(self):
+        return self._spec.components
+
+    @property
+    def info(self):
+        return self._spec.info
+
+    @property
+    def openapi(self):
+        return self._spec.openapi
+
+
 
     # public methods
     def authenticate(self, security_scheme, value):
@@ -79,11 +81,126 @@ class OpenAPI(ObjectBase):
             self._security = None
             return
 
-        if security_scheme not in self.components.securitySchemes:
+        if security_scheme not in self._spec.components.securitySchemes:
             raise ValueError('{} does not accept security scheme {}'.format(
                 self.info.title, security_scheme))
 
         self._security = {security_scheme: value}
+
+
+    def log_spec_error(self, error):
+        """
+        In Validation Mode, this method is used when parsing a spec to record an
+        error that was encountered, for later reporting.  This should not be used
+        outside of Validation Mode.
+
+        :param error: The error encountered.
+        :type error: SpecError
+        """
+        if not self._validation_mode:
+            raise RuntimeError('This client is not in Validation Mode, cannot '
+                               'record errors!')
+        self._spec_errors.append(error)
+
+    def errors(self):
+        """
+        In Validation Mode, returns all errors encountered from parsing a spec.
+        This should not be called if not in Validation Mode.
+
+        :returns: The errors encountered during the parsing of this spec.
+        :rtype: List[SpecError]
+        """
+        if not self._validation_mode:
+            raise RuntimeError('This client is not in Validation Mode, cannot '
+                               'return errors!')
+        return self._spec_errors
+
+    # private methods
+    def _register_operation(self, operation_id, operation):
+        """
+        Adds an Operation to this spec's _operation_map, raising an error if the
+        OperationId has already been registered.
+
+        :param operation_id: The operation ID to register
+        :type operation_id: str
+        :param operation: The operation to register
+        :type operation: Operation
+        """
+        if operation_id in self._operation_map:
+            raise SpecError("Duplicate operationId {}".format(operation_id), path=operation._path)
+        self._operation_map[operation_id] = operation
+
+    def _get_callable(self, operation):
+        """
+        A helper function to create OperationCallable objects for __getattribute__,
+        pre-initialized with the required values from this object.
+
+        :param operation: The Operation the callable should call
+        :type operation: callable (Operation.request)
+
+        :returns: The callable that executes this operation with this object's
+                  configuration.
+        :rtype: OperationCallable
+        """
+        base_url = self.servers[0].url
+
+        return OperationCallable(operation, base_url, self._security, self._ssl_verify,
+                                 self._session)
+
+    def __getattribute__(self, attr):
+        """
+        Extended __getattribute__ function to allow resolving dynamic function
+        names.  The purpose of this is to call syntax like this::
+
+           spec = OpenAPI(raw_spec)
+           spec.call_operationId()
+
+        This method will intercept the dot notation above (spec.call_operationId)
+        and look up the requested operation, returning a callable object that
+        will then immediately be called by the parenthesis.
+
+        :param attr: The attribute we're retrieving
+        :type attr: str
+
+        :returns: The attribute requested
+        :rtype: any
+        :raises AttributeError: if the requested attribute does not exist
+        """
+        if attr.startswith('call_'):
+            _, operationId = attr.split('_', 1)
+            if operationId in self._operation_map:
+                return self._get_callable(self._operation_map[operationId].request)
+            else:
+                raise AttributeError('{} has no operation {}'.format(
+                    self.info.title, operationId))
+
+        return object.__getattribute__(self, attr)
+
+
+class OpenAPISpec(ObjectBase):
+    """
+    This class represents the root of the OpenAPI schema document, as defined
+    in `the spec`_
+
+    .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
+    """
+
+    openapi: str = Field(required=True)
+    info: Info = Field(required=True)
+    paths: Map[str, Path] = Field(required=True, default_factory=Map)
+
+    components: Optional[Components] = Field(default=None)
+    externalDocs: Optional[Map[Any, Any]] = Field(default=None)
+    security: Optional[List[SecurityRequirement]] = Field(default=None)
+    servers: Optional[List[Server]] = Field(default=None)
+    tags: Optional[List[Tag]] = Field(default=None)
+
+    _validation_mode: bool
+    _operation_map: set
+
+    class Config:
+        underscore_attrs_are_private = True
+        arbitrary_types_allowed = True
 
     def resolve_path(self, path):
         """
@@ -99,7 +216,7 @@ class OpenAPI(ObjectBase):
         node = self
 
         for part in path:
-            if isinstance(node, Map):
+            if isinstance(node, dict):
                 if part not in node:  # pylint: disable=unsupported-membership-test
                     err_msg = 'Invalid path {} in Reference'.format(path)
                     raise ReferenceResolutionError(err_msg)
@@ -121,7 +238,7 @@ class OpenAPI(ObjectBase):
         :param error: The error encountered.
         :type error: SpecError
         """
-        if not self.validation_mode:
+        if not self._validation_mode:
             raise RuntimeError('This client is not in Validation Mode, cannot '
                                'record errors!')
         self._spec_errors.append(error)
@@ -134,7 +251,7 @@ class OpenAPI(ObjectBase):
         :returns: The errors encountered during the parsing of this spec.
         :rtype: List[SpecError]
         """
-        if not self.validation_mode:
+        if not self._validation_mode:
             raise RuntimeError('This client is not in Validation Mode, cannot '
                                'return errors!')
         return self._spec_errors
@@ -151,7 +268,7 @@ class OpenAPI(ObjectBase):
         :type operation: Operation
         """
         if operation_id in self._operation_map:
-            raise SpecError("Duplicate operationId {}".format(operation_id), path=operation.path)
+            raise SpecError("Duplicate operationId {}".format(operation_id), path=operation._path)
         self._operation_map[operation_id] = operation
 
     def _parse_data(self):
@@ -212,6 +329,7 @@ class OpenAPI(ObjectBase):
 
         return object.__getattribute__(self, attr)
 
+OpenAPISpec.update_forward_refs()
 
 class OperationCallable:
     """

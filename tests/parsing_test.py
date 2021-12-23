@@ -3,6 +3,7 @@ Tests parsing specs
 """
 import pytest
 
+from pydantic import ValidationError
 from openapi3 import OpenAPI, SpecError, ReferenceResolutionError
 
 
@@ -17,7 +18,7 @@ def test_parsing_fails(broken):
     """
     Tests that broken specs fail to parse
     """
-    with pytest.raises(SpecError, match=r"Expected .info to be of type Info, with required fields \['title', 'version'\]" ):
+    with pytest.raises(ValidationError) as e:
         spec = OpenAPI(broken)
 
 

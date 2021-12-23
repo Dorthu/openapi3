@@ -2,6 +2,8 @@ import dataclasses
 from typing import ForwardRef, Union, List, Optional
 import json
 import re
+
+from pydantic import Field
 import requests
 
 try:
@@ -13,19 +15,28 @@ from .errors import SpecError
 from .object_base import ObjectBase, Map
 from .schemas import Model
 
+from .info import Info
+#from .components import Components
+from .servers import Server
+from .tag import Tag
+from .general import Reference
+from .general import ExternalDocumentation
+from .schemas import Schema
+from .example import Example
+
 
 def _validate_parameters(instance):
     """
     Ensures that all parameters for this path are valid
     """
-    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', instance.path[1])
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', instance._path[1])
 
     for c in instance.parameters:
         if c.in_ == 'path':
             if c.name not in allowed_path_parameters:
-                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance.path)
+                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance._path)
 
-@dataclasses.dataclass
+
 class Path(ObjectBase):
     """
     A Path object, as defined `here`_.  Path objects represent URL paths that
@@ -33,20 +44,20 @@ class Path(ObjectBase):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#paths-object
     """
-    delete: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    get: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
-    head: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
-    options: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    delete: Optional[ForwardRef('Operation')] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    get: Optional[ForwardRef('Operation')] = Field(default=None)
+    head: Optional[ForwardRef('Operation')] = Field(default=None)
+    options: Optional[ForwardRef('Operation')] = Field(default=None)
 
-    patch: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
-    post: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
-    put: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
-    servers: Optional[List['Server']] = dataclasses.field(default=None)
-    summary: Optional[str] = dataclasses.field(default=None)
-    trace: Optional[ForwardRef('Operation')] = dataclasses.field(default=None)
+    patch: Optional[ForwardRef('Operation')] = Field(default=None)
+    post: Optional[ForwardRef('Operation')] = Field(default=None)
+    put: Optional[ForwardRef('Operation')] = Field(default=None)
+    servers: Optional[List[Server]] = Field(default=None)
+    summary: Optional[str] = Field(default=None)
+    trace: Optional[ForwardRef('Operation')] = Field(default=None)
 
-    parameters: Optional[List[Union['Parameter', 'Reference']]] = dataclasses.field(default_factory=list)
+    parameters: Optional[List[Union['Parameter', Reference]]] = Field(default_factory=list)
 
     def _parse_data(self):
         """
@@ -58,18 +69,18 @@ class Path(ObjectBase):
             # this will be iterated over later
             self.parameters = []
 
-    def _resolve_references(self):
-        """
-        Overloaded _resolve_references to allow us to verify parameters after
-        we've got all references settled.
-        """
-        super(self.__class__, self)._resolve_references()
+    # def _resolve_references(self, root):
+    #     """
+    #     Overloaded _resolve_references to allow us to verify parameters after
+    #     we've got all references settled.
+    #     """
+    #     super(self.__class__, self)._resolve_references(root)
+    #
+    #     # this will raise if parameters are invalid
+    #     _validate_parameters(self)
 
-        # this will raise if parameters are invalid
-        _validate_parameters(self)
 
 
-@dataclasses.dataclass
 class Parameter(ObjectBase):
     """
     A `Parameter Object`_ defines a single operation parameter.
@@ -77,37 +88,37 @@ class Parameter(ObjectBase):
     .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#parameterObject
     """
 
-    in_: str = dataclasses.field(default=None)  # TODO must be one of ["query","header","path","cookie"]
-    name: str = dataclasses.field(default=None)
+    in_: str = Field(required=True, alias="in")  # TODO must be one of ["query","header","path","cookie"]
+    name: str = Field(required=True)
 
-    deprecated: Optional[bool] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    example: Optional[str] = dataclasses.field(default=None)
-    examples: Optional[Map[str, Union['Example','Reference']]] = dataclasses.field(default=None)
-    explode: Optional[bool] = dataclasses.field(default=None)
-    required: Optional[bool] = dataclasses.field(default=None)
-    schema: Optional[Union['Schema', 'Reference']] = dataclasses.field(default=None)
-    style: Optional[str] = dataclasses.field(default=None)
+    deprecated: Optional[bool] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    example: Optional[str] = Field(default=None)
+    examples: Optional[Map[str, Union['Example','Reference']]] = Field(default=None)
+    explode: Optional[bool] = Field(default=None)
+    required: Optional[bool] = Field(default=None)
+    schema_: Optional[Union['Schema', 'Reference']] = Field(default=None, alias="schema")
+    style: Optional[str] = Field(default=None)
 
     # allow empty or reserved values in Parameter data
-    allowEmptyValue: Optional[bool] = dataclasses.field(default=None)
-    allowReserved: Optional[bool] = dataclasses.field(default=None)
+    allowEmptyValue: Optional[bool] = Field(default=None)
+    allowReserved: Optional[bool] = Field(default=None)
 
     @classmethod
     def can_parse(cls, dct):
         return super().can_parse(dct)
 
     def _parse_data(self):
-        super()._parse_data()
-        self.in_ = self._get("in", str)
+#        super()._parse_data()
+#        self.in_ = self._get("in", str)
 
         # required is required and must be True if this parameter is in the path
         if self.in_ == "path" and self.required is not True:
             err_msg = 'Parameter {} must be required since it is in the path'
-            raise SpecError(err_msg.format(self.get_path()), path=self.path)
+            raise SpecError(err_msg.format(self.get_path()), path=self._path)
 
+from pydantic import validator
 
-@dataclasses.dataclass
 class Operation(ObjectBase):
     """
     An Operation object as defined `here`_
@@ -115,17 +126,19 @@ class Operation(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject
     """
 
-    responses: Map[str, Union['Response', 'Reference']] = dataclasses.field(default=None)
-    deprecated: Optional[bool] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    externalDocs: Optional[ForwardRef('ExternalDocumentation')] = dataclasses.field(default=None)
-    operationId: Optional[str] = dataclasses.field(default=None)
-    parameters: Optional[List[Union['Parameter', 'Reference']]] = dataclasses.field(default_factory=list)
-    requestBody: Optional[Union['RequestBody', 'Reference']] = dataclasses.field(default=None)
-    security: Optional[List['SecurityRequirement']] = dataclasses.field(default_factory=list)
-    servers: Optional[List['Server']] = dataclasses.field(default=None)
-    summary: Optional[str] = dataclasses.field(default=None)
-    tags: Optional[List[str]] = dataclasses.field(default=None)
+    responses: Map[str, Union['Response', 'Reference']] = Field(required=True)
+
+    deprecated: Optional[bool] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    externalDocs: Optional[ForwardRef('ExternalDocumentation')] = Field(default=None)
+    operationId: Optional[str] = Field(default=None)
+    parameters: Optional[List[Union['Parameter', 'Reference']]] = Field(default_factory=list)
+    requestBody: Optional[Union['RequestBody', 'Reference']] = Field(default=None)
+    security: Optional[List['SecurityRequirement']] = Field(default_factory=list)
+    servers: Optional[List['Server']] = Field(default=None)
+    summary: Optional[str] = Field(default=None)
+    tags: Optional[List[str]] = Field(default=None)
+
 
     def _parse_data(self):
         """
@@ -146,15 +159,15 @@ class Operation(ObjectBase):
         # Store request object
         self._request = requests.Request()
 
-    def _resolve_references(self):
-        """
-        Overloaded _resolve_references to allow us to verify parameters after
-        we've got all references settled.
-        """
-        super(self.__class__, self)._resolve_references()
-
-        # this will raise if parameters are invalid
-        _validate_parameters(self)
+#    def _resolve_references(self, root):
+#        """
+#        Overloaded _resolve_references to allow us to verify parameters after
+#        we've got all references settled.
+#        """
+#        super(self.__class__, self)._resolve_references()
+#
+#        # this will raise if parameters are invalid
+#        _validate_parameters(self)
 
     def _request_handle_secschemes(self, security_requirement, value):
         ss = self._root.components.securitySchemes[security_requirement.name]
@@ -189,7 +202,7 @@ class Operation(ObjectBase):
         # Parameters
         path_parameters = {}
         accepted_parameters = {}
-        p = self.parameters + self._root.paths[self.path[-2]].parameters
+        p = self.parameters + self._root.paths[self._path[-2]].parameters
 
         for _ in list(p):
             # TODO - make this work with $refs - can operations be $refs?
@@ -264,10 +277,10 @@ class Operation(ObjectBase):
         :type raw_response: bool
         """
         # Set request method (e.g. 'GET')
-        self._request = requests.Request(self.path[-1])
+        self._request = requests.Request(self._path[-1])
 
         # Set self._request.url to base_url w/ path
-        self._request.url = base_url + self.path[-2]
+        self._request.url = base_url + self._path[-2]
 
         if security and self.security:
             security_requirement = None
@@ -343,7 +356,7 @@ class Operation(ObjectBase):
             raise NotImplementedError()
 
 
-@dataclasses.dataclass
+
 class SecurityRequirement(ObjectBase):
     """
     A `SecurityRequirement`_ object describes security schemes for API access.
@@ -351,17 +364,17 @@ class SecurityRequirement(ObjectBase):
     .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
     """
 
-    name: Optional[str] = dataclasses.field(default=None)
-    types: Optional[List[str]] = dataclasses.field(default=None)
+    name: Optional[str] = Field(default=None)
+    types: Optional[List[str]] = Field(default=None)
 
     def _parse_data(self):
         """
         """
         # usually these only ever have one key
-        if len(self.raw_element.keys()) == 1:
-            self.name  = [c for c in self.raw_element.keys()][0]
+        if len(self._raw_element.keys()) == 1:
+            self.name  = [c for c in self._raw_element.keys()][0]
             self.types = self._get(self.name, List[str])
-        elif len(self.raw_element.keys()) == 0:
+        elif len(self._raw_element.keys()) == 0:
             # optional
             self.name = self.types = None
 
@@ -378,7 +391,7 @@ class SecurityRequirement(ObjectBase):
         return {self.name: self.types}
 
 
-@dataclasses.dataclass
+
 class RequestBody(ObjectBase):
     """
     A `RequestBody`_ object describes a single request body.
@@ -386,12 +399,12 @@ class RequestBody(ObjectBase):
     .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
     """
 
-    content: Map[str, ForwardRef('MediaType')] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    required: Optional[bool] = dataclasses.field(default=None)
+    content: Map[str, ForwardRef('MediaType')] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    required: Optional[bool] = Field(default=None)
 
 
-@dataclasses.dataclass
+
 class MediaType(ObjectBase):
     """
     A `MediaType`_ object provides schema and examples for the media type identified
@@ -400,13 +413,13 @@ class MediaType(ObjectBase):
     .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
     """
 
-    schema: Optional[Union['Schema', 'Reference']] = dataclasses.field(default=None)
-    example: Optional[str] = dataclasses.field(default=None)  # 'any' type
-    examples: Optional[Map[str, Union['Example', 'Reference']]] = dataclasses.field(default=None)
-    encoding: Optional[Map[str, ForwardRef('Encoding')]] = dataclasses.field(default=None)
+    schema_: Optional[Union['Schema', 'Reference']] = Field(default=None, alias="schema")
+    example: Optional[str] = Field(default=None)  # 'any' type
+    examples: Optional[Map[str, Union['Example', 'Reference']]] = Field(default=None)
+    encoding: Optional[Map[str, str]] = Field(default=None)
 
 
-@dataclasses.dataclass
+
 class Response(ObjectBase):
     """
     A `Response Object`_ describes a single response from an API Operation,
@@ -415,12 +428,12 @@ class Response(ObjectBase):
     .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
     """
 
-    description: str = dataclasses.field(default=None)
-    content: Optional[Map[str, ForwardRef('MediaType')]] = dataclasses.field(default=None)
-    links: Optional[Map[str, Union['Link', 'Reference']]] = dataclasses.field(default=None)
+    description: str = Field(required=True)
+    content: Optional[Map[str, ForwardRef('MediaType')]] = Field(default=None)
+    links: Optional[Map[str, Union['Link', 'Reference']]] = Field(default=None)
 
 
-@dataclasses.dataclass
+
 class Link(ObjectBase):
     """
     A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
@@ -428,12 +441,12 @@ class Link(ObjectBase):
     .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
     """
 
-    operationId: Optional[str] = dataclasses.field(default=None)
-    operationRef: Optional[str] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    parameters: Optional[dict] = dataclasses.field(default=None)
-    requestBody: Optional[dict] = dataclasses.field(default=None)
-    server: Optional[ForwardRef('Server')] = dataclasses.field(default=None)
+    operationId: Optional[str] = Field(default=None)
+    operationRef: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    parameters: Optional[dict] = Field(default=None)
+    requestBody: Optional[dict] = Field(default=None)
+    server: Optional[ForwardRef('Server')] = Field(default=None)
 
     def _parse_data(self):
         """
@@ -446,3 +459,8 @@ class Link(ObjectBase):
 
         if not (self.operationId or self.operationRef):
             raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")
+
+Path.update_forward_refs()
+Operation.update_forward_refs()
+MediaType.update_forward_refs()
+RequestBody.update_forward_refs()

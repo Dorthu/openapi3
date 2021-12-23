@@ -1,6 +1,8 @@
 from typing import Union, List, Any, Optional
 import dataclasses
 
+from pydantic import Field
+
 from .errors import SpecError
 from .general import Reference  # need this for Model below
 from .object_base import ObjectBase, Map
@@ -14,7 +16,7 @@ TYPE_LOOKUP = {
 }
 
 
-@dataclasses.dataclass
+
 class Schema(ObjectBase):
     """
     The `Schema Object`_ allows the definition of input and output data types.
@@ -22,41 +24,41 @@ class Schema(ObjectBase):
     .. _Schema Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#schemaObject
     """
 
-    title: Optional[str] = dataclasses.field(default=None)
-    maximum: Optional[Union[int, float]] = dataclasses.field(default=None)
-    minimum: Optional[Union[int, float]] = dataclasses.field(default=None)
-    maxLength: Optional[int] = dataclasses.field(default=None)
-    minLength: Optional[int] = dataclasses.field(default=None)
-    pattern: Optional[str] = dataclasses.field(default=None)
-    maxItems: Optional[int] = dataclasses.field(default=None)
-    minItems: Optional[int] = dataclasses.field(default=None)
-    required: Optional[List[str]] = dataclasses.field(default_factory=list)
-    enum: Optional[list] = dataclasses.field(default=None)
-    type: Optional[str] = dataclasses.field(default=None)
-    allOf: Optional[List[Union["Schema", "Reference"]]] = dataclasses.field(default=None)
-    oneOf: Optional[list] = dataclasses.field(default=None)
-    anyOf: Optional[list] = dataclasses.field(default=None)
-    items: Optional[Union['Schema', 'Reference']] = dataclasses.field(default=None)
-    properties: Optional[Map[str, Union['Schema', 'Reference']]] = dataclasses.field(default=None)
-    additionalProperties: Optional[Union[bool, dict]] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    format: Optional[str] = dataclasses.field(default=None)
-    default: Optional[str] = dataclasses.field(default=None)  # TODO - str as a default?
-    nullable: Optional[bool] = dataclasses.field(default=None)
-    discriminator: Optional[dict] = dataclasses.field(default=None)  # 'Discriminator'
-    readOnly: Optional[bool] = dataclasses.field(default=None)
-    writeOnly: Optional[bool] = dataclasses.field(default=None)
-    xml: Optional[dict] = dataclasses.field(default=None)  # 'XML'
-    externalDocs: Optional[dict] = dataclasses.field(default=None)  # 'ExternalDocs'
-    deprecated: Optional[bool] = dataclasses.field(default=None)
-    example: Optional[Any] = dataclasses.field(default=None)
-    contentEncoding: Optional[str] = dataclasses.field(default=None)
-    contentMediaType: Optional[str] = dataclasses.field(default=None)
-    contentSchema: Optional[str] = dataclasses.field(default=None)
+    title: Optional[str] = Field(default=None)
+    maximum: Optional[Union[int, float]] = Field(default=None)
+    minimum: Optional[Union[int, float]] = Field(default=None)
+    maxLength: Optional[int] = Field(default=None)
+    minLength: Optional[int] = Field(default=None)
+    pattern: Optional[str] = Field(default=None)
+    maxItems: Optional[int] = Field(default=None)
+    minItems: Optional[int] = Field(default=None)
+    required: Optional[List[str]] = Field(default_factory=list)
+    enum: Optional[list] = Field(default=None)
+    type: Optional[str] = Field(default=None)
+    allOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
+    oneOf: Optional[list] = Field(default=None)
+    anyOf: Optional[list] = Field(default=None)
+    items: Optional[Union['Schema', 'Reference']] = Field(default=None)
+    properties: Optional[Map[str, Union['Schema', 'Reference']]] = Field(default=None)
+    additionalProperties: Optional[Union[bool, dict]] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    format: Optional[str] = Field(default=None)
+    default: Optional[str] = Field(default=None)  # TODO - str as a default?
+    nullable: Optional[bool] = Field(default=None)
+    discriminator: Optional[dict] = Field(default=None)  # 'Discriminator'
+    readOnly: Optional[bool] = Field(default=None)
+    writeOnly: Optional[bool] = Field(default=None)
+    xml: Optional[dict] = Field(default=None)  # 'XML'
+    externalDocs: Optional[dict] = Field(default=None)  # 'ExternalDocs'
+    deprecated: Optional[bool] = Field(default=None)
+    example: Optional[Any] = Field(default=None)
+    contentEncoding: Optional[str] = Field(default=None)
+    contentMediaType: Optional[str] = Field(default=None)
+    contentSchema: Optional[str] = Field(default=None)
 
-    _model_type: object = dataclasses.field(default=None)
-    _request_model_type: object = dataclasses.field(default=None)
-    _resolved_allOfs: object = dataclasses.field(default=None)
+    _model_type: object = Field(default=None)
+    _request_model_type: object = Field(default=None)
+    _resolved_allOfs: object = Field(default=None)
 
     def _parse_data(self):
         """
@@ -92,7 +94,7 @@ class Schema(ObjectBase):
         """
         # this is defined in ObjectBase.__init__ as all slots are
         if self._model_type is None:  # pylint: disable=access-member-before-definition
-            type_name = self.title or self.path[-1]
+            type_name = self.title or self._path[-1]
             self._model_type = type(type_name, (Model,), {  # pylint: disable=attribute-defined-outside-init
                 '__slots__': self.properties.keys()
             })
@@ -126,7 +128,7 @@ class Schema(ObjectBase):
         """
         # this is defined in ObjectBase.__init__ as all slots are
         if self._request_model_type is None:  # pylint: disable=access-member-before-definition
-            type_name = self.title or self.path[-1]
+            type_name = self.title or self._path[-1]
             self._request_model_type = type(type_name + 'Request', (Model,), {  # pylint: disable=attribute-defined-outside-init
                 '__slots__': [k for k, v in self.properties.items() if not v.readOnly]
             })
@@ -254,3 +256,4 @@ class Model:
         return
 
 
+Schema.update_forward_refs()
