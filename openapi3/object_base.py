@@ -1,9 +1,9 @@
 import sys
 import typing
-
-
-
+from typing import List, Optional, Set
 import dataclasses
+
+from pydantic import BaseModel, Field
 
 from .errors import SpecError, ReferenceResolutionError
 
@@ -52,7 +52,7 @@ def raise_on_unknown_type(parent, field, object_types, found):
                 expected_type.__name__,
                 sorted(expected_type.required_fields),
             ),
-            path=parent.path,
+            path=parent._path,
             element=parent,
         )
     elif len(object_types) == 2 and len([c for c in object_types if isinstance(c, str)]) == 2 and "Reference" in object_types:
@@ -63,9 +63,9 @@ def raise_on_unknown_type(parent, field, object_types, found):
                 parent.get_path(),
                 field,
                 expected_type_str,
-                expected_type.required_fields,
+                expected_type._get_required_fields,
             ),
-            path=parent.path,
+            path=parent._path,
             element=parent,
         )
     print(object_types)
@@ -76,37 +76,41 @@ def raise_on_unknown_type(parent, field, object_types, found):
             ),
             type(found)
         ),
-        path=parent.path,
+        path=parent._path,
         element=parent,
     )
 
 def isoptional(x):
-    if x.name[0] == '_':
-        return True
-    if typing.get_origin(x.type) != typing.Union:
-        return False
-    args = typing.get_args(x.type)
-    if None.__class__ not in args:
-        return False
-    return True
+    pass
 
-class ObjectBase(object):
+from pydantic.fields import ModelField
+
+class ObjectBase(BaseModel):
     """
     The base class for all schema objects.  Includes helpers for common schema-
     related functions.
     """
-    __slots__ = ['path', 'raw_element', '_accessed_members', 'strict', '_root',
-                 'extensions', '_original_ref']
+#    __slots__ = ['path', 'raw_element', '_accessed_members', 'strict', '_root',
+#                 'extensions', '_original_ref']
 
-    @classmethod
+    extensions: Optional[object] = Field(default=None)
+
+
+    _strict: bool
+    _path: List[str]
+    _raw_element: dict
+    _root: object
+    _accessed_members: object
+
+    class Config:
+        underscore_attrs_are_private = True
+        arbitrary_types_allowed = True
+
+
+
     @property
-    def required_fields(cls):
-        try:
-            return cls._required_fields_cache
-        except AttributeError:
-            fields = [x for x in map(lambda x: x.name.rstrip("_"), filter(lambda x: not isoptional(x), dataclasses.fields(cls)))]
-            cls._required_fields_cache = frozenset(fields)
-        return cls._required_fields_cache
+    def _get_required_fields(self):
+        return set(map(lambda y: y.alias, filter(lambda z: z.required is True, self.__fields__.values())))
 
     @classmethod
     def create(cls, path, raw_element, root, obj=None):
@@ -123,29 +127,29 @@ class ObjectBase(object):
         :type root: OpenAPI
         """
         # init empty slots
-        obj = obj or cls()
+        obj = obj or cls(raw_element)
 #        for k in type(obj).__slots__:
 #            if k in ('_spec_errors', 'validation_mode'):
 #                # allow these two fields to keep their values
 #                continue
 #            setattr(obj, k, None)
 
-        obj.path = path
-        obj.raw_element = raw_element
+        obj._path = path
+        obj._raw_element = raw_element
         obj._root = root
 
         obj._accessed_members = []
         obj.extensions = {}
 
         # TODO - add strict mode that errors if all members were not accessed
-        obj.strict = False
+        obj._strict = False
 
         # parse our own element
         try:
-            obj._required_fields(*type(obj).required_fields)
+            obj._required_fields(obj._get_required_fields)
             obj._parse_data()
         except SpecError as e:
-            if obj._root.validation_mode:
+            if obj._root._validation_mode:
                 obj._root.log_spec_error(e)
             else:
                 raise
@@ -162,7 +166,7 @@ class ObjectBase(object):
         Returns a string representation of the parsed object
         """
         # TODO - why?
-        return "<{} {}>".format(type(self), self.path)
+        return "<{} {}>".format(type(self), self._path)
 
     def __getstate__(self):
         """
@@ -182,7 +186,7 @@ class ObjectBase(object):
         for k, v in state.items():
             setattr(self, k, v)
 
-    def _required_fields(self, *fields):
+    def _required_fields(self, fields: Set):
         """
         Given a list of require fields for this object, raises a SpecError if any
         of the fields do not exist.
@@ -192,12 +196,12 @@ class ObjectBase(object):
 
         :raises SpecError: if any of the required fields are not present.
         """
-        missing_fields = set(fields) - set(self.raw_element)
+        missing_fields = fields - set(self._raw_element)
 
         if missing_fields:
             raise SpecError('Missing required fields: {}'.format(
                 ', '.join(missing_fields)),
-                path=self.path,
+                path=self._path,
                 element=self)
 
     def _parse_data(self):
@@ -212,10 +216,7 @@ class ObjectBase(object):
         are parsed and then an assertion is made that all keys in the
         raw_element were accessed - if not, the schema is considered invalid.
         """
-        for field in dataclasses.fields(self):
-            v = self._get(field.name, field.type)
-            if v is not None:
-                setattr(self, field.name, v)
+        self.__class__.parse_obj(self._raw_element)
 
     def _get(self, field, object_type):
         """
@@ -232,7 +233,7 @@ class ObjectBase(object):
         """
         self._accessed_members.append(field)
         c = object_type
-        ret = self.raw_element.get(field, None)
+        ret = self._raw_element.get(field, None)
         if ret is None:
             return None
 
@@ -253,7 +254,7 @@ class ObjectBase(object):
                     raise SpecError('Expected {}.{} to be a list of {}, got {}'.format(
                         self.get_path, field, object_type,
                         type(ret)),
-                        path=self.path,
+                        path=self._path,
                         element=self)
                 ret = self.parse_list(ret, object_type, field)
             elif origin == Map:
@@ -261,9 +262,9 @@ class ObjectBase(object):
                     raise SpecError('Expected {}.{} to be a Map of string: [{}], got {}'.format(
                         self.get_path, field, object_type,
                         type(ret)),
-                        path=self.path,
+                        path=self._path,
                         element=self)
-                ret = Map(self.path + [field], ret, object_type, self._root)
+                ret = Map(self._path + [field], ret, object_type, self._root)
             else:
                 accepts_string = False
                 for t in types:
@@ -280,7 +281,7 @@ class ObjectBase(object):
                         python_type = t #ObjectBase.get_object_type(t)
 
                         if python_type.can_parse(ret):
-                            ret = python_type.create(self.path + [field], ret, self._root)
+                            ret = python_type.create(self._path + [field], ret, self._root)
                             break
 
                     elif isinstance(ret, t):
@@ -292,7 +293,7 @@ class ObjectBase(object):
                     else:
                         raise_on_unknown_type(self, field, types, ret)
         except SpecError as e:
-            if self._root.validation_mode:
+            if self._root._validation_mode:
                 self._root.log_spec_error(e)
                 ret = None
             else:
@@ -343,7 +344,7 @@ class ObjectBase(object):
         if keys - fields:
             return False
 
-        if cls.required_fields - keys:
+        if cls._get_required_fields - keys:
             return False
 
         return True
@@ -355,7 +356,7 @@ class ObjectBase(object):
 
         .. _Specification Extensions: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#specificationExtensions
         """
-        for k, v in self.raw_element.items():
+        for k, v in self._raw_element.items():
             if k.startswith('x-'):
                 self.extensions[k[2:]] = v
                 self._accessed_members.append(k)
@@ -396,7 +397,7 @@ class ObjectBase(object):
         :returns: The path in the spec for this element
         :rtype: str
         """
-        return '.'.join(self.path)
+        return '.'.join(self._path)
 
     def parse_list(self, raw_list, object_type, field=None):
         """
@@ -417,7 +418,7 @@ class ObjectBase(object):
         if raw_list is None:
             return None
 
-        real_path = self.path[:]
+        real_path = self._path[:]
         if field:
             real_path += [field]
 
@@ -441,28 +442,28 @@ class ObjectBase(object):
             if not found_type:
                 raise SpecError('Could not parse {}.{}, expected to be one of [{}]'.format(
                     '.'.join(real_path), i, python_types),
-                    path=self.path,
+                    path=self._path,
                     element=self)
 
         return result
 
     @staticmethod
-    def _resolve_type(obj, value):
+    def _resolve_type(root, obj, value):
         # we found a reference - attempt to resolve it
         reference_path = value.ref
         if not reference_path.startswith('#/'):
             raise ReferenceResolutionError('Invalid reference path {}'.format(
                 reference_path),
-                path=obj.path,
+                path=obj._path,
                 element=obj)
 
         reference_path = reference_path.split('/')[1:]
 
         try:
-            resolved_value = obj._root.resolve_path(reference_path)
+            resolved_value = root.resolve_path(reference_path)
         except ReferenceResolutionError as e:
             # add metadata to the error
-            e.path = obj.path
+            e.path = obj._path
             e.element = obj
             raise
 
@@ -471,37 +472,51 @@ class ObjectBase(object):
         resolved_value._original_ref = value
         return resolved_value
 
-    def _resolve_references(self):
+    def _resolve_references(self, root):
         """
         Resolves all reference objects below this object and notes their original
         value was a reference.
         """
         # don't circular import
+
         reference_type = ObjectBase.get_object_type('Reference')
+        obj = root = self
 
-        for slot in filter(lambda x: not x.startswith("_"),
-                           map(lambda x: x.name, dataclasses.fields(self))):
-            value = getattr(self, slot)
-
-            if isinstance(value, reference_type):
-                resolved_value = self._resolve_type(self, value)
-                setattr(self, slot, resolved_value)
-            elif issubclass(type(value), ObjectBase) or isinstance(value, Map):
-                # otherwise, continue resolving down the tree
-                value._resolve_references()
-            elif isinstance(value, list):
-                # if it's a list, resolve its item's references
-                resolved_list = []
-                for item in value:
-                    if isinstance(item, reference_type):
-                        resolved_value = self._resolve_type(self, item)
-                        resolved_list.append(resolved_value)
-                    else:
-                        if issubclass(type(value), ObjectBase) or isinstance(value, Map):
-                            item._resolve_references()
+        def resolve(obj):
+            for slot in filter(lambda x: not x.startswith("_"), obj.__fields_set__):
+                value = getattr(obj, slot)
+                if value is None:
+                    continue
+                elif isinstance(value, reference_type):
+                    resolved_value = ObjectBase._resolve_type(root, obj, value)
+                    setattr(obj, slot, resolved_value)
+                elif issubclass(type(value), ObjectBase):
+                    # otherwise, continue resolving down the tree
+                    resolve(value)
+                elif isinstance(value, dict):  # pydantic does not use Map
+                    for k, v in value.items():
+                        if isinstance(v, reference_type):
+                            if v.ref:
+                                value[k] = ObjectBase._resolve_type(root, obj, v)
+                        else:
+                            resolve(value[k])
+                elif isinstance(value, list):
+                    # if it's a list, resolve its item's references
+                    resolved_list = []
+                    for item in value:
+                        if isinstance(item, reference_type):
+                            resolved_value = ObjectBase._resolve_type(root, item)
+                            resolved_list.append(resolved_value)
+                        else:
+                            resolve(value)
                         resolved_list.append(item)
+                    setattr(obj, slot, resolved_list)
+                elif isinstance(value, (str, int, float)):
+                    pass
+                else:
+                    raise TypeError(type(value))
 
-                setattr(self, slot, resolved_list)
+        resolve(self)
 
     def _resolve_allOfs(self):
         """
@@ -574,15 +589,38 @@ class ObjectBase(object):
         raise TypeError(object_type)
 
 
+from collections.abc import Mapping
+from typing import TypeVar, Hashable
 
-class Map(dict):
+K = TypeVar("K", bound=Hashable)
+V = TypeVar("V", bound=Hashable)
+
+#class Map(Mapping[K, V]):
+import collections
+class Map(collections.OrderedDict):
+#    @classmethod
+#    def __get_validators__(cls):
+#        yield cls.validate
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+
+    @classmethod
+    def __modify_schema__(cls, field_schema, field: Optional[ModelField]):
+        print(field_schema)
+
     """
     The Map object wraps a python dict and parses its values into the chosen
     type or types.
     """
-    __slots__ = ['dct', 'path', 'raw_element', '_root']
+#    __slots__ = ['dct', 'path', 'raw_element', '_root']
 
-    def __init__(self, path, raw_element, object_type, root):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def old__init__(self, path, raw_element, object_type, root):
         """
         Creates a dict containing the parsed objects from the raw element
 

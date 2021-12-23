@@ -1,8 +1,11 @@
 import dataclasses
 from typing import Optional
+
+from pydantic import Field
+
 from .object_base import ObjectBase, Map
 
-@dataclasses.dataclass
+
 class SecurityScheme(ObjectBase):
     """
     A `Security Scheme`_ defines a security scheme that can be used by the operations.
@@ -10,15 +13,15 @@ class SecurityScheme(ObjectBase):
     .. _Security Scheme: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securitySchemeObject
     """
 
-    type: str = dataclasses.field(default=None)
+    type: str = Field(default=None)
 
-    bearerFormat: Optional[str] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    flows: Optional[Map[str, str]] = dataclasses.field(default=None)  # TODO
-    in_: Optional[str] = dataclasses.field(default=None)
-    name: Optional[str] = dataclasses.field(default=None)
-    openIdConnectUrl: Optional[str] = dataclasses.field(default=None)
-    scheme: Optional[str] = dataclasses.field(default=None)
+    bearerFormat: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    flows: Optional[Map[str, str]] = Field(default=None)  # TODO
+    in_: Optional[str] = Field(default=None)
+    name: Optional[str] = Field(default=None)
+    openIdConnectUrl: Optional[str] = Field(default=None)
+    scheme: Optional[str] = Field(default=None)
 
     def _parse_data(self):
         super()._parse_data()

@@ -1,8 +1,11 @@
 import dataclasses
 from typing import ForwardRef, Optional
+
+from pydantic import Field
+
 from .object_base import ObjectBase
 
-@dataclasses.dataclass
+
 class Info(ObjectBase):
     """
     An OpenAPI Info object, as defined in `the spec`_.
@@ -10,15 +13,16 @@ class Info(ObjectBase):
     .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#infoObject
     """
 
-    title: str = dataclasses.field(default=None)
-    version: str = dataclasses.field(default=None)
+    title: str = Field(default=None)
+    version: str = Field(default=None)
 
-    contact: Optional[ForwardRef('Contact')] = dataclasses.field(default=None)
-    description: Optional[str] = dataclasses.field(default=None)
-    license: Optional[ForwardRef('License')] = dataclasses.field(default=None)
-    termsOfService: Optional[str] = dataclasses.field(default=None)
+    contact: Optional[ForwardRef('Contact')] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    license: Optional[ForwardRef('License')] = Field(default=None)
+    termsOfService: Optional[str] = Field(default=None)
 
-@dataclasses.dataclass
+
+
 class Contact(ObjectBase):
     """
     Contact object belonging to an Info object, as described `here`_
@@ -26,12 +30,10 @@ class Contact(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#contactObject
     """
 
-    email: str = dataclasses.field(default=None)
-    name: str = dataclasses.field(default=None)
-    url: str = dataclasses.field(default=None)
+    email: str = Field(default=None)
+    name: str = Field(default=None)
+    url: str = Field(default=None)
 
-
-@dataclasses.dataclass
 class License(ObjectBase):
     """
     License object belonging to an Info object, as described `here`_
@@ -39,5 +41,7 @@ class License(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#license-object
     """
 
-    name: str = dataclasses.field(default=None)
-    url: Optional[str] = dataclasses.field(default=None)
+    name: str = Field(default=None)
+    url: Optional[str] = Field(default=None)
+
+Info.update_forward_refs()
