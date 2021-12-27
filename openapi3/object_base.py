@@ -413,53 +413,6 @@ class ObjectBase(BaseModel):
         """
         return '.'.join(self._path)
 
-    def parse_list(self, raw_list, object_type, field=None):
-        """
-        Given a list of Objects, iterates over the list and creates the relevant
-        Objects, returning the resulting list.
-
-        :param raw_list: The list to parse
-        :type raw_list: list[dict]
-        :param object_type: typing
-        :type object_type: typeing.Type
-        :param field: The field to append to self.get_path() when determining path
-                      for created objects.
-        :type field: str
-
-        :returns: A list of parsed objects
-        :rtype: list[object_type]
-        """
-        if raw_list is None:
-            return None
-
-        real_path = self._path[:]
-        if field:
-            real_path += [field]
-
-        python_types = self.types_of(object_type)
-
-
-        result = []
-        for i, cur in enumerate(raw_list):
-            found_type = False
-
-            for cur_type in python_types:
-                if issubclass(cur_type, ObjectBase) and cur_type.can_parse(cur):
-                    result.append(cur_type.create(real_path + [str(i)], cur, self._root))
-                    found_type = True
-                    continue
-                elif isinstance(cur, cur_type):
-                    result.append(cur)
-                    found_type = True
-                    continue
-
-            if not found_type:
-                raise SpecError('Could not parse {}.{}, expected to be one of [{}]'.format(
-                    '.'.join(real_path), i, python_types),
-                    path=self._path,
-                    element=self)
-
-        return result
 
     @staticmethod
     def _resolve_type(root, obj, value):
@@ -496,202 +449,46 @@ class ObjectBase(BaseModel):
         reference_type = ObjectBase.get_object_type('Reference')
         obj = root = self
 
+
+
         def resolve(obj):
-            for slot in filter(lambda x: not x.startswith("_"), obj.__fields_set__):
-                value = getattr(obj, slot)
-                if value is None:
-                    continue
-                elif isinstance(value, reference_type):
-                    resolved_value = ObjectBase._resolve_type(root, obj, value)
-                    setattr(obj, slot, resolved_value)
-                elif issubclass(type(value), ObjectBase):
-                    # otherwise, continue resolving down the tree
-                    resolve(value)
-                elif isinstance(value, dict):  # pydantic does not use Map
-                    for k, v in value.items():
-                        if isinstance(v, reference_type):
-                            if v.ref:
-                                value[k] = ObjectBase._resolve_type(root, obj, v)
-                        elif isinstance(v, (ObjectBase, dict, list)):
-                            resolve(v)
-                elif isinstance(value, list):
-                    # if it's a list, resolve its item's references
-                    resolved_list = []
-                    for item in value:
-                        if isinstance(item, reference_type):
-                            resolved_value = ObjectBase._resolve_type(root, obj, item)
-                            resolved_list.append(resolved_value)
-                        elif isinstance(item, (ObjectBase, dict, list)):
-                            resolve(item)
-                            resolved_list.append(item)
-                        else:
-                            resolved_list.append(item)
-                    setattr(obj, slot, resolved_list)
-                elif isinstance(value, (str, int, float)):
-                    continue
-                else:
-                    raise TypeError(type(value))
+            if isinstance(obj, ObjectBase):
+                for slot in filter(lambda x: not x.startswith("_"), obj.__fields_set__):
+                    value = getattr(obj, slot)
+                    if value is None:
+                        continue
+                    elif isinstance(value, reference_type):
+                        resolved_value = ObjectBase._resolve_type(root, obj, value)
+                        setattr(obj, slot, resolved_value)
+                    elif issubclass(type(value), ObjectBase):
+                        # otherwise, continue resolving down the tree
+                        resolve(value)
+                    elif isinstance(value, dict):  # pydantic does not use Map
+                        resolve(value)
+                    elif isinstance(value, list):
+                        # if it's a list, resolve its item's references
+                        resolved_list = []
+                        for item in value:
+                            if isinstance(item, reference_type):
+                                resolved_value = ObjectBase._resolve_type(root, obj, item)
+                                resolved_list.append(resolved_value)
+                            elif isinstance(item, (ObjectBase, dict, list)):
+                                resolve(item)
+                                resolved_list.append(item)
+                            else:
+                                resolved_list.append(item)
+                        setattr(obj, slot, resolved_list)
+                    elif isinstance(value, (str, int, float)):
+                        continue
+                    else:
+                        raise TypeError(type(value))
+            elif isinstance(obj, dict):
+                for k, v in obj.items():
+                    if isinstance(v, reference_type):
+                        if v.ref:
+                            obj[k] = ObjectBase._resolve_type(root, obj, v)
+                    elif isinstance(v, (ObjectBase, dict, list)):
+                        resolve(v)
 
         resolve(self)
-
-    def _resolve_allOfs(self):
-        """
-        Walks object tree calling _resolve_allOf on each type.
-
-        Types can override this to handle allOf handling themselves.  Types that
-        do so should call the parent class' _resolve_allOf when they do
-        """
-        for slot in map(lambda x: x.name, dataclasses.fields(self)):
-            if slot.startswith("_"):
-                # no need to handle private members
-                continue
-
-            value = getattr(self, slot)
-            if value is None:
-                continue
-            elif issubclass(type(value), ObjectBase):
-                value._resolve_allOfs()
-            elif issubclass(type(value), Map):
-                for _, c in value.items():
-                    c._resolve_allOfs()
-            elif isinstance(value, list):
-                for c in value:
-                    if issubclass(type(c), ObjectBase) or issubclass(type(c), Map):
-                        c._resolve_allOfs()
-            elif isinstance(value, (int, str, dict)):
-                continue
-            else:
-                raise TypeError(value)
-
-    @staticmethod
-    def types_of(object_type, expected=None):
-        def resolve(t):
-            if typing.get_origin(t) == typing.Union:
-                t = typing.get_args(t)
-            else:
-                t = [t]
-
-            r = []
-            for tt in t:
-                if isinstance(tt, typing.ForwardRef):
-                    r.append(ObjectBase.get_object_type(tt.__forward_arg__))
-                else:
-                    if typing.get_origin(t) == typing.Union:
-                        r.extend(resolve(t))
-                    else:
-                        r.append(tt)
-            return r
-
-        if expected:
-            assert typing.get_origin(object_type) == expected
-
-        if object_type in frozenset([str, int, float, dict, bool, typing.Any]):
-            return [object_type]
-
-        if typing.get_origin(object_type) == list:
-            python_types = typing.get_args(object_type)[0]
-            return resolve(python_types)
-
-        if typing.get_origin(object_type) == Map:
-            args = typing.get_args(object_type)
-            return resolve(args[0]),resolve(args[1])
-
-        if isinstance(object_type, typing.ForwardRef):
-            return resolve(object_type)
-
-        if typing.get_origin(object_type) == typing.Union:
-            return resolve(object_type)
-
-        raise TypeError(object_type)
-
-
-from collections.abc import Mapping
-from typing import TypeVar, Hashable
-
-K = TypeVar("K", bound=Hashable)
-V = TypeVar("V", bound=Hashable)
-
-#class Map(Mapping[K, V]):
-import collections
-class Map(collections.OrderedDict):
-#    @classmethod
-#    def __get_validators__(cls):
-#        yield cls.validate
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-
-    @classmethod
-    def __modify_schema__(cls, field_schema, field: Optional[ModelField]):
-        print(field_schema)
-
-    """
-    The Map object wraps a python dict and parses its values into the chosen
-    type or types.
-    """
-#    __slots__ = ['dct', 'path', 'raw_element', '_root']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def old__init__(self, path, raw_element, object_type, root):
-        """
-        Creates a dict containing the parsed objects from the raw element
-
-        :param path: The path to this Map in the spec.
-        :type path: list
-        :param raw_element: The raw spec data for this map.  The keys must all
-                            be strings.
-        :type raw_element: dict
-        :param object_type: typing
-        :type object_type: typing
-        """
-        self.path = path
-        self.raw_element = raw_element
-        self._root = root
-
-        python_types = ObjectBase.types_of(object_type, Map)[1]
-        dct = {}
-
-        for k, v in self.raw_element.items():
-            found_type = False
-
-            for t in python_types:
-                if issubclass(t, ObjectBase) and t.can_parse(v):
-                    dct[k] = t.create(path + [k], v, self._root)
-                    found_type = True
-                elif isinstance(v, t):
-                    dct[k] = v
-                    found_type = True
-
-            if not found_type:
-                raise_on_unknown_type(self, k, python_types, v)
-
-        self.update(dct)
-
-    def _resolve_references(self):
-        """
-        This has been added to allow propagation of reference resolution as defined
-        in :any:`ObjectBase._resolve_references`.  This implementation simply
-        calls the same on all values in this Map.
-        """
-        reference_type = ObjectBase.get_object_type('Reference')
-
-        for key, value in self.items():
-            if isinstance(value, reference_type):
-                self[key] = ObjectBase._resolve_type(self, value)
-            else:
-                value._resolve_references()
-
-    def get_path(self):
-        """
-        Get the full path for this element in the spec
-
-        :returns: The path in the spec for this element
-        :rtype: str
-        """
-        return '.'.join(self.path)
-
 

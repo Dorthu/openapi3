@@ -1,7 +1,7 @@
 from typing import Union, List, Any, Optional
 import dataclasses
 
-from pydantic import Field, root_validator, Extra
+from pydantic import Field, root_validator, Extra, BaseModel
 
 from .errors import SpecError
 from .general import Reference  # need this for Model below
@@ -39,13 +39,13 @@ class Schema(ObjectBase):
     oneOf: Optional[list] = Field(default=None)
     anyOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
     items: Optional[Union['Schema', 'Reference']] = Field(default=None)
-    properties: Optional[Map[str, Union['Schema', 'Reference']]] = Field(default=None)
+    properties: Optional[Map[str, Union['Schema', 'Reference']]] = Field(default_factory=dict)
     additionalProperties: Optional[Union[bool, dict]] = Field(default=None)
     description: Optional[str] = Field(default=None)
     format: Optional[str] = Field(default=None)
     default: Optional[str] = Field(default=None)  # TODO - str as a default?
     nullable: Optional[bool] = Field(default=None)
-    discriminator: Optional[dict[str, Union["Schema", "Reference"]]] = Field(default=None)  # 'Discriminator'
+    discriminator: Optional[dict[str, Union[str, dict]]] = Field(default=None)  # 'Discriminator'
     readOnly: Optional[bool] = Field(default=None)
     writeOnly: Optional[bool] = Field(default=None)
     xml: Optional[dict] = Field(default=None)  # 'XML'
@@ -56,9 +56,9 @@ class Schema(ObjectBase):
     contentMediaType: Optional[str] = Field(default=None)
     contentSchema: Optional[str] = Field(default=None)
 
-    _model_type: object = Field(default=None)
-    _request_model_type: object = Field(default=None)
-    _resolved_allOfs: object = Field(default=None)
+    _model_type: object
+    _request_model_type: object
+    _resolved_allOfs: object
 
     class Config:
         extra = Extra.forbid
@@ -106,11 +106,41 @@ class Schema(ObjectBase):
            type(object1) == type(object2) # true
         """
         # this is defined in ObjectBase.__init__ as all slots are
-        if self._model_type is None:  # pylint: disable=access-member-before-definition
+
+        try:
+            return self._model_type
+        except AttributeError:
+            def typeof(schema):
+                r = None
+                if schema.type == "string":
+                    r = str
+                elif schema.type == "integer":
+                    r = int
+                else:
+                    raise TypeError(schema.type)
+
+                return r
+
             type_name = self.title or self._path[-1]
-            self._model_type = type(type_name, (Model,), {  # pylint: disable=attribute-defined-outside-init
-                '__slots__': self.properties.keys()
-            })
+            namespace = dict()
+            annos = dict()
+            if self.allOf:
+                pass
+            elif self.anyOf:
+                types = [i.get_type() for i in self.anyOf]
+                namespace["__root__"] = Union[types]
+            elif self.oneOf:
+                pass
+            else:
+                for name, f in self.properties.items():
+                    r = typeof(f)
+                    if name not in self.required:
+                        annos[name] = Optional[r]
+                    else:
+                        annos[name] = r
+            namespace['__annotations__'] = annos
+            import types
+            self._model_type = types.new_class(type_name, (BaseModel, ), {}, lambda ns: ns.update(namespace))
 
         return self._model_type
 
@@ -130,9 +160,9 @@ class Schema(ObjectBase):
             # expected
             return data
         elif self.type == "array":
-            return [self.items.get_type()(i, self.items) for i in data]
+            return [self.items.get_type().parse_obj(i) for i in data]
         else:
-            return self.get_type()(data, self)
+            return self.get_type().parse_obj(data)
 
     def get_request_type(self):
         """
@@ -142,7 +172,8 @@ class Schema(ObjectBase):
         # this is defined in ObjectBase.__init__ as all slots are
         if self._request_model_type is None:  # pylint: disable=access-member-before-definition
             type_name = self.title or self._path[-1]
-            self._request_model_type = type(type_name + 'Request', (Model,), {  # pylint: disable=attribute-defined-outside-init
+            self._request_model_type = type(type_name + 'Request', (BaseModel, ),
+                                            {  # pylint: disable=attribute-defined-outside-init
                 '__slots__': [k for k, v in self.properties.items() if not v.readOnly]
             })
 
