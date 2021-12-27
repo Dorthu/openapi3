@@ -1,5 +1,6 @@
 import json
 import pathlib
+import datetime
 from typing import ForwardRef, Any, List, Optional, Dict
 
 from pydantic import Field, ValidationError
@@ -26,11 +27,23 @@ class FileSystemLoader(Loader):
     def __init__(self, base):
         self.base = pathlib.Path(base)
 
-    def load(self, file):
+    def load(self, file, codec=None):
         file = pathlib.Path(file)
         path = self.base / file
         assert path.is_relative_to(self.base)
-        data = path.open("r").read()
+        data = path.open("rb").read()
+        if codec is not None:
+            codecs = [codec]
+        else:
+            codecs = ["ascii","utf-8"]
+        for c in codecs:
+            try:
+                r = data.decode(c)
+                break
+            except UnicodeError:
+                continue
+        else:
+            raise ValueError("encoding")
         if file.suffix == ".yaml":
             data = yaml.safe_load(data)
         elif file.suffix == ".json":
