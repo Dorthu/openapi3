@@ -142,30 +142,6 @@ class Operation(ObjectBase):
     class Config:
         underscore_attrs_are_private = True
 
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        super()._parse_data()
-        # callbacks: dict TODO
-
-        # gather all operations into the spec object
-        if self.operationId is not None:
-            # TODO - how to store without an operationId?
-            formatted_operation_id = self.operationId.replace(" ", "_")
-            self._root._register_operation(formatted_operation_id, self)
-
-        # Store session object
-
-#    def _resolve_references(self, root):
-#        """
-#        Overloaded _resolve_references to allow us to verify parameters after
-#        we've got all references settled.
-#        """
-#        super(self.__class__, self)._resolve_references()
-#
-#        # this will raise if parameters are invalid
-#        _validate_parameters(self)
 
     def _request_handle_secschemes(self, security_requirement, value):
         ss = self._root.components.securitySchemes[security_requirement.name]
