@@ -2,11 +2,15 @@
 This file tests that $ref resolution works as expected, and that
 allOfs are populated as expected as well.
 """
+import typing
+
 import pytest
+
 
 from openapi3 import OpenAPI
 from openapi3.schemas import Schema
 
+from pydantic.main import ModelMetaclass
 
 def test_ref_resolution(petstore_expanded_spec):
     """
@@ -33,30 +37,17 @@ def test_allOf_resolution(petstore_expanded_spec):
     """
     Tests that allOfs are resolved correctly
     """
-    ref = petstore_expanded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema
-    ref = petstore_expanded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema
+    ref = petstore_expanded_spec.paths['/pets'].get.responses['200'].content['application/json'].schema_.get_type()
 
-    assert type(ref) == Schema
-    assert ref.type == "array"
-    assert ref.items is not None
+    assert type(ref) == ModelMetaclass
+    assert typing.get_origin(ref.__fields__["__root__"].outer_type_) == list
 
-    items = ref.items
-    assert type(items) == Schema
-    assert sorted(items.required) == sorted(["id","name"])
-    assert len(items.properties) == 3
-    assert 'id' in items.properties
-    assert 'name' in items.properties
-    assert 'tag' in items.properties
+    items = typing.get_args(ref.__fields__["__root__"].outer_type_)[0].__fields__
 
-    id_prop = items.properties['id']
-    id_prop = items.properties['id']
-    assert id_prop.type == "integer"
-    assert id_prop.format == "int64"
+    assert sorted(map(lambda x: x.name, filter(lambda y: y.required==True, items.values()))) == sorted(["id","name"])
 
-    name = items.properties['name']
-    name = items.properties['name']
-    assert name.type == 'string'
+    assert sorted(map(lambda x: x.name, items.values())) == ["id","name","tag"]
 
-    tag = items.properties['tag']
-    tag = items.properties['tag']
-    assert tag.type == 'string'
+    assert items['id'].outer_type_ == int
+    assert items['name'].outer_type_ == str
+    assert items["tag"].outer_type_ == str

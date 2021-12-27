@@ -59,6 +59,7 @@ class Schema(ObjectBase):
     _model_type: object
     _request_model_type: object
     _resolved_allOfs: object
+    _path: str
 
     class Config:
         extra = Extra.forbid
@@ -90,34 +91,48 @@ class Schema(ObjectBase):
         try:
             return self._model_type
         except AttributeError:
+
             def typeof(schema):
                 r = None
                 if schema.type == "string":
                     r = str
                 elif schema.type == "integer":
                     r = int
+                elif schema.type == "array":
+                    r = schema.items.get_type()
                 else:
                     raise TypeError(schema.type)
 
                 return r
+            def annotationsof(schema):
+                annos = dict()
+                if schema.type == "array":
+                    annos["__root__"] = List[typeof(schema)]
+                else:
+                    for name, f in schema.properties.items():
+                        r = typeof(f)
+                        if name not in schema.required:
+                            annos[name] = Optional[r]
+                        else:
+                            annos[name] = r
+                return annos
 
-            type_name = self.title or self._path[-1]
+            type_name = self.title or self._path
             namespace = dict()
             annos = dict()
             if self.allOf:
-                pass
+                for i in self.allOf:
+                    annos.update(annotationsof(i))
             elif self.anyOf:
-                types = [i.get_type() for i in self.anyOf]
-                namespace["__root__"] = Union[types]
+#                types = [i.get_type() for i in self.anyOf]
+#                namespace["__root__"] = Union[types]
+                raise NotImplementedError("anyOf")
             elif self.oneOf:
-                pass
+                raise NotImplementedError("oneOf")
             else:
-                for name, f in self.properties.items():
-                    r = typeof(f)
-                    if name not in self.required:
-                        annos[name] = Optional[r]
-                    else:
-                        annos[name] = r
+
+                annos = annotationsof(self)
+
             namespace['__annotations__'] = annos
             import types
             self._model_type = types.new_class(type_name, (BaseModel, ), {}, lambda ns: ns.update(namespace))

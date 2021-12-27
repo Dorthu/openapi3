@@ -10,6 +10,7 @@ from .errors import ReferenceResolutionError, SpecError
 from .info import Info
 from .paths import Path, SecurityRequirement, _validate_parameters
 from .components import Components
+from .general import Reference
 from .servers import Server
 from .tag import Tag
 
@@ -62,7 +63,7 @@ class OpenAPI:
         """
 
         self._validation_mode = validate
-        self._spec_errors = None
+        self._spec_errors = list()
         self._operation_map = dict()
         self._security = None
 
@@ -72,8 +73,10 @@ class OpenAPI:
             if not self._validation_mode:
                 raise e
             self._spec_errors = e
-
         else:
+            for name, schema in self.components.schemas.items():
+                schema._path = name
+
             for path,obj in self.paths.items():
                 for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
                     op = getattr(obj, m)
@@ -83,6 +86,12 @@ class OpenAPI:
                         continue
                     formatted_operation_id = op.operationId.replace(" ", "_")
                     self._register_operation(formatted_operation_id, op)
+                    for r, response in op.responses.items():
+                        if isinstance(response, Reference):
+                            continue
+                        for c, content in response.content.items():
+                            content.schema_._path = f"{path}.{m}.{r}.{c}"
+
 
 
     #        self._spec.resolve_path("#/components/responses/Missing".split('/')[1:])
