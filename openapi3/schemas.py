@@ -1,9 +1,9 @@
+import types
 from typing import Union, List, Any, Optional, Dict
-import dataclasses
+
 
 from pydantic import Field, root_validator, Extra, BaseModel
 
-from .errors import SpecError
 from .general import Reference  # need this for Model below
 from .object_base import ObjectBase
 
@@ -73,7 +73,7 @@ class Schema(ObjectBase):
         extra = Extra.forbid
 
     @root_validator
-    def check_number_type(cls, values):
+    def validate_Schema_number_type(cls, values):
         conv = ["minimum","maximum"]
         if values.get("type", None) == "integer":
             for i in conv:
@@ -142,7 +142,7 @@ class Schema(ObjectBase):
                 annos = annotationsof(self)
 
             namespace['__annotations__'] = annos
-            import types
+
             self._model_type = types.new_class(type_name, (BaseModel, ), {}, lambda ns: ns.update(namespace))
 
         return self._model_type

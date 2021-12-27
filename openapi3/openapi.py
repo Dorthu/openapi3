@@ -123,7 +123,7 @@ class OpenAPI:
             for path,obj in self.paths.items():
                 for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
                     op = getattr(obj, m)
-                    op._path,op._method, op._root = path, m, self
+                    op._path, op._method, op._root = path, m, self
                     _validate_parameters(op, ['x', path])
                     if op.operationId is None:
                         continue
@@ -265,35 +265,22 @@ class OpenAPI:
 
     def _resolve_type(self, root, obj, value):
         # we found a reference - attempt to resolve it
-        reference_path = value.ref
-        if not reference_path.startswith('#/'):
-            from pathlib import Path
-            import yaml
-            filename = Path(reference_path.split("#")[0])
+
+        filename,reference_path = value.ref.split("#/", maxsplit=1)
+        if filename != '':
+            filename = pathlib.Path(filename)
             if filename not in self._cached:
                 self._cached[filename] = self._load(filename)
             root = self._cached[filename]
 #                return self._resolve_type(child, obj, value)
 
-            # raise ReferenceResolutionError('Invalid reference path {}'.format(
-            #     reference_path),
-            #     path=obj._path,
-            #     element=obj)
-
-        reference_path = reference_path.split('/')[1:]
-
         try:
-            resolved_value = root.resolve_path(reference_path)
+            return root.resolve_path(reference_path.split('/'))
         except ReferenceResolutionError as e:
             # add metadata to the error
-#            e.path = obj._path
             e.element = obj
             raise
 
-        # FIXME - will break if multiple things reference the same
-        # node
-#        resolved_value._original_ref = value
-        return resolved_value
 
 
 class OpenAPISpec(ObjectBase):
