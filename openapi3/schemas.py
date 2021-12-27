@@ -1,7 +1,7 @@
 from typing import Union, List, Any, Optional
 import dataclasses
 
-from pydantic import Field
+from pydantic import Field, root_validator, Extra
 
 from .errors import SpecError
 from .general import Reference  # need this for Model below
@@ -25,8 +25,8 @@ class Schema(ObjectBase):
     """
 
     title: Optional[str] = Field(default=None)
-    maximum: Optional[Union[int, float]] = Field(default=None)
-    minimum: Optional[Union[int, float]] = Field(default=None)
+    maximum: Optional[float] = Field(default=None) # FIXME Field(discriminator='type') would be better
+    minimum: Optional[float] = Field(default=None)
     maxLength: Optional[int] = Field(default=None)
     minLength: Optional[int] = Field(default=None)
     pattern: Optional[str] = Field(default=None)
@@ -37,7 +37,7 @@ class Schema(ObjectBase):
     type: Optional[str] = Field(default=None)
     allOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
     oneOf: Optional[list] = Field(default=None)
-    anyOf: Optional[list] = Field(default=None)
+    anyOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
     items: Optional[Union['Schema', 'Reference']] = Field(default=None)
     properties: Optional[Map[str, Union['Schema', 'Reference']]] = Field(default=None)
     additionalProperties: Optional[Union[bool, dict]] = Field(default=None)
@@ -45,7 +45,7 @@ class Schema(ObjectBase):
     format: Optional[str] = Field(default=None)
     default: Optional[str] = Field(default=None)  # TODO - str as a default?
     nullable: Optional[bool] = Field(default=None)
-    discriminator: Optional[dict] = Field(default=None)  # 'Discriminator'
+    discriminator: Optional[dict[str, Union["Schema", "Reference"]]] = Field(default=None)  # 'Discriminator'
     readOnly: Optional[bool] = Field(default=None)
     writeOnly: Optional[bool] = Field(default=None)
     xml: Optional[dict] = Field(default=None)  # 'XML'
@@ -59,6 +59,19 @@ class Schema(ObjectBase):
     _model_type: object = Field(default=None)
     _request_model_type: object = Field(default=None)
     _resolved_allOfs: object = Field(default=None)
+
+    class Config:
+        extra = Extra.forbid
+
+    @root_validator
+    def check_number_type(cls, values):
+        conv = ["minimum","maximum"]
+        if values.get("type", None) == "integer":
+            for i in conv:
+                v = values.get(i, None)
+                if v is not None:
+                    values[i] = int(v)
+        return values
 
     def _parse_data(self):
         """

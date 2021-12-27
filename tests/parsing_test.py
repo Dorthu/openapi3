@@ -59,7 +59,7 @@ def test_object_example(obj_example_expanded):
     Tests that `example` exists.
     """
     spec = OpenAPI(obj_example_expanded)
-    schema = spec.paths['/check-dict'].get.responses['200'].content['application/json'].schema
+    schema = spec.paths['/check-dict'].get.responses['200'].content['application/json'].schema_
     assert isinstance(schema.example, dict)
     assert isinstance(schema.example['real'], float)
 
@@ -72,7 +72,7 @@ def test_parsing_float_validation(float_validation_expanded):
     Tests that `minimum` and similar validators work with floats.
     """
     spec = OpenAPI(float_validation_expanded)
-    properties = spec.paths['/foo'].get.responses['200'].content['application/json'].schema.properties
+    properties = spec.paths['/foo'].get.responses['200'].content['application/json'].schema_.properties
 
     assert isinstance(properties['integer'].minimum, int)
     assert isinstance(properties['integer'].maximum, int)
@@ -106,12 +106,13 @@ def test_parsing_broken_links(with_broken_links):
 
     errors = spec.errors()
 
-    assert len(errors) == 2
-    error_strs = [str(e) for e in errors]
-    assert sorted([
+    assert len(errors.args) == 2
+    error_strs = str(errors)
+
+    assert all([i in error_strs for i in [
         "operationId and operationRef are mutually exclusive, only one of them is allowed",
         "operationId and operationRef are mutually exclusive, one of them must be specified",
-    ]) == sorted(error_strs)
+    ]])
 
 
 def test_securityparameters(with_securityparameters):

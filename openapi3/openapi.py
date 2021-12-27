@@ -8,13 +8,34 @@ from .object_base import ObjectBase, Map
 from .errors import ReferenceResolutionError, SpecError
 
 from .info import Info
-from .paths import Path, SecurityRequirement
+from .paths import Path, SecurityRequirement, _validate_parameters
 from .components import Components
 from .servers import Server
 from .tag import Tag
 
 
 class OpenAPI:
+
+    @property
+    def paths(self):
+        return self._spec.paths
+
+    @property
+    def components(self):
+        return self._spec.components
+
+    @property
+    def info(self):
+        return self._spec.info
+
+    @property
+    def openapi(self):
+        return self._spec.openapi
+
+    @property
+    def servers(self):
+        return self._spec.servers
+
     def __init__(
             self,
             raw_document,
@@ -40,32 +61,36 @@ class OpenAPI:
         :type use_session: bool
         """
 
-        self._spec = OpenAPISpec.parse_obj(raw_document)
-#        self._spec.resolve_path("#/components/responses/Missing".split('/')[1:])
-        self._spec._resolve_references(self._spec)
+        self._validation_mode = validate
+        self._spec_errors = None
+        self._operation_map = dict()
 
-        self._ssl_verify = ssl_verify
+        try:
+            self._spec = OpenAPISpec.parse_obj(raw_document)
+        except Exception as e:
+            if not self._validation_mode:
+                raise e
+            self._spec_errors = e
 
-        self._session = None
-        if use_session:
-            self._session = session_factory()
+        else:
+            for n,p in self.paths.items():
+                for m in p.__fields_set__ & frozenset(["get","set","head","post","put","patch","trace"]):
+                    op = getattr(p, m)
+                    _validate_parameters(op, ['x', n])
+                    if op.operationId is None:
+                        continue
+                    formatted_operation_id = op.operationId.replace(" ", "_")
+                    self._register_operation(formatted_operation_id, op)
 
-    @property
-    def paths(self):
-        return self._spec.path
 
-    @property
-    def components(self):
-        return self._spec.components
+    #        self._spec.resolve_path("#/components/responses/Missing".split('/')[1:])
+            self._spec._resolve_references(self._spec)
 
-    @property
-    def info(self):
-        return self._spec.info
+            self._ssl_verify = ssl_verify
 
-    @property
-    def openapi(self):
-        return self._spec.openapi
-
+            self._session = None
+            if use_session:
+                self._session = session_factory()
 
 
     # public methods
@@ -115,6 +140,7 @@ class OpenAPI:
                                'return errors!')
         return self._spec_errors
 
+
     # private methods
     def _register_operation(self, operation_id, operation):
         """
@@ -127,7 +153,7 @@ class OpenAPI:
         :type operation: Operation
         """
         if operation_id in self._operation_map:
-            raise SpecError("Duplicate operationId {}".format(operation_id), path=operation._path)
+            raise SpecError("Duplicate operationId {}".format(operation_id), path=None)
         self._operation_map[operation_id] = operation
 
     def _get_callable(self, operation):
@@ -195,9 +221,6 @@ class OpenAPISpec(ObjectBase):
     servers: Optional[List[Server]] = Field(default=None)
     tags: Optional[List[Tag]] = Field(default=None)
 
-    _validation_mode: bool
-    _operation_map: set
-
     class Config:
         underscore_attrs_are_private = True
         arbitrary_types_allowed = True
@@ -229,32 +252,6 @@ class OpenAPISpec(ObjectBase):
 
         return node
 
-    def log_spec_error(self, error):
-        """
-        In Validation Mode, this method is used when parsing a spec to record an
-        error that was encountered, for later reporting.  This should not be used
-        outside of Validation Mode.
-
-        :param error: The error encountered.
-        :type error: SpecError
-        """
-        if not self._validation_mode:
-            raise RuntimeError('This client is not in Validation Mode, cannot '
-                               'record errors!')
-        self._spec_errors.append(error)
-
-    def errors(self):
-        """
-        In Validation Mode, returns all errors encountered from parsing a spec.
-        This should not be called if not in Validation Mode.
-
-        :returns: The errors encountered during the parsing of this spec.
-        :rtype: List[SpecError]
-        """
-        if not self._validation_mode:
-            raise RuntimeError('This client is not in Validation Mode, cannot '
-                               'return errors!')
-        return self._spec_errors
 
     # private methods
     def _register_operation(self, operation_id, operation):

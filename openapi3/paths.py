@@ -25,16 +25,16 @@ from .schemas import Schema
 from .example import Example
 
 
-def _validate_parameters(instance):
+def _validate_parameters(op: "Operation", _path):
     """
     Ensures that all parameters for this path are valid
     """
-    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', instance._path[1])
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', _path[1])
 
-    for c in instance.parameters:
+    for c in op.parameters:
         if c.in_ == 'path':
             if c.name not in allowed_path_parameters:
-                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=instance._path)
+                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=_path)
 
 
 class Path(ObjectBase):
@@ -57,7 +57,7 @@ class Path(ObjectBase):
     summary: Optional[str] = Field(default=None)
     trace: Optional[ForwardRef('Operation')] = Field(default=None)
 
-    parameters: Optional[List[Union['Parameter', Reference]]] = Field(default_factory=list)
+    parameters: Optional[List[Union['Parameter', Reference]]] = Field(default=None)
 
     def _parse_data(self):
         """
@@ -132,7 +132,7 @@ class Operation(ObjectBase):
     description: Optional[str] = Field(default=None)
     externalDocs: Optional[ForwardRef('ExternalDocumentation')] = Field(default=None)
     operationId: Optional[str] = Field(default=None)
-    parameters: Optional[List[Union['Parameter', 'Reference']]] = Field(default_factory=list)
+    parameters: List[Union['Parameter', 'Reference']] = Field(default_factory=list)
     requestBody: Optional[Union['RequestBody', 'Reference']] = Field(default=None)
     security: Optional[List['SecurityRequirement']] = Field(default_factory=list)
     servers: Optional[List['Server']] = Field(default=None)
@@ -351,7 +351,7 @@ class Operation(ObjectBase):
         response_data = None
 
         if content_type.lower() == 'application/json':
-            return expected_media.schema.model(result.json())
+            return expected_media.schema_.model(result.json())
         else:
             raise NotImplementedError()
 
@@ -413,7 +413,7 @@ class MediaType(ObjectBase):
     .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
     """
 
-    schema_: Optional[Union['Schema', 'Reference']] = Field(default=None, alias="schema")
+    schema_: Optional[Union['Schema', 'Reference']] = Field(required=True, alias="schema")
     example: Optional[str] = Field(default=None)  # 'any' type
     examples: Optional[Map[str, Union['Example', 'Reference']]] = Field(default=None)
     encoding: Optional[Map[str, str]] = Field(default=None)
@@ -429,10 +429,11 @@ class Response(ObjectBase):
     """
 
     description: str = Field(required=True)
-    content: Optional[Map[str, ForwardRef('MediaType')]] = Field(default=None)
+    content: Map[str, ForwardRef('MediaType')] = Field(required=False, default=None)
     links: Optional[Map[str, Union['Link', 'Reference']]] = Field(default=None)
 
 
+from pydantic import root_validator, validator
 
 class Link(ObjectBase):
     """
@@ -448,19 +449,23 @@ class Link(ObjectBase):
     requestBody: Optional[dict] = Field(default=None)
     server: Optional[ForwardRef('Server')] = Field(default=None)
 
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        super()._parse_data()
+#    @validator("operationId", always=True)
+#    def operationId_check(cls, v):
+#        assert False
 
-        if self.operationId and self.operationRef:
+    @root_validator(pre=False)
+    def operation_check(cls, values):
+        if values["operationId"] != None and values["operationRef"] != None:
             raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
 
-        if not (self.operationId or self.operationRef):
+        if values["operationId"] == values["operationRef"] == None:
             raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")
+
+        return values
+
 
 Path.update_forward_refs()
 Operation.update_forward_refs()
 MediaType.update_forward_refs()
 RequestBody.update_forward_refs()
+Response.update_forward_refs()
