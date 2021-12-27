@@ -1,8 +1,10 @@
-import dataclasses
+import json
+import pathlib
 from typing import ForwardRef, Any, List, Optional, Dict
 
 from pydantic import Field, ValidationError
 import requests
+import yaml
 
 from .object_base import ObjectBase
 from .errors import ReferenceResolutionError, SpecError
@@ -13,6 +15,29 @@ from .components import Components
 from .general import Reference
 from .servers import Server
 from .tag import Tag
+
+
+class Loader:
+    def load(self, name):
+        raise NotImplementedError("load")
+
+
+class FileSystemLoader(Loader):
+    def __init__(self, base):
+        self.base = pathlib.Path(base)
+
+    def load(self, file):
+        file = pathlib.Path(file)
+        path = self.base / file
+        assert path.is_relative_to(self.base)
+        data = path.open("r").read()
+        if file.suffix == ".yaml":
+            data = yaml.safe_load(data)
+        elif file.suffix == ".json":
+            data = json.loads(data)
+        else:
+            raise ValueError(file.name)
+        return data
 
 
 class OpenAPI:
@@ -43,7 +68,8 @@ class OpenAPI:
             validate=False,
             ssl_verify=None,
             use_session=False,
-            session_factory=requests.Session):
+            session_factory=requests.Session,
+            loader=None):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -66,16 +92,20 @@ class OpenAPI:
         self._spec_errors = list()
         self._operation_map = dict()
         self._security = None
+        self.loader = loader
+        self._cached = dict()
 
         try:
             self._spec = OpenAPISpec.parse_obj(raw_document)
         except Exception as e:
             if not self._validation_mode:
-                raise e
+                raise
             self._spec_errors = e
         else:
             for name, schema in self.components.schemas.items():
                 schema._path = name
+
+            self._spec._resolve_references(self)
 
             for path,obj in self.paths.items():
                 for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
@@ -90,12 +120,12 @@ class OpenAPI:
                         if isinstance(response, Reference):
                             continue
                         for c, content in response.content.items():
+                            if content.schema_ is None:
+                                continue
                             content.schema_._path = f"{path}.{m}.{r}.{c}"
 
 
 
-    #        self._spec.resolve_path("#/components/responses/Missing".split('/')[1:])
-            self._spec._resolve_references(self._spec)
 
             self._ssl_verify = ssl_verify
 
@@ -212,6 +242,45 @@ class OpenAPI:
                     self.info.title, operationId))
 
         return object.__getattribute__(self, attr)
+
+    def _load(self, i):
+        data = self.loader.load(i)
+        return OpenAPISpec.parse_obj(data)
+
+
+
+
+    def _resolve_type(self, root, obj, value):
+        # we found a reference - attempt to resolve it
+        reference_path = value.ref
+        if not reference_path.startswith('#/'):
+            from pathlib import Path
+            import yaml
+            filename = Path(reference_path.split("#")[0])
+            if filename not in self._cached:
+                self._cached[filename] = self._load(filename)
+            root = self._cached[filename]
+#                return self._resolve_type(child, obj, value)
+
+            # raise ReferenceResolutionError('Invalid reference path {}'.format(
+            #     reference_path),
+            #     path=obj._path,
+            #     element=obj)
+
+        reference_path = reference_path.split('/')[1:]
+
+        try:
+            resolved_value = root.resolve_path(reference_path)
+        except ReferenceResolutionError as e:
+            # add metadata to the error
+#            e.path = obj._path
+            e.element = obj
+            raise
+
+        # FIXME - will break if multiple things reference the same
+        # node
+#        resolved_value._original_ref = value
+        return resolved_value
 
 
 class OpenAPISpec(ObjectBase):

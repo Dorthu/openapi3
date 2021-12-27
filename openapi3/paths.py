@@ -1,5 +1,5 @@
 import dataclasses
-from typing import ForwardRef, Union, List, Optional, Dict
+from typing import ForwardRef, Union, List, Optional, Dict, Any
 import json
 import re
 
@@ -103,18 +103,13 @@ class Parameter(ObjectBase):
     allowEmptyValue: Optional[bool] = Field(default=None)
     allowReserved: Optional[bool] = Field(default=None)
 
-    @classmethod
-    def can_parse(cls, dct):
-        return super().can_parse(dct)
-
-    def _parse_data(self):
-#        super()._parse_data()
-#        self.in_ = self._get("in", str)
-
-        # required is required and must be True if this parameter is in the path
-        if self.in_ == "path" and self.required is not True:
-            err_msg = 'Parameter {} must be required since it is in the path'
-            raise SpecError(err_msg.format(self.get_path()), path=self._path)
+    @root_validator
+    def validate_Parameter(cls, values):
+#        if values["in_"] ==
+#        if self.in_ == "path" and self.required is not True:
+#            err_msg = 'Parameter {} must be required since it is in the path'
+#            raise SpecError(err_msg.format(self.get_path()), path=self._path)
+        return values
 
 from pydantic import validator
 
@@ -403,6 +398,25 @@ class RequestBody(ObjectBase):
     description: Optional[str] = Field(default=None)
     required: Optional[bool] = Field(default=None)
 
+class Header(ObjectBase):
+    """
+
+    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#headerObject
+    """
+    deprecated: Optional[bool] = Field(default=None)
+
+
+class Encoding(ObjectBase):
+    """
+    A single encoding definition applied to a single schema property.
+
+    .. _Encoding: https://github.com/OAI/OpeI-Specification/blob/main/versions/3.1.0.md#encodingObject
+    """
+    contentType: Optional[str] = Field(default=None)
+    headers: Optional[Dict[str, Union[Header, Reference]]] = Field(default_factory=dict)
+    style: Optional[str] = Field(default=None)
+    explode: Optional[bool] = Field(default=None)
+    allowReserved: Optional[bool] = Field(default=None)
 
 
 class MediaType(ObjectBase):
@@ -414,9 +428,9 @@ class MediaType(ObjectBase):
     """
 
     schema_: Optional[Union['Schema', 'Reference']] = Field(required=True, alias="schema")
-    example: Optional[str] = Field(default=None)  # 'any' type
+    example: Optional[Any] = Field(default=None)  # 'any' type
     examples: Optional[Dict[str, Union['Example', 'Reference']]] = Field(default_factory=dict)
-    encoding: Optional[Dict[str, str]] = Field(default_factory=dict)
+    encoding: Optional[Dict[str, Encoding]] = Field(default_factory=dict)
 
 
 

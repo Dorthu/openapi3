@@ -1,10 +1,21 @@
 import dataclasses
 from typing import Optional, Dict
 
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from .object_base import ObjectBase
 
+class OAuthFlowObject(ObjectBase):
+    authorizationUrl: Optional[str] = Field(default=None)
+    tokenUrl: Optional[str] = Field(default=None)
+    refreshUrl: Optional[str] = Field(default=None)
+    scopes: Dict[str, str] = Field(default_factory=dict)
+
+class OAuthFlows(ObjectBase):
+    implicit: Optional[OAuthFlowObject] = Field(default=None)
+    password: Optional[OAuthFlowObject] = Field(default=None)
+    clientCredentials: Optional[OAuthFlowObject] = Field(default=None)
+    authorizationCode: Optional[OAuthFlowObject] = Field(default=None)
 
 class SecurityScheme(ObjectBase):
     """
@@ -17,7 +28,7 @@ class SecurityScheme(ObjectBase):
 
     bearerFormat: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    flows: Optional[Dict[str, str]] = Field(default_factory=dict)  # TODO
+    flows: Optional[OAuthFlows] = Field(default=None)
     in_: Optional[str] = Field(default=None, alias="in")
     name: Optional[str] = Field(default=None)
     openIdConnectUrl: Optional[str] = Field(default=None)

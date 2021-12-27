@@ -31,3 +31,5 @@ class ServerVariable(ObjectBase):
     description: Optional[str] = Field(default=None)
     enum: Optional[List[str]] = Field(default=None)
 
+
+Server.update_forward_refs()

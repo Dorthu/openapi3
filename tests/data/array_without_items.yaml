@@ -1,0 +1,51 @@
+{
+    "openapi": "3.0.2",
+    "info": {
+        "title": "Failure example",
+        "version": "0.0.1"
+    },
+    "servers": [
+        {
+            "url": "https://api.example.com",
+            "description": "Example server"
+        }
+    ],
+    "paths": {
+        "/name": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "nullable": false,
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "name"
+                                    ]
+                                }
+                            }
+                        },
+                        "description": "Success"
+                    }
+                },
+                "parameters": [
+                    {
+                        "required": false,
+                        "name": "fields",
+                        "in": "query",
+                        "schema": {
+                            "type": "array",
+                            "format": "string"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

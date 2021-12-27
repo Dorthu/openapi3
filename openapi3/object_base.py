@@ -1,4 +1,5 @@
 import sys
+import datetime
 import typing
 from typing import List, Optional, Set
 import dataclasses
@@ -14,17 +15,6 @@ else:
     # unicode was removed in python3, but we need to support both here, so define
     # it in python 3 only
     unicode = str
-
-
-def _asdict(x):
-    if hasattr(x, '__getstate__'):
-        return x.__getstate__()
-    elif isinstance(x, dict):
-        return {k: _asdict(v) for k, v in x.items()}
-    elif isinstance(x, (list, tuple, set)):
-        return x.__class__(_asdict(y) for y in x)
-    else:
-        return x
 
 
 def raise_on_unknown_type(parent, field, object_types, found):
@@ -111,7 +101,7 @@ class ObjectBase(BaseModel):
         e = dict()
         for k,v in values.items():
             if k.startswith("x-"):
-                e[k[2]] = v
+                e[k[2:]] = v
         if len(e):
             for i in e.keys():
                 del values[f"x-{i}"]
@@ -160,32 +150,7 @@ class ObjectBase(BaseModel):
         return '.'.join(self._path)
 
 
-    @staticmethod
-    def _resolve_type(root, obj, value):
-        # we found a reference - attempt to resolve it
-        reference_path = value.ref
-        if not reference_path.startswith('#/'):
-            raise ReferenceResolutionError('Invalid reference path {}'.format(
-                reference_path),
-                path=obj._path,
-                element=obj)
-
-        reference_path = reference_path.split('/')[1:]
-
-        try:
-            resolved_value = root.resolve_path(reference_path)
-        except ReferenceResolutionError as e:
-            # add metadata to the error
-#            e.path = obj._path
-            e.element = obj
-            raise
-
-        # FIXME - will break if multiple things reference the same
-        # node
-#        resolved_value._original_ref = value
-        return resolved_value
-
-    def _resolve_references(self, root):
+    def _resolve_references(self, api):
         """
         Resolves all reference objects below this object and notes their original
         value was a reference.
@@ -204,7 +169,7 @@ class ObjectBase(BaseModel):
                     if value is None:
                         continue
                     elif isinstance(value, reference_type):
-                        resolved_value = ObjectBase._resolve_type(root, obj, value)
+                        resolved_value = api._resolve_type(root, obj, value)
                         setattr(obj, slot, resolved_value)
                     elif issubclass(type(value), ObjectBase):
                         # otherwise, continue resolving down the tree
@@ -216,7 +181,7 @@ class ObjectBase(BaseModel):
                         resolved_list = []
                         for item in value:
                             if isinstance(item, reference_type):
-                                resolved_value = ObjectBase._resolve_type(root, obj, item)
+                                resolved_value = api._resolve_type(root, obj, item)
                                 resolved_list.append(resolved_value)
                             elif isinstance(item, (ObjectBase, dict, list)):
                                 resolve(item)
@@ -224,7 +189,7 @@ class ObjectBase(BaseModel):
                             else:
                                 resolved_list.append(item)
                         setattr(obj, slot, resolved_list)
-                    elif isinstance(value, (str, int, float)):
+                    elif isinstance(value, (str, int, float, datetime.datetime)):
                         continue
                     else:
                         raise TypeError(type(value))
@@ -232,7 +197,7 @@ class ObjectBase(BaseModel):
                 for k, v in obj.items():
                     if isinstance(v, reference_type):
                         if v.ref:
-                            obj[k] = ObjectBase._resolve_type(root, obj, v)
+                            obj[k] = api._resolve_type(root, obj, v)
                     elif isinstance(v, (ObjectBase, dict, list)):
                         resolve(v)
 
