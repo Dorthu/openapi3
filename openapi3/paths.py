@@ -1,5 +1,5 @@
 import dataclasses
-from typing import ForwardRef, Union, List, Optional
+from typing import ForwardRef, Union, List, Optional, Dict
 import json
 import re
 
@@ -12,7 +12,7 @@ except ImportError:
     from urllib import urlencode
 
 from .errors import SpecError
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 from .schemas import Model
 
 from .info import Info
@@ -94,7 +94,7 @@ class Parameter(ObjectBase):
     deprecated: Optional[bool] = Field(default=None)
     description: Optional[str] = Field(default=None)
     example: Optional[str] = Field(default=None)
-    examples: Optional[Map[str, Union['Example','Reference']]] = Field(default=None)
+    examples: Optional[Dict[str, Union['Example','Reference']]] = Field(default_factory=dict)
     explode: Optional[bool] = Field(default=None)
     required: Optional[bool] = Field(default=None)
     schema_: Optional[Union['Schema', 'Reference']] = Field(default=None, alias="schema")
@@ -126,7 +126,7 @@ class Operation(ObjectBase):
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject
     """
 
-    responses: Map[str, Union['Response', 'Reference']] = Field(required=True)
+    responses: Dict[str, Union['Response', 'Reference']] = Field(required=True)
 
     deprecated: Optional[bool] = Field(default=None)
     description: Optional[str] = Field(default=None)
@@ -409,7 +409,7 @@ class RequestBody(ObjectBase):
     .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
     """
 
-    content: Map[str, ForwardRef('MediaType')] = Field(default=None)
+    content: Dict[str, ForwardRef('MediaType')] = Field(default_factory=dict)
     description: Optional[str] = Field(default=None)
     required: Optional[bool] = Field(default=None)
 
@@ -425,8 +425,8 @@ class MediaType(ObjectBase):
 
     schema_: Optional[Union['Schema', 'Reference']] = Field(required=True, alias="schema")
     example: Optional[str] = Field(default=None)  # 'any' type
-    examples: Optional[Map[str, Union['Example', 'Reference']]] = Field(default=None)
-    encoding: Optional[Map[str, str]] = Field(default=None)
+    examples: Optional[Dict[str, Union['Example', 'Reference']]] = Field(default_factory=dict)
+    encoding: Optional[Dict[str, str]] = Field(default_factory=dict)
 
 
 
@@ -439,8 +439,8 @@ class Response(ObjectBase):
     """
 
     description: str = Field(required=True)
-    content: Map[str, ForwardRef('MediaType')] = Field(required=False, default=None)
-    links: Optional[Map[str, Union['Link', 'Reference']]] = Field(default=None)
+    content: Optional[Dict[str, ForwardRef('MediaType')]] = Field(default_factory=dict)
+    links: Optional[Dict[str, Union['Link', 'Reference']]] = Field(default_factory=dict)
 
 
 from pydantic import root_validator, validator

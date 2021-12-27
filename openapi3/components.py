@@ -1,9 +1,9 @@
 import dataclasses
-from typing import Union, Optional
+from typing import Union, Optional, Dict
 
 from pydantic import Field
 
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 
 from .example import Example
 from .paths import Reference, RequestBody, Link, Parameter, Response
@@ -18,14 +18,14 @@ class Components(ObjectBase):
     .. _Components Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#componentsObject
     """
 
-    examples: Optional[Map[str, Union['Example', 'Reference']]] = Field(default=None)
-    parameters: Optional[Map[str, Union['Parameter', 'Reference']]] = Field(default=None)
-    requestBodies: Optional[Map[str, Union['RequestBody', 'Reference']]] = Field(default=None)
-    responses: Optional[Map[str, Union['Response', 'Reference']]] = Field(default=None)
-    schemas: Optional[Map[str, Union['Schema', 'Reference']]] = Field(default=None)
-    securitySchemes: Optional[Map[str, Union['SecurityScheme', 'Reference']]] = Field(default=None)
+    examples: Optional[Dict[str, Union['Example', 'Reference']]] = Field(default_factory=dict)
+    parameters: Optional[Dict[str, Union['Parameter', 'Reference']]] = Field(default_factory=dict)
+    requestBodies: Optional[Dict[str, Union['RequestBody', 'Reference']]] = Field(default_factory=dict)
+    responses: Optional[Dict[str, Union['Response', 'Reference']]] = Field(default_factory=dict)
+    schemas: Optional[Dict[str, Union['Schema', 'Reference']]] = Field(default_factory=dict)
+    securitySchemes: Optional[Dict[str, Union['SecurityScheme', 'Reference']]] = Field(default_factory=dict)
     # headers: ['Header', 'Reference'], is_map=True
-    links: Optional[Map[str, Union['Link', 'Reference']]] = Field(default=None)
+    links: Optional[Dict[str, Union['Link', 'Reference']]] = Field(default_factory=dict)
     # callbacks: ['Callback', 'Reference'], is_map=True
 
 Components.update_forward_refs()

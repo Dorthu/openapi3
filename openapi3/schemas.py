@@ -1,11 +1,11 @@
-from typing import Union, List, Any, Optional
+from typing import Union, List, Any, Optional, Dict
 import dataclasses
 
 from pydantic import Field, root_validator, Extra, BaseModel
 
 from .errors import SpecError
 from .general import Reference  # need this for Model below
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 
 TYPE_LOOKUP = {
     'array': list,
@@ -35,11 +35,11 @@ class Schema(ObjectBase):
     required: Optional[List[str]] = Field(default_factory=list)
     enum: Optional[list] = Field(default=None)
     type: Optional[str] = Field(default=None)
-    allOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
+    allOf: Optional[List[Union["Schema", "Reference"]]] = Field(default_factory=list)
     oneOf: Optional[list] = Field(default=None)
     anyOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
     items: Optional[Union['Schema', 'Reference']] = Field(default=None)
-    properties: Optional[Map[str, Union['Schema', 'Reference']]] = Field(default_factory=dict)
+    properties: Optional[Dict[str, Union['Schema', 'Reference']]] = Field(default_factory=dict)
     additionalProperties: Optional[Union[bool, dict]] = Field(default=None)
     description: Optional[str] = Field(default=None)
     format: Optional[str] = Field(default=None)

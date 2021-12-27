@@ -1,10 +1,10 @@
 import dataclasses
-from typing import ForwardRef, Any, List, Optional
+from typing import ForwardRef, Any, List, Optional, Dict
 
 from pydantic import Field, ValidationError
 import requests
 
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 from .errors import ReferenceResolutionError, SpecError
 
 from .info import Info
@@ -215,10 +215,10 @@ class OpenAPISpec(ObjectBase):
 
     openapi: str = Field(required=True)
     info: Info = Field(required=True)
-    paths: Map[str, Path] = Field(required=True, default_factory=Map)
+    paths: Dict[str, Path] = Field(required=True, default_factory=dict)
 
-    components: Optional[Components] = Field(default=None)
-    externalDocs: Optional[Map[Any, Any]] = Field(default=None)
+    components: Optional[Components] = Field(default_factory=Components)
+    externalDocs: Optional[Dict[Any, Any]] = Field(default_factory=dict)
     security: Optional[List[SecurityRequirement]] = Field(default=None)
     servers: Optional[List[Server]] = Field(default=None)
     tags: Optional[List[Tag]] = Field(default=None)

@@ -1,9 +1,9 @@
 import dataclasses
-from typing import Optional
+from typing import Optional, Dict
 
 from pydantic import Field
 
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 
 
 class SecurityScheme(ObjectBase):
@@ -17,12 +17,8 @@ class SecurityScheme(ObjectBase):
 
     bearerFormat: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    flows: Optional[Map[str, str]] = Field(default=None)  # TODO
-    in_: Optional[str] = Field(default=None)
+    flows: Optional[Dict[str, str]] = Field(default_factory=dict)  # TODO
+    in_: Optional[str] = Field(default=None, alias="in")
     name: Optional[str] = Field(default=None)
     openIdConnectUrl: Optional[str] = Field(default=None)
-    scheme: Optional[str] = Field(default=None)
-
-    def _parse_data(self):
-        super()._parse_data()
-        self.in_ = self._get("in", str)
+    scheme_: Optional[str] = Field(default=None, alias="scheme")
