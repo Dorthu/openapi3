@@ -64,6 +64,7 @@ class OpenAPI:
         self._validation_mode = validate
         self._spec_errors = None
         self._operation_map = dict()
+        self._security = None
 
         try:
             self._spec = OpenAPISpec.parse_obj(raw_document)
@@ -73,10 +74,11 @@ class OpenAPI:
             self._spec_errors = e
 
         else:
-            for n,p in self.paths.items():
-                for m in p.__fields_set__ & frozenset(["get","set","head","post","put","patch","trace"]):
-                    op = getattr(p, m)
-                    _validate_parameters(op, ['x', n])
+            for path,obj in self.paths.items():
+                for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
+                    op = getattr(obj, m)
+                    op._path,op._method, op._root = path, m, self
+                    _validate_parameters(op, ['x', path])
                     if op.operationId is None:
                         continue
                     formatted_operation_id = op.operationId.replace(" ", "_")
@@ -252,79 +254,6 @@ class OpenAPISpec(ObjectBase):
 
         return node
 
-
-    # private methods
-    def _register_operation(self, operation_id, operation):
-        """
-        Adds an Operation to this spec's _operation_map, raising an error if the
-        OperationId has already been registered.
-
-        :param operation_id: The operation ID to register
-        :type operation_id: str
-        :param operation: The operation to register
-        :type operation: Operation
-        """
-        if operation_id in self._operation_map:
-            raise SpecError("Duplicate operationId {}".format(operation_id), path=operation._path)
-        self._operation_map[operation_id] = operation
-
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        self._operation_map = {}
-
-        super()._parse_data()
-
-        # now that we've parsed _all_ the data, resolve all references
-        self._resolve_references()
-        self._resolve_allOfs()
-
-    def _get_callable(self, operation):
-        """
-        A helper function to create OperationCallable objects for __getattribute__,
-        pre-initialized with the required values from this object.
-
-        :param operation: The Operation the callable should call
-        :type operation: callable (Operation.request)
-
-        :returns: The callable that executes this operation with this object's
-                  configuration.
-        :rtype: OperationCallable
-        """
-        base_url = self.servers[0].url
-
-        return OperationCallable(operation, base_url, self._security, self._ssl_verify,
-                                 self._session)
-
-    def __getattribute__(self, attr):
-        """
-        Extended __getattribute__ function to allow resolving dynamic function
-        names.  The purpose of this is to call syntax like this::
-
-           spec = OpenAPI(raw_spec)
-           spec.call_operationId()
-
-        This method will intercept the dot notation above (spec.call_operationId)
-        and look up the requested operation, returning a callable object that
-        will then immediately be called by the parenthesis.
-
-        :param attr: The attribute we're retrieving
-        :type attr: str
-
-        :returns: The attribute requested
-        :rtype: any
-        :raises AttributeError: if the requested attribute does not exist
-        """
-        if attr.startswith('call_'):
-            _, operationId = attr.split('_', 1)
-            if operationId in self._operation_map:
-                return self._get_callable(self._operation_map[operationId].request)
-            else:
-                raise AttributeError('{} has no operation {}'.format(
-                    self.info.title, operationId))
-
-        return object.__getattribute__(self, attr)
 
 OpenAPISpec.update_forward_refs()
 

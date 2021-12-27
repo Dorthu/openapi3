@@ -57,7 +57,7 @@ class Path(ObjectBase):
     summary: Optional[str] = Field(default=None)
     trace: Optional[ForwardRef('Operation')] = Field(default=None)
 
-    parameters: Optional[List[Union['Parameter', Reference]]] = Field(default=None)
+    parameters: Optional[List[Union['Parameter', Reference]]] = Field(default_factory=list)
 
     def _parse_data(self):
         """
@@ -139,6 +139,14 @@ class Operation(ObjectBase):
     summary: Optional[str] = Field(default=None)
     tags: Optional[List[str]] = Field(default=None)
 
+    _root = object
+    _path: str
+    _method: str
+    _request: object
+    _session: object
+
+    class Config:
+        underscore_attrs_are_private = True
 
     def _parse_data(self):
         """
@@ -154,10 +162,6 @@ class Operation(ObjectBase):
             self._root._register_operation(formatted_operation_id, self)
 
         # Store session object
-        self._session = requests.Session()
-
-        # Store request object
-        self._request = requests.Request()
 
 #    def _resolve_references(self, root):
 #        """
@@ -202,7 +206,7 @@ class Operation(ObjectBase):
         # Parameters
         path_parameters = {}
         accepted_parameters = {}
-        p = self.parameters + self._root.paths[self._path[-2]].parameters
+        p = self.parameters + self._root.paths[self._path].parameters
 
         for _ in list(p):
             # TODO - make this work with $refs - can operations be $refs?
@@ -277,10 +281,13 @@ class Operation(ObjectBase):
         :type raw_response: bool
         """
         # Set request method (e.g. 'GET')
-        self._request = requests.Request(self._path[-1])
+        self._request = requests.Request(self._method)
 
         # Set self._request.url to base_url w/ path
-        self._request.url = base_url + self._path[-2]
+        self._request.url = base_url + self._path
+
+        self._session = requests.Session()
+
 
         if security and self.security:
             security_requirement = None
@@ -328,6 +335,9 @@ class Operation(ObjectBase):
             err_var = result.status_code, self.operationId, ','.join(self.responses.keys())
 
             raise RuntimeError(err_msg.format(*err_var))
+
+        if expected_response.content is None:
+            return None
 
         content_type   = result.headers['Content-Type']
         expected_media = expected_response.content.get(content_type, None)
