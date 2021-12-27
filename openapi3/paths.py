@@ -13,7 +13,6 @@ except ImportError:
 
 from .errors import SpecError
 from .object_base import ObjectBase
-from .schemas import Model
 
 from .info import Info
 #from .components import Components
@@ -241,15 +240,8 @@ class Operation(ObjectBase):
 
     def _request_handle_body(self, data):
         if 'application/json' in self.requestBody.content:
-            if isinstance(data, dict) or isinstance(data, list):
+            if isinstance(data, (dict, list)):
                 body = json.dumps(data)
-
-            if issubclass(type(data), Model):
-                # serialize models as dicts
-                converter = lambda c: dict(c)
-                data_dict = {k: v for k, v in data if v is not None}
-
-                body = json.dumps(data_dict, default=converter)
 
             self._request.data = body
             self._request.headers['Content-Type'] = 'application/json'
