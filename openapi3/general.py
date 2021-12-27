@@ -28,7 +28,3 @@ class Reference(ObjectBase):
     """
     ref: str = Field(alias="$ref")
 
-#    @root_validator
-#    def root_check(cls, values):
-#        print(values)
-#        return values

@@ -463,12 +463,8 @@ class Link(ObjectBase):
     requestBody: Optional[dict] = Field(default=None)
     server: Optional[ForwardRef('Server')] = Field(default=None)
 
-#    @validator("operationId", always=True)
-#    def operationId_check(cls, v):
-#        assert False
-
     @root_validator(pre=False)
-    def operation_check(cls, values):
+    def validate_Link_operation(cls, values):
         if values["operationId"] != None and values["operationRef"] != None:
             raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
 
