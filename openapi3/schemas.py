@@ -25,22 +25,30 @@ class Schema(ObjectBase):
     """
 
     title: Optional[str] = Field(default=None)
+    multipleOf: Optional[int] = Field(default=None)
     maximum: Optional[float] = Field(default=None) # FIXME Field(discriminator='type') would be better
+    exclusiveMaximum: Optional[bool] = Field(default=None)
     minimum: Optional[float] = Field(default=None)
+    exclusiveMinimum: Optional[bool] = Field(default=None)
     maxLength: Optional[int] = Field(default=None)
     minLength: Optional[int] = Field(default=None)
     pattern: Optional[str] = Field(default=None)
     maxItems: Optional[int] = Field(default=None)
     minItems: Optional[int] = Field(default=None)
+    uniqueItems: Optional[bool] = Field(default=None)
+    maxProperties: Optional[int] = Field(default=None)
+    minProperties: Optional[int] = Field(default=None)
     required: Optional[List[str]] = Field(default_factory=list)
     enum: Optional[list] = Field(default=None)
+
     type: Optional[str] = Field(default=None)
     allOf: Optional[List[Union["Schema", "Reference"]]] = Field(default_factory=list)
     oneOf: Optional[list] = Field(default=None)
     anyOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
+    not_: Optional[Union["Schema", "Reference"]] = Field(default=None, alias="not")
     items: Optional[Union['Schema', 'Reference']] = Field(default=None)
     properties: Optional[Dict[str, Union['Schema', 'Reference']]] = Field(default_factory=dict)
-    additionalProperties: Optional[Union[bool, dict]] = Field(default=None)
+    additionalProperties: Optional[Union[bool, 'Schema', 'Reference']] = Field(default=None)
     description: Optional[str] = Field(default=None)
     format: Optional[str] = Field(default=None)
     default: Optional[str] = Field(default=None)  # TODO - str as a default?
