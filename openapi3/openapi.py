@@ -305,6 +305,58 @@ class OpenAPISpec(ObjectBase):
         underscore_attrs_are_private = True
         arbitrary_types_allowed = True
 
+    def _resolve_references(self, api):
+        """
+        Resolves all reference objects below this object and notes their original
+        value was a reference.
+        """
+        # don't circular import
+
+        reference_type = Reference
+        root = self
+
+        def resolve(obj):
+            if isinstance(obj, ObjectBase):
+                for slot in filter(lambda x: not x.startswith("_"), obj.__fields_set__):
+                    value = getattr(obj, slot)
+                    if value is None:
+                        continue
+                    elif isinstance(value, reference_type):
+                        resolved_value = api._resolve_type(root, obj, value)
+                        setattr(obj, slot, resolved_value)
+                    elif issubclass(type(value), ObjectBase):
+                        # otherwise, continue resolving down the tree
+                        resolve(value)
+                    elif isinstance(value, dict):  # pydantic does not use Map
+                        resolve(value)
+                    elif isinstance(value, list):
+                        # if it's a list, resolve its item's references
+                        resolved_list = []
+                        for item in value:
+                            if isinstance(item, reference_type):
+                                resolved_value = api._resolve_type(root, obj, item)
+                                resolved_list.append(resolved_value)
+                            elif isinstance(item, (ObjectBase, dict, list)):
+                                resolve(item)
+                                resolved_list.append(item)
+                            else:
+                                resolved_list.append(item)
+                        setattr(obj, slot, resolved_list)
+                    elif isinstance(value, (str, int, float, datetime.datetime)):
+                        continue
+                    else:
+                        raise TypeError(type(value))
+            elif isinstance(obj, dict):
+                for k, v in obj.items():
+                    if isinstance(v, reference_type):
+                        if v.ref:
+                            obj[k] = api._resolve_type(root, obj, v)
+                    elif isinstance(v, (ObjectBase, dict, list)):
+                        resolve(v)
+
+        resolve(self)
+
+
     def resolve_path(self, path):
         """
         Given a $ref path, follows the document tree and returns the given attribute.
