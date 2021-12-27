@@ -3,7 +3,7 @@ from typing import ForwardRef, Union, List, Optional, Dict
 import json
 import re
 
-from pydantic import Field
+from pydantic import Field, BaseModel, root_validator
 import requests
 
 try:
@@ -175,13 +175,13 @@ class Operation(ObjectBase):
     def _request_handle_secschemes(self, security_requirement, value):
         ss = self._root.components.securitySchemes[security_requirement.name]
 
-        if ss.type == 'http' and ss.scheme == 'basic':
+        if ss.type == 'http' and ss.scheme_ == 'basic':
             self._request.auth = requests.auth.HTTPBasicAuth(*value)
 
-        if ss.type == 'http' and ss.scheme == 'digest':
+        if ss.type == 'http' and ss.scheme_ == 'digest':
             self._request.auth = requests.auth.HTTPDigestAuth(*value)
 
-        if ss.type == 'http' and ss.scheme == 'bearer':
+        if ss.type == 'http' and ss.scheme_ == 'bearer':
             header = ss.bearerFormat or 'Bearer {}'
             self._request.headers['Authorization'] = header.format(value)
 
@@ -328,7 +328,7 @@ class Operation(ObjectBase):
 
             raise RuntimeError(err_msg.format(*err_var))
 
-        if expected_response.content is None:
+        if len(expected_response.content) == 0:
             return None
 
         content_type   = result.headers['Content-Type']
@@ -359,18 +359,33 @@ class Operation(ObjectBase):
 
 
 
-class SecurityRequirement(ObjectBase):
+class SecurityRequirement(BaseModel):
     """
     A `SecurityRequirement`_ object describes security schemes for API access.
 
     .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
     """
+    __root__: Dict[str, List[str]]
 
-    name: Optional[str] = Field(default=None)
-    types: Optional[List[str]] = Field(default=None)
+    @root_validator
+    def validate_SecurityRequirement(cls, values):
+        root = values.get("__root__", {})
+        if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
+            raise ValueError(root)
+        return values
 
 
+    @property
+    def name(self):
+        if len(self.__root__.keys()):
+            return list(self.__root__.keys())[0]
+        return None
 
+    @property
+    def types(self):
+        if self.name:
+            return self.__root__[self.name]
+        return None
 
     def __getstate__(self):
         return {self.name: self.types}

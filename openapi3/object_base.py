@@ -103,6 +103,11 @@ class ObjectBase(BaseModel):
 
     @root_validator(pre=True)
     def check_extensions(cls, values):
+        """ FIXME
+        https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.1.md#specificationExtensions
+        :param values:
+        :return: values
+        """
         e = dict()
         for k,v in values.items():
             if k.startswith("x-"):
