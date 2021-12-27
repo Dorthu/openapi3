@@ -1,9 +1,9 @@
 import dataclasses
-from typing import List, Optional, ForwardRef
+from typing import List, Optional, ForwardRef, Dict
 
 from pydantic import Field
 
-from .object_base import ObjectBase, Map
+from .object_base import ObjectBase
 
 
 
@@ -16,7 +16,7 @@ class Server(ObjectBase):
 
     url: str = Field(default=None)
     description: Optional[str] = Field(default=None)
-    variables: Optional[Map[str, ForwardRef('ServerVariable')]] = Field(default=None)
+    variables: Optional[Dict[str, ForwardRef('ServerVariable')]] = Field(default_factory=dict)
 
 
 
