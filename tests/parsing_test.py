@@ -114,28 +114,6 @@ def test_parsing_broken_links(with_broken_links):
         "operationId and operationRef are mutually exclusive, one of them must be specified",
     ]])
 
-def test_parsing_data():
-    import yaml, json
-    from pathlib import Path
-    datadir = Path("tests/data")
-    for i in filter(lambda x: x.is_file(), datadir.iterdir()):
-        data = None
-        if i.suffix == ".yaml":
-            data = yaml.safe_load(i.open('r').read())
-        elif i.suffix == ".json":
-            data = json.loads(i.open('r').read())
-        elif i.name == "README.md":
-            continue
-        else:
-            raise ValueError(i.name)
-        spec = OpenAPI(data, loader=FileSystemLoader(i.parent))
-
-def test_parsing_data_open5gs():
-    from pathlib import Path
-    import yaml
-    i = Path("tests/data/open5gs/TS29510_Nnrf_NFManagement.yaml")
-    data = yaml.safe_load(i.open('r').read())
-    spec = OpenAPI(data, loader=FileSystemLoader(i.parent))
 
 def test_securityparameters(with_securityparameters):
     spec = OpenAPI(with_securityparameters, validate=True)
