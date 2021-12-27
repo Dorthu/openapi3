@@ -3,7 +3,7 @@ import typing
 from typing import List, Optional, Set
 import dataclasses
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator
 
 from .errors import SpecError, ReferenceResolutionError
 
@@ -107,6 +107,20 @@ class ObjectBase(BaseModel):
         arbitrary_types_allowed = True
 
 
+    @root_validator(pre=True)
+    def check_extensions(cls, values):
+        e = dict()
+        for k,v in values.items():
+            if k.startswith("x-"):
+                e[k[2]] = v
+        if len(e):
+            for i in e.keys():
+                del values[f"x-{i}"]
+            if "extensions" in values.keys():
+                raise ValueError("extensions")
+            values["extensions"] = e
+
+        return values
 
     @property
     def _get_required_fields(self):
@@ -161,12 +175,12 @@ class ObjectBase(BaseModel):
 
         return obj
 
-    def __repr__(self):
-        """
-        Returns a string representation of the parsed object
-        """
-        # TODO - why?
-        return "<{} {}>".format(type(self), self._path)
+#    def __repr__(self):
+#        """
+#        Returns a string representation of the parsed object
+#        """
+#        # TODO - why?
+#        return "<{} {}>".format(type(self), self._path)
 
     def __getstate__(self):
         """
@@ -463,13 +477,13 @@ class ObjectBase(BaseModel):
             resolved_value = root.resolve_path(reference_path)
         except ReferenceResolutionError as e:
             # add metadata to the error
-            e.path = obj._path
+#            e.path = obj._path
             e.element = obj
             raise
 
         # FIXME - will break if multiple things reference the same
         # node
-        resolved_value._original_ref = value
+#        resolved_value._original_ref = value
         return resolved_value
 
     def _resolve_references(self, root):
@@ -498,21 +512,23 @@ class ObjectBase(BaseModel):
                         if isinstance(v, reference_type):
                             if v.ref:
                                 value[k] = ObjectBase._resolve_type(root, obj, v)
-                        else:
-                            resolve(value[k])
+                        elif isinstance(v, (ObjectBase, dict, list)):
+                            resolve(v)
                 elif isinstance(value, list):
                     # if it's a list, resolve its item's references
                     resolved_list = []
                     for item in value:
                         if isinstance(item, reference_type):
-                            resolved_value = ObjectBase._resolve_type(root, item)
+                            resolved_value = ObjectBase._resolve_type(root, obj, item)
                             resolved_list.append(resolved_value)
+                        elif isinstance(item, (ObjectBase, dict, list)):
+                            resolve(item)
+                            resolved_list.append(item)
                         else:
-                            resolve(value)
-                        resolved_list.append(item)
+                            resolved_list.append(item)
                     setattr(obj, slot, resolved_list)
                 elif isinstance(value, (str, int, float)):
-                    pass
+                    continue
                 else:
                     raise TypeError(type(value))
 

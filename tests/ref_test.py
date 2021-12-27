@@ -12,7 +12,7 @@ def test_ref_resolution(petstore_expanded_spec):
     """
     Tests that $refs are resolved as we expect them to be
     """
-    ref = petstore_expanded_spec.paths['/pets'].get.responses['default'].content['application/json'].schema
+    ref = petstore_expanded_spec.paths['/pets'].get.responses['default'].content['application/json'].schema_
 
     assert type(ref) == Schema
     assert ref.type == "object"

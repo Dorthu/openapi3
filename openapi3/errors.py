@@ -1,3 +1,5 @@
+from pydantic import ValidationError
+
 class SpecError(ValueError):
     """
     This error class is used when an invalid format is found while parsing an
