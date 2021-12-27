@@ -73,26 +73,6 @@ class Schema(ObjectBase):
                     values[i] = int(v)
         return values
 
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        super()._parse_data()
-        # TODO - Implement the following properties:
-        # self.multipleOf
-        # self.not
-        # self.uniqueItems
-        # self.maxProperties
-        # self.minProperties
-        # self.exclusiveMinimum
-        # self.exclusiveMaximum
-
-        self._resolved_allOfs = False
-
-        if self.type == 'array' and self.items is None:
-            raise SpecError('{}: items is required when type is "array"'.format(
-                self.get_path()))
-
     def get_type(self):
         """
         Returns the Type that this schema represents.  This Type is created once
@@ -186,65 +166,5 @@ class Schema(ObjectBase):
         """
         # TODO - this doesn't get nested schemas
         return self.get_request_type()(kwargs, self)
-
-    def _resolve_allOfs(self):
-        """
-        Handles merging properties for allOfs
-        """
-        if self._resolved_allOfs:
-            return
-
-        self._resolved_allOfs = True
-
-        if self.allOf:
-            for c in self.allOf:
-#            for c in typing.get_args(self.allOf):
-#                assert isinstance(c, typing.ForwardRef)
-#                c = ObjectBase.get_object_type(c.__forward_arg__)
-                if isinstance(c, Schema):
-                    self._merge(c)
-
-    def _merge(self, other):
-        """
-        Merges ``other`` into this schema, preferring to use the values in ``other``
-        """
-        for slot in map(lambda x: x.name, dataclasses.fields(self)):
-            if slot.startswith("_"):
-                # skip private members
-                continue
-
-            my_value = getattr(self, slot)
-            other_value = getattr(other, slot)
-
-            if other_value:
-                # we got a value to merge
-                if isinstance(other_value, Schema):
-                    # if it's another schema, merge them
-                    if my_value is not None:
-                        my_value._merge(other_value)
-                    else:
-                        setattr(self, slot, other_value)
-                elif isinstance(other_value, list):
-                    # we got a list, combine them
-                    if my_value is None:
-                        my_value = []
-                    setattr(self, slot, my_value + other_value)
-                elif isinstance(other_value, dict) or isinstance(other_value, Map):
-                    if my_value:
-                        for k, v in my_value.items():
-                            if k in other_value:
-                                if isinstance(v, Schema):
-                                    v._merge(other_value[k])
-                                    continue
-                                else:
-                                    my_value[k] = other_value[k]
-                        for ok, ov in other_value.items():
-                            if ok not in my_value:
-                                my_value[ok] = ov
-                    else:
-                        setattr(self, slot, other_value)
-                else:
-                    setattr(self, slot, other_value)
-
 
 Schema.update_forward_refs()
