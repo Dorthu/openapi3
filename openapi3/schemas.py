@@ -16,6 +16,14 @@ TYPE_LOOKUP = {
 }
 
 
+class Discriminator(ObjectExtended):
+    """
+
+    .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.1.md#discriminator-object
+    """
+    propertyName: str = Field(required=True)
+    mapping: Optional[Dict[str, str]] = Field(default_factory=dict)
+
 
 class Schema(ObjectExtended):
     """
@@ -42,18 +50,18 @@ class Schema(ObjectExtended):
     enum: Optional[list] = Field(default=None)
 
     type: Optional[str] = Field(default=None)
-    allOf: Optional[List[Union["Schema", "Reference"]]] = Field(default_factory=list)
+    allOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
     oneOf: Optional[list] = Field(default=None)
-    anyOf: Optional[List[Union["Schema", "Reference"]]] = Field(default=None)
-    not_: Optional[Union["Schema", "Reference"]] = Field(default=None, alias="not")
-    items: Optional[Union['Schema', 'Reference']] = Field(default=None)
-    properties: Optional[Dict[str, Union['Schema', 'Reference']]] = Field(default_factory=dict)
-    additionalProperties: Optional[Union[bool, 'Schema', 'Reference']] = Field(default=None)
+    anyOf: Optional[List[Union["Schema", Reference]]] = Field(default=None)
+    not_: Optional[Union["Schema", Reference]] = Field(default=None, alias="not")
+    items: Optional[Union['Schema', Reference]] = Field(default=None)
+    properties: Optional[Dict[str, Union['Schema', Reference]]] = Field(default_factory=dict)
+    additionalProperties: Optional[Union[bool, 'Schema', Reference]] = Field(default=None)
     description: Optional[str] = Field(default=None)
     format: Optional[str] = Field(default=None)
     default: Optional[str] = Field(default=None)  # TODO - str as a default?
     nullable: Optional[bool] = Field(default=None)
-    discriminator: Optional[dict[str, Union[str, dict]]] = Field(default=None)  # 'Discriminator'
+    discriminator: Optional[Discriminator] = Field(default=None)  # 'Discriminator'
     readOnly: Optional[bool] = Field(default=None)
     writeOnly: Optional[bool] = Field(default=None)
     xml: Optional[dict] = Field(default=None)  # 'XML'
