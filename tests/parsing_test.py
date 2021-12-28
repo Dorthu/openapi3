@@ -120,3 +120,9 @@ def test_securityparameters(with_securityparameters):
     errors = spec.errors()
     print(errors)
     assert len(errors) == 0
+
+def test_callback(with_callback):
+    spec = OpenAPI(with_callback, validate=True)
+    errors = spec.errors()
+    print(errors)
+    assert len(errors) == 0

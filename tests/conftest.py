@@ -15,8 +15,8 @@ def _get_parsed_yaml(filename):
                      include extension.
     :type filename: str
     """
-    if filename not in LOADED_FILES:
-        with open("tests/fixtures/" + filename) as f:
+    if filename  not in LOADED_FILES:
+        with open("tests/fixtures/"+filename) as f:
             raw = f.read()
         parsed = safe_load(raw)
 
@@ -33,14 +33,14 @@ def _get_parsed_spec(filename):
                      include extension.
     :type filename: str
     """
-    if "spec:" + filename not in LOADED_FILES:
+    if "spec:"+filename not in LOADED_FILES:
         parsed = _get_parsed_yaml(filename)
 
         spec = OpenAPI(parsed)
 
-        LOADED_FILES["spec:" + filename] = spec
+        LOADED_FILES["spec:"+filename] = spec
 
-    return LOADED_FILES["spec:" + filename]
+    return LOADED_FILES["spec:"+filename]
 
 
 @pytest.fixture
@@ -105,7 +105,7 @@ def obj_example_expanded():
     """
     yield _get_parsed_yaml("obj-example.yaml")
 
-
+    
 @pytest.fixture
 def float_validation_expanded():
     """
@@ -137,16 +137,6 @@ def with_broken_links():
     """
     yield _get_parsed_yaml("with-broken-links.yaml")
 
-
-@pytest.fixture
-def with_param_types():
-    """
-    Provides a spec with multiple parameter types and typed examples
-    """
-    # JSON file to allow specific typing of bool example (bool is a subclass of int in Python)
-    yield _get_parsed_yaml("parameter-types.json")
-
-
 @pytest.fixture
 def with_securityparameters():
     """
@@ -154,19 +144,16 @@ def with_securityparameters():
     """
     yield _get_parsed_yaml("with-securityparameters.yaml")
 
+@pytest.fixture
+def with_parameters():
+    """
+    Provides a spec with parameters
+    """
+    yield _get_parsed_yaml("with-parameters.yaml")
 
 @pytest.fixture
-def with_nested_allof_ref():
+def with_callback():
     """
-    Provides a spec with a $ref under a schema defined in an allOf
+    Provides a spec with callback
     """
-    yield _get_parsed_yaml("nested-allOf.yaml")
-
-
-@pytest.fixture
-def with_ref_allof():
-    """
-    Provides a spec that includes a reference to a component schema in and out of
-    an allOf
-    """
-    yield _get_parsed_yaml("ref-allof.yaml")
+    yield _get_parsed_yaml("callback-example.yaml")

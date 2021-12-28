@@ -3,6 +3,7 @@ This file tests that paths are parsed and populated correctly
 """
 import base64
 import uuid
+import pathlib
 
 from unittest.mock import patch, MagicMock
 from urllib.parse import urlparse
@@ -99,8 +100,6 @@ def test_operation_populated(petstore_expanded_spec):
 
 def test_securityparameters(with_securityparameters):
     api = OpenAPI(with_securityparameters)
-    r = patch("requests.sessions.Session.send")
-
     auth=str(uuid.uuid4())
 
     # global security
@@ -123,7 +122,7 @@ def test_securityparameters(with_securityparameters):
         api.call_api_v1_auth_login_create(data={}, parameters={})
 
     parsed_url = urlparse(r.call_args.args[0].url)
-    parsed_url.query == auth
+    assert parsed_url.query == f"auth={auth}"
 
     api.authenticate('cookieAuth', auth)
     resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
@@ -152,5 +151,19 @@ def test_securityparameters(with_securityparameters):
     api.authenticate(None, None)
     resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
     with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-        api.call_api_v1_auth_login_create(data={}, parameters={})
+        api.call_api_v1_auth_login_info(data={}, parameters={})
+
+def test_parameters(with_parameters):
+    api = OpenAPI(with_parameters)
+
+    with pytest.raises(ValueError, match="Required parameter \w+ not provided"):
+        api.call_getTest(data={}, parameters={})
+
+    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
+    with patch("requests.sessions.Session.send", return_value=resp) as r:
+        Header = str([i ** i for i in range(3)])
+        api.call_getTest(data={}, parameters={"Cookie":"Cookie", "Path":"Path", "Header":Header, "Query":"Query"})
+        assert r.call_args.args[0].headers["Header"] == Header
+        assert r.call_args.args[0].headers["Cookie"] == "Cookie=Cookie"
+        assert pathlib.Path(urlparse(r.call_args.args[0].path_url).path).name == "Path"
+        assert urlparse(r.call_args.args[0].path_url).query == "Query=Query"
