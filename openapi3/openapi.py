@@ -1,6 +1,7 @@
 import json
 import pathlib
 import datetime
+import urllib.parse
 from typing import ForwardRef, Any, List, Optional, Dict
 
 from pydantic import Field, ValidationError
@@ -13,7 +14,7 @@ from .errors import ReferenceResolutionError, SpecError
 from .info import Info
 from .paths import Path, SecurityRequirement, _validate_parameters
 from .components import Components
-from .general import Reference
+from .general import Reference, JSONPointer, JSONReference
 from .servers import Server
 from .tag import Tag
 
@@ -263,19 +264,16 @@ class OpenAPI:
 
 
 
-    def _resolve_type(self, root, obj, value):
-        # we found a reference - attempt to resolve it
-
-        filename,reference_path = value.ref.split("#/", maxsplit=1)
-        if filename != '':
-            filename = pathlib.Path(filename)
-            if filename not in self._cached:
-                self._cached[filename] = self._load(filename)
-            root = self._cached[filename]
-#                return self._resolve_type(child, obj, value)
+    def resolve_jr(self, root: "OpenAPISpec", obj, value: Reference):
+        url,jp = JSONReference.split(value.ref)
+        if url != '':
+            url = pathlib.Path(url)
+            if url not in self._cached:
+                self._cached[url] = self._load(url)
+            root = self._cached[url]
 
         try:
-            return root.resolve_path(reference_path.split('/'))
+            return root.resolve_jp(jp)
         except ReferenceResolutionError as e:
             # add metadata to the error
             e.element = obj
@@ -321,8 +319,12 @@ class OpenAPISpec(ObjectExtended):
                     value = getattr(obj, slot)
                     if value is None:
                         continue
-                    elif isinstance(value, reference_type):
-                        resolved_value = api._resolve_type(root, obj, value)
+
+                    if isinstance(obj, Path) and slot == "ref":
+                        resolved_value = api.resolve_jr(root, obj, Reference.construct(ref=value))
+                        setattr(obj, slot, resolved_value)
+                    if isinstance(value, reference_type):
+                        resolved_value = api.resolve_jr(root, obj, value)
                         setattr(obj, slot, resolved_value)
                     elif issubclass(type(value), ObjectBase):
                         # otherwise, continue resolving down the tree
@@ -334,7 +336,7 @@ class OpenAPISpec(ObjectExtended):
                         resolved_list = []
                         for item in value:
                             if isinstance(item, reference_type):
-                                resolved_value = api._resolve_type(root, obj, item)
+                                resolved_value = api.resolve_jr(root, obj, item)
                                 resolved_list.append(resolved_value)
                             elif isinstance(item, (ObjectBase, dict, list)):
                                 resolve(item)
@@ -350,27 +352,29 @@ class OpenAPISpec(ObjectExtended):
                 for k, v in obj.items():
                     if isinstance(v, reference_type):
                         if v.ref:
-                            obj[k] = api._resolve_type(root, obj, v)
+                            obj[k] = api.resolve_jr(root, obj, v)
                     elif isinstance(v, (ObjectBase, dict, list)):
                         resolve(v)
 
         resolve(self)
 
 
-    def resolve_path(self, path):
+    def resolve_jp(self, jp):
         """
         Given a $ref path, follows the document tree and returns the given attribute.
 
-        :param path: The path down the spec tree to follow
-        :type path: List[str]
+        :param jp: The path down the spec tree to follow
+        :type jp: str #/foo/bar
 
         :returns: The node requested
         :rtype: ObjectBase
         :raises ValueError: if the given path is not valid
         """
+        path = jp.split("/")[1:]
         node = self
 
         for part in path:
+            part = JSONPointer.decode(part)
             if isinstance(node, dict):
                 if part not in node:  # pylint: disable=unsupported-membership-test
                     err_msg = 'Invalid path {} in Reference'.format(path)

@@ -1,7 +1,8 @@
-import dataclasses
+import urllib.parse
 from typing import Optional
 
-from pydantic import Field, root_validator
+from pydantic import Field, Extra
+from yarl import URL
 
 from .object_base import ObjectExtended, ObjectBase
 
@@ -19,6 +20,23 @@ class ExternalDocumentation(ObjectExtended):
     description: Optional[str] = Field(default=None)
 
 
+class JSONPointer:
+    @staticmethod
+    def decode(part):
+        """
+
+        https://swagger.io/docs/specification/using-ref/
+        :param part:
+        """
+        part = urllib.parse.unquote(part)
+        part = part.replace('~1', '/')
+        return part.replace('~0', '~')
+
+class JSONReference:
+    @staticmethod
+    def split(url):
+        u = URL(url)
+        return str(u.with_fragment("")), u.raw_fragment
 
 class Reference(ObjectBase):
     """
@@ -28,3 +46,5 @@ class Reference(ObjectBase):
     """
     ref: str = Field(alias="$ref")
 
+    class Config:
+        extra = Extra.ignore
