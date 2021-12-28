@@ -198,7 +198,7 @@ class OpenAPI:
         :type operation: Operation
         """
         if operation_id in self._operation_map:
-            raise SpecError("Duplicate operationId {}".format(operation_id), path=None)
+            raise SpecError(f"Duplicate operationId {operation_id}", element=operation)
         self._operation_map[operation_id] = operation
 
     def _get_callable(self, operation):
@@ -367,13 +367,11 @@ class OpenAPISpec(ObjectExtended):
             part = JSONPointer.decode(part)
             if isinstance(node, dict):
                 if part not in node:  # pylint: disable=unsupported-membership-test
-                    err_msg = 'Invalid path {} in Reference'.format(path)
-                    raise ReferenceResolutionError(err_msg)
+                    raise ReferenceResolutionError(f'Invalid path {path} in Reference')
                 node = node.get(part)
             else:
                 if not hasattr(node, part):
-                    err_msg = 'Invalid path {} in Reference'.format(path)
-                    raise ReferenceResolutionError(err_msg)
+                    raise ReferenceResolutionError(f'Invalid path {path} in Reference')
                 node = getattr(node, part)
 
         return node

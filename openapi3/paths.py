@@ -5,11 +5,6 @@ from typing import Union, List, Optional, Dict, Any
 import requests
 from pydantic import Field, BaseModel, root_validator
 
-try:
-    from urllib.parse import urlencode
-except ImportError:
-    from urllib import urlencode
-
 from .errors import SpecError
 from .object_base import ObjectBase, ObjectExtended
 
@@ -30,7 +25,7 @@ def _validate_parameters(op: "Operation", path):
     for c in op.parameters:
         if c.in_ == 'path':
             if c.name not in allowed_path_parameters:
-                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=path)
+                raise SpecError('Parameter name not found in path: {}'.format(c.name))
 
 
 class ParameterBase(ObjectExtended):
@@ -55,7 +50,7 @@ class ParameterBase(ObjectExtended):
     content: Optional[Dict[str, "MediaType"]]
 
     @root_validator
-    def validate_Parameter(cls, values):
+    def validate_ParameterBase(cls, values):
 #        if values["in_"] ==
 #        if self.in_ == "path" and self.required is not True:
 #            err_msg = 'Parameter {} must be required since it is in the path'
@@ -95,9 +90,6 @@ class SecurityRequirement(BaseModel):
         if self.name:
             return self.__root__[self.name]
         return None
-
-    def __getstate__(self):
-        return {self.name: self.types}
 
 
 class Header(ParameterBase):
@@ -340,9 +332,7 @@ class Operation(ObjectExtended):
                         self._request_handle_secschemes(r, value)
 
             if security_requirement is None:
-                err_msg = '''No security requirement satisfied (accepts {}) \
-                          '''.format(', '.join(self.security.keys()))
-                raise ValueError(err_msg)
+                raise ValueError(f"No security requirement satisfied (accepts {', '.join(self.security.keys()) })")
 
         if self.requestBody:
             if self.requestBody.required and data is None:
