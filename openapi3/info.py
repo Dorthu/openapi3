@@ -1,9 +1,8 @@
-import dataclasses
-from typing import ForwardRef, Optional
+from typing import Optional
 
 from pydantic import Field
 
-from .object_base import ObjectBase, ObjectExtended
+from .object_base import ObjectExtended
 
 
 class Contact(ObjectExtended):

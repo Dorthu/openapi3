@@ -1,20 +1,18 @@
+import datetime
 import json
 import pathlib
-import datetime
-import urllib.parse
-from typing import ForwardRef, Any, List, Optional, Dict
+from typing import Any, List, Optional, Dict
 
-from pydantic import Field, ValidationError
 import requests
 import yaml
+from pydantic import Field
 
-from .object_base import ObjectExtended, ObjectBase
-from .errors import ReferenceResolutionError, SpecError
-
-from .info import Info
-from .paths import Path, SecurityRequirement, _validate_parameters
 from .components import Components
+from .errors import ReferenceResolutionError, SpecError
 from .general import Reference, JSONPointer, JSONReference
+from .info import Info
+from .object_base import ObjectExtended, ObjectBase
+from .paths import Path, SecurityRequirement, _validate_parameters
 from .servers import Server
 from .tag import Tag
 

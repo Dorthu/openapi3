@@ -1,9 +1,8 @@
-import dataclasses
 from typing import List, Optional, Dict
 
 from pydantic import Field
 
-from .object_base import ObjectBase, ObjectExtended
+from .object_base import ObjectExtended
 
 
 class ServerVariable(ObjectExtended):

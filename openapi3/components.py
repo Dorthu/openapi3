@@ -1,14 +1,13 @@
-import dataclasses
 from typing import Union, Optional, Dict
 
 from pydantic import Field
 
-from .object_base import ObjectExtended
-
 from .example import Example
+from .object_base import ObjectExtended
 from .paths import Reference, RequestBody, Link, Parameter, Response, Callback, Header
 from .schemas import Schema
 from .security import SecurityScheme
+
 
 class Components(ObjectExtended):
     """

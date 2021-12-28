@@ -1,10 +1,9 @@
-import dataclasses
-from typing import Union, List, Optional, Dict, Any
 import json
 import re
+from typing import Union, List, Optional, Dict, Any
 
-from pydantic import Field, BaseModel, root_validator
 import requests
+from pydantic import Field, BaseModel, root_validator
 
 try:
     from urllib.parse import urlencode
@@ -14,10 +13,7 @@ except ImportError:
 from .errors import SpecError
 from .object_base import ObjectBase, ObjectExtended
 
-from .info import Info
-#from .components import Components
 from .servers import Server
-from .tag import Tag
 from .general import Reference
 from .general import ExternalDocumentation
 from .schemas import Schema

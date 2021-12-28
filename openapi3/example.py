@@ -1,7 +1,7 @@
-import dataclasses
 from typing import Union, Optional
 
 from pydantic import Field
+
 from .general import Reference
 from .object_base import ObjectExtended
 
