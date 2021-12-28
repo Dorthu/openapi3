@@ -1,7 +1,7 @@
-from typing import List, Optional
-
+from typing import Optional
 
 from pydantic import BaseModel, Field, root_validator, Extra
+
 
 class ObjectBase(BaseModel):
     """
@@ -9,17 +9,9 @@ class ObjectBase(BaseModel):
     related functions.
     """
 
-
-
-    _strict: bool
-    _path: List[str]
-    _raw_element: dict
-    _root: object
-    _accessed_members: object
-
     class Config:
         underscore_attrs_are_private = True
-        arbitrary_types_allowed = True
+        arbitrary_types_allowed = False
         extra = Extra.forbid
 
 

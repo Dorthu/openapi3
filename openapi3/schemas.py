@@ -74,11 +74,11 @@ class Schema(ObjectExtended):
 
     _model_type: object
     _request_model_type: object
-    _resolved_allOfs: object
-    _path: str
 
-    class Config:
-        extra = Extra.forbid
+    """
+    The _identity attribute is set during OpenAPI.__init__ and used at get_type()
+    """
+    _identity: str
 
     @root_validator
     def validate_Schema_number_type(cls, values):
@@ -133,7 +133,7 @@ class Schema(ObjectExtended):
                             annos[name] = r
                 return annos
 
-            type_name = self.title or self._path
+            type_name = self.title or self._identity
             namespace = dict()
             annos = dict()
             if self.allOf:

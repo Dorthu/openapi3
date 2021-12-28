@@ -122,8 +122,8 @@ class OpenAPI:
             for path,obj in self.paths.items():
                 for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
                     op = getattr(obj, m)
-                    op._path, op._method, op._root = path, m, self
-                    _validate_parameters(op, ['x', path])
+                    op._path, op._method, op._spec = path, m, self
+                    _validate_parameters(op, path)
                     if op.operationId is None:
                         continue
                     formatted_operation_id = op.operationId.replace(" ", "_")
@@ -387,8 +387,6 @@ class OpenAPISpec(ObjectExtended):
         return node
 
 
-OpenAPISpec.update_forward_refs()
-
 class OperationCallable:
     """
     This class is returned by instances of the OpenAPI class when members
@@ -411,3 +409,5 @@ class OperationCallable:
             kwargs['session'] = self.session
         return self.operation(self.base_url, *args, security=self.security,
                               **kwargs)
+
+OpenAPISpec.update_forward_refs()

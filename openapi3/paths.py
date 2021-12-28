@@ -20,16 +20,17 @@ from .schemas import Schema
 from .example import Example
 
 
-def _validate_parameters(op: "Operation", _path):
+def _validate_parameters(op: "Operation", path):
     """
     Ensures that all parameters for this path are valid
     """
-    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', _path[1])
+    assert isinstance(path, str)
+    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', path)
 
     for c in op.parameters:
         if c.in_ == 'path':
             if c.name not in allowed_path_parameters:
-                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=_path)
+                raise SpecError('Parameter name not found in path: {}'.format(c.name), path=path)
 
 
 class ParameterBase(ObjectExtended):
@@ -206,7 +207,11 @@ class Operation(ObjectExtended):
 
     callbacks: Optional[Dict[str, "Callback"]] = Field(default_factory=dict)
 
-    _root = object
+    """
+    The OpenAPISpec this is part of
+    """
+    _spec: "OpenAPISpec"
+
     _path: str
     _method: str
     _request: object
@@ -217,7 +222,7 @@ class Operation(ObjectExtended):
 
 
     def _request_handle_secschemes(self, security_requirement, value):
-        ss = self._root.components.securitySchemes[security_requirement.name]
+        ss = self._spec.components.securitySchemes[security_requirement.name]
 
         if ss.type == 'http' and ss.scheme_ == 'basic':
             self._request.auth = requests.auth.HTTPBasicAuth(*value)
@@ -249,7 +254,7 @@ class Operation(ObjectExtended):
         # Parameters
         path_parameters = {}
         accepted_parameters = {}
-        p = self.parameters + self._root.paths[self._path].parameters
+        p = self.parameters + self._spec.paths[self._path].parameters
 
         for _ in list(p):
             # TODO - make this work with $refs - can operations be $refs?

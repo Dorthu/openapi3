@@ -47,4 +47,5 @@ class Reference(ObjectBase):
     ref: str = Field(alias="$ref")
 
     class Config:
+        """This object cannot be extended with additional properties and any properties added SHALL be ignored."""
         extra = Extra.ignore
