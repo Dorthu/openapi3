@@ -105,10 +105,7 @@ def test_parsing_broken_links(with_broken_links):
     spec = OpenAPI(with_broken_links, validate=True)
 
     errors = spec.errors()
-
-    assert len(errors.args) == 2
     error_strs = str(errors)
-
     assert all([i in error_strs for i in [
         "operationId and operationRef are mutually exclusive, only one of them is allowed",
         "operationId and operationRef are mutually exclusive, one of them must be specified",
@@ -118,11 +115,9 @@ def test_parsing_broken_links(with_broken_links):
 def test_securityparameters(with_securityparameters):
     spec = OpenAPI(with_securityparameters, validate=True)
     errors = spec.errors()
-    print(errors)
-    assert len(errors) == 0
+    assert errors is None
 
 def test_callback(with_callback):
     spec = OpenAPI(with_callback, validate=True)
     errors = spec.errors()
-    print(errors)
-    assert len(errors) == 0
+    assert errors is None

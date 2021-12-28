@@ -14,6 +14,7 @@ from .info import Info
 from .object_base import ObjectExtended, ObjectBase
 from .paths import Path, SecurityRequirement, _validate_parameters
 from .servers import Server
+from .schemas import Schema
 from .tag import Tag
 
 
@@ -100,51 +101,56 @@ class OpenAPI:
         :type use_session: bool
         """
 
+        self.loader = loader
+
         self._validation_mode = validate
-        self._spec_errors = list()
+        self._spec_error = None
         self._operation_map = dict()
         self._security = None
-        self.loader = loader
         self._cached = dict()
+        self._ssl_verify = ssl_verify
+
+        self._session = None
+        if use_session:
+            self._session = session_factory()
+
 
         try:
             self._spec = OpenAPISpec.parse_obj(raw_document)
         except Exception as e:
             if not self._validation_mode:
                 raise
-            self._spec_errors = e
-        else:
-            for name, schema in self.components.schemas.items():
-                schema._path = name
+            self._spec_error = e
+            return
 
+        try:
             self._spec._resolve_references(self)
+        except ValueError as e:
+            if not self._validation_mode:
+                raise
+            self._spec_error = e
+            return
 
-            for path,obj in self.paths.items():
-                for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
-                    op = getattr(obj, m)
-                    op._path, op._method, op._spec = path, m, self
-                    _validate_parameters(op, path)
-                    if op.operationId is None:
+        for name, schema in self.components.schemas.items():
+            schema._identity = name
+
+        for path,obj in self.paths.items():
+            for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
+                op = getattr(obj, m)
+                op._path, op._method, op._spec = path, m, self
+                _validate_parameters(op, path)
+                if op.operationId is None:
+                    continue
+                formatted_operation_id = op.operationId.replace(" ", "_")
+                self._register_operation(formatted_operation_id, op)
+                for r, response in op.responses.items():
+                    if isinstance(response, Reference):
                         continue
-                    formatted_operation_id = op.operationId.replace(" ", "_")
-                    self._register_operation(formatted_operation_id, op)
-                    for r, response in op.responses.items():
-                        if isinstance(response, Reference):
+                    for c, content in response.content.items():
+                        if content.schema_ is None:
                             continue
-                        for c, content in response.content.items():
-                            if content.schema_ is None:
-                                continue
-                            content.schema_._path = f"{path}.{m}.{r}.{c}"
-
-
-
-
-            self._ssl_verify = ssl_verify
-
-            self._session = None
-            if use_session:
-                self._session = session_factory()
-
+                        if isinstance(content.schema_, Schema):
+                            content.schema_._identity = f"{path}.{m}.{r}.{c}"
 
     # public methods
     def authenticate(self, security_scheme, value):
@@ -166,32 +172,18 @@ class OpenAPI:
         self._security = {security_scheme: value}
 
 
-    def log_spec_error(self, error):
-        """
-        In Validation Mode, this method is used when parsing a spec to record an
-        error that was encountered, for later reporting.  This should not be used
-        outside of Validation Mode.
-
-        :param error: The error encountered.
-        :type error: SpecError
-        """
-        if not self._validation_mode:
-            raise RuntimeError('This client is not in Validation Mode, cannot '
-                               'record errors!')
-        self._spec_errors.append(error)
-
     def errors(self):
         """
         In Validation Mode, returns all errors encountered from parsing a spec.
         This should not be called if not in Validation Mode.
 
         :returns: The errors encountered during the parsing of this spec.
-        :rtype: List[SpecError]
+        :rtype: ValidationError
         """
         if not self._validation_mode:
             raise RuntimeError('This client is not in Validation Mode, cannot '
                                'return errors!')
-        return self._spec_errors
+        return self._spec_error
 
 
     # private methods
