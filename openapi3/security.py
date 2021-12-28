@@ -1,23 +1,35 @@
-import dataclasses
 from typing import Optional, Dict
 
-from pydantic import Field, BaseModel
+from pydantic import Field
 
-from .object_base import ObjectBase
+from .object_base import ObjectExtended
 
-class OAuthFlowObject(ObjectBase):
+
+class OAuthFlow(ObjectExtended):
+    """
+    Configuration details for a supported OAuth Flow
+
+    .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.1.md#oauth-flow-object
+    """
     authorizationUrl: Optional[str] = Field(default=None)
     tokenUrl: Optional[str] = Field(default=None)
     refreshUrl: Optional[str] = Field(default=None)
     scopes: Dict[str, str] = Field(default_factory=dict)
 
-class OAuthFlows(ObjectBase):
-    implicit: Optional[OAuthFlowObject] = Field(default=None)
-    password: Optional[OAuthFlowObject] = Field(default=None)
-    clientCredentials: Optional[OAuthFlowObject] = Field(default=None)
-    authorizationCode: Optional[OAuthFlowObject] = Field(default=None)
 
-class SecurityScheme(ObjectBase):
+class OAuthFlows(ObjectExtended):
+    """
+    Allows configuration of the supported OAuth Flows.
+
+    .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.1.md#oauth-flows-object
+    """
+    implicit: Optional[OAuthFlow] = Field(default=None)
+    password: Optional[OAuthFlow] = Field(default=None)
+    clientCredentials: Optional[OAuthFlow] = Field(default=None)
+    authorizationCode: Optional[OAuthFlow] = Field(default=None)
+
+
+class SecurityScheme(ObjectExtended):
     """
     A `Security Scheme`_ defines a security scheme that can be used by the operations.
 

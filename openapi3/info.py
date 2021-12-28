@@ -3,27 +3,10 @@ from typing import ForwardRef, Optional
 
 from pydantic import Field
 
-from .object_base import ObjectBase
+from .object_base import ObjectBase, ObjectExtended
 
 
-class Info(ObjectBase):
-    """
-    An OpenAPI Info object, as defined in `the spec`_.
-
-    .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#infoObject
-    """
-
-    title: str = Field(default=None)
-    version: str = Field(default=None)
-
-    contact: Optional[ForwardRef('Contact')] = Field(default=None)
-    description: Optional[str] = Field(default=None)
-    license: Optional[ForwardRef('License')] = Field(default=None)
-    termsOfService: Optional[str] = Field(default=None)
-
-
-
-class Contact(ObjectBase):
+class Contact(ObjectExtended):
     """
     Contact object belonging to an Info object, as described `here`_
 
@@ -34,7 +17,8 @@ class Contact(ObjectBase):
     name: str = Field(default=None)
     url: str = Field(default=None)
 
-class License(ObjectBase):
+
+class License(ObjectExtended):
     """
     License object belonging to an Info object, as described `here`_
 
@@ -44,4 +28,19 @@ class License(ObjectBase):
     name: str = Field(default=None)
     url: Optional[str] = Field(default=None)
 
-Info.update_forward_refs()
+
+class Info(ObjectExtended):
+    """
+    An OpenAPI Info object, as defined in `the spec`_.
+
+    .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#infoObject
+    """
+
+    title: str = Field(default=None)
+    version: str = Field(default=None)
+
+    contact: Optional[Contact] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    license: Optional[License] = Field(default=None)
+    termsOfService: Optional[str] = Field(default=None)
+

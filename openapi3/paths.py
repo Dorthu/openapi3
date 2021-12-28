@@ -1,5 +1,5 @@
 import dataclasses
-from typing import ForwardRef, Union, List, Optional, Dict, Any
+from typing import Union, List, Optional, Dict, Any
 import json
 import re
 
@@ -12,7 +12,7 @@ except ImportError:
     from urllib import urlencode
 
 from .errors import SpecError
-from .object_base import ObjectBase
+from .object_base import ObjectBase, ObjectExtended
 
 from .info import Info
 #from .components import Components
@@ -36,72 +36,26 @@ def _validate_parameters(op: "Operation", _path):
                 raise SpecError('Parameter name not found in path: {}'.format(c.name), path=_path)
 
 
-class Path(ObjectBase):
-    """
-    A Path object, as defined `here`_.  Path objects represent URL paths that
-    may be accessed by appending them to a Server
-
-    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#paths-object
-    """
-    delete: Optional[ForwardRef('Operation')] = Field(default=None)
-    description: Optional[str] = Field(default=None)
-    get: Optional[ForwardRef('Operation')] = Field(default=None)
-    head: Optional[ForwardRef('Operation')] = Field(default=None)
-    options: Optional[ForwardRef('Operation')] = Field(default=None)
-
-    patch: Optional[ForwardRef('Operation')] = Field(default=None)
-    post: Optional[ForwardRef('Operation')] = Field(default=None)
-    put: Optional[ForwardRef('Operation')] = Field(default=None)
-    servers: Optional[List[Server]] = Field(default=None)
-    summary: Optional[str] = Field(default=None)
-    trace: Optional[ForwardRef('Operation')] = Field(default=None)
-
-    parameters: Optional[List[Union['Parameter', Reference]]] = Field(default_factory=list)
-
-    def _parse_data(self):
-        """
-        Implementation of :any:`ObjectBase._parse_data`
-        """
-        # TODO - handle possible $ref
-        super()._parse_data()
-        if self.parameters is None:
-            # this will be iterated over later
-            self.parameters = []
-
-    # def _resolve_references(self, root):
-    #     """
-    #     Overloaded _resolve_references to allow us to verify parameters after
-    #     we've got all references settled.
-    #     """
-    #     super(self.__class__, self)._resolve_references(root)
-    #
-    #     # this will raise if parameters are invalid
-    #     _validate_parameters(self)
-
-
-
-class Parameter(ObjectBase):
+class ParameterBase(ObjectExtended):
     """
     A `Parameter Object`_ defines a single operation parameter.
 
     .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#parameterObject
     """
 
-    in_: str = Field(required=True, alias="in")  # TODO must be one of ["query","header","path","cookie"]
-    name: str = Field(required=True)
-
-    deprecated: Optional[bool] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    example: Optional[str] = Field(default=None)
-    examples: Optional[Dict[str, Union['Example','Reference']]] = Field(default_factory=dict)
-    explode: Optional[bool] = Field(default=None)
     required: Optional[bool] = Field(default=None)
-    schema_: Optional[Union['Schema', 'Reference']] = Field(default=None, alias="schema")
-    style: Optional[str] = Field(default=None)
-
-    # allow empty or reserved values in Parameter data
+    deprecated: Optional[bool] = Field(default=None)
     allowEmptyValue: Optional[bool] = Field(default=None)
+
+    style: Optional[str] = Field(default=None)
+    explode: Optional[bool] = Field(default=None)
     allowReserved: Optional[bool] = Field(default=None)
+    schema_: Optional[Union[Schema, Reference]] = Field(default=None, alias="schema")
+    example: Optional[str] = Field(default=None)
+    examples: Optional[Dict[str, Union['Example',Reference]]] = Field(default_factory=dict)
+
+    content: Optional[Dict[str, "MediaType"]]
 
     @root_validator
     def validate_Parameter(cls, values):
@@ -111,27 +65,150 @@ class Parameter(ObjectBase):
 #            raise SpecError(err_msg.format(self.get_path()), path=self._path)
         return values
 
-from pydantic import validator
 
-class Operation(ObjectBase):
+class Parameter(ParameterBase):
+    in_: str = Field(required=True, alias="in")  # TODO must be one of ["query","header","path","cookie"]
+    name: str = Field(required=True)
+
+
+class SecurityRequirement(BaseModel):
+    """
+    A `SecurityRequirement`_ object describes security schemes for API access.
+
+    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
+    """
+    __root__: Dict[str, List[str]]
+
+    @root_validator
+    def validate_SecurityRequirement(cls, values):
+        root = values.get("__root__", {})
+        if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
+            raise ValueError(root)
+        return values
+
+
+    @property
+    def name(self):
+        if len(self.__root__.keys()):
+            return list(self.__root__.keys())[0]
+        return None
+
+    @property
+    def types(self):
+        if self.name:
+            return self.__root__[self.name]
+        return None
+
+    def __getstate__(self):
+        return {self.name: self.types}
+
+
+class Header(ParameterBase):
+    """
+
+    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#headerObject
+    """
+
+
+class Encoding(ObjectExtended):
+    """
+    A single encoding definition applied to a single schema property.
+
+    .. _Encoding: https://github.com/OAI/OpeI-Specification/blob/main/versions/3.1.0.md#encodingObject
+    """
+    contentType: Optional[str] = Field(default=None)
+    headers: Optional[Dict[str, Union[Header, Reference]]] = Field(default_factory=dict)
+    style: Optional[str] = Field(default=None)
+    explode: Optional[bool] = Field(default=None)
+    allowReserved: Optional[bool] = Field(default=None)
+
+
+class MediaType(ObjectExtended):
+    """
+    A `MediaType`_ object provides schema and examples for the media type identified
+    by its key.  These are used in a RequestBody object.
+
+    .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
+    """
+
+    schema_: Optional[Union[Schema, Reference]] = Field(required=True, alias="schema")
+    example: Optional[Any] = Field(default=None)  # 'any' type
+    examples: Optional[Dict[str, Union[Example, Reference]]] = Field(default_factory=dict)
+    encoding: Optional[Dict[str, Encoding]] = Field(default_factory=dict)
+
+
+class RequestBody(ObjectExtended):
+    """
+    A `RequestBody`_ object describes a single request body.
+
+    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
+    """
+
+    content: Dict[str, MediaType] = Field(default_factory=dict)
+    description: Optional[str] = Field(default=None)
+    required: Optional[bool] = Field(default=None)
+
+
+class Link(ObjectExtended):
+    """
+    A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
+
+    .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
+    """
+
+    operationId: Optional[str] = Field(default=None)
+    operationRef: Optional[str] = Field(default=None)
+    description: Optional[str] = Field(default=None)
+    parameters: Optional[dict] = Field(default=None)
+    requestBody: Optional[dict] = Field(default=None)
+    server: Optional[Server] = Field(default=None)
+
+    @root_validator(pre=False)
+    def validate_Link_operation(cls, values):
+        if values["operationId"] != None and values["operationRef"] != None:
+            raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
+
+        if values["operationId"] == values["operationRef"] == None:
+            raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")
+
+        return values
+
+
+class Response(ObjectExtended):
+    """
+    A `Response Object`_ describes a single response from an API Operation,
+    including design-time, static links to operations based on the response.
+
+    .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
+    """
+
+    description: str = Field(required=True)
+    headers: Optional[Dict[str, Union[Header, Reference]]] = Field(default_factory=dict)
+    content: Optional[Dict[str, MediaType]] = Field(default_factory=dict)
+    links: Optional[Dict[str, Union[Link, Reference]]] = Field(default_factory=dict)
+
+
+class Operation(ObjectExtended):
     """
     An Operation object as defined `here`_
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject
     """
 
-    responses: Dict[str, Union['Response', 'Reference']] = Field(required=True)
+    responses: Dict[str, Union[Response, Reference]] = Field(required=True)
 
     deprecated: Optional[bool] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    externalDocs: Optional[ForwardRef('ExternalDocumentation')] = Field(default=None)
+    externalDocs: Optional[ExternalDocumentation] = Field(default=None)
     operationId: Optional[str] = Field(default=None)
-    parameters: List[Union['Parameter', 'Reference']] = Field(default_factory=list)
-    requestBody: Optional[Union['RequestBody', 'Reference']] = Field(default=None)
-    security: Optional[List['SecurityRequirement']] = Field(default_factory=list)
-    servers: Optional[List['Server']] = Field(default=None)
+    parameters: List[Union[Parameter, Reference]] = Field(default_factory=list)
+    requestBody: Optional[Union[RequestBody, Reference]] = Field(default=None)
+    security: Optional[List[SecurityRequirement]] = Field(default_factory=list)
+    servers: Optional[List[Server]] = Field(default=None)
     summary: Optional[str] = Field(default=None)
     tags: Optional[List[str]] = Field(default=None)
+
+    callbacks: Optional[Dict[str, "Callback"]] = Field(default_factory=dict)
 
     _root = object
     _path: str
@@ -244,7 +321,7 @@ class Operation(ObjectBase):
         :type raw_response: bool
         """
         # Set request method (e.g. 'GET')
-        self._request = requests.Request(self._method)
+        self._request = requests.Request(self._method, cookies={})
 
         # Set self._request.url to base_url w/ path
         self._request.url = base_url + self._path
@@ -329,129 +406,38 @@ class Operation(ObjectBase):
             raise NotImplementedError()
 
 
-
-class SecurityRequirement(BaseModel):
+class Path(ObjectExtended):
     """
-    A `SecurityRequirement`_ object describes security schemes for API access.
+    A Path object, as defined `here`_.  Path objects represent URL paths that
+    may be accessed by appending them to a Server
 
-    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
+    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#paths-object
     """
-    __root__: Dict[str, List[str]]
-
-    @root_validator
-    def validate_SecurityRequirement(cls, values):
-        root = values.get("__root__", {})
-        if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
-            raise ValueError(root)
-        return values
-
-
-    @property
-    def name(self):
-        if len(self.__root__.keys()):
-            return list(self.__root__.keys())[0]
-        return None
-
-    @property
-    def types(self):
-        if self.name:
-            return self.__root__[self.name]
-        return None
-
-    def __getstate__(self):
-        return {self.name: self.types}
-
-
-
-class RequestBody(ObjectBase):
-    """
-    A `RequestBody`_ object describes a single request body.
-
-    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
-    """
-
-    content: Dict[str, ForwardRef('MediaType')] = Field(default_factory=dict)
+    ref: Optional[str] = Field(default=None, alias="$ref")
+    summary: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    required: Optional[bool] = Field(default=None)
+    get: Optional[Operation] = Field(default=None)
+    put: Optional[Operation] = Field(default=None)
+    post: Optional[Operation] = Field(default=None)
+    delete: Optional[Operation] = Field(default=None)
+    options: Optional[Operation] = Field(default=None)
+    head: Optional[Operation] = Field(default=None)
+    patch: Optional[Operation] = Field(default=None)
+    trace: Optional[Operation] = Field(default=None)
+    servers: Optional[List[Server]] = Field(default=None)
+    parameters: Optional[List[Union[Parameter, Reference]]] = Field(default_factory=list)
 
-class Header(ObjectBase):
+
+class Callback(ObjectBase):
     """
+    A map of possible out-of band callbacks related to the parent operation.
 
-    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#headerObject
+    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.1.md#callbackObject
+
+    This object MAY be extended with Specification Extensions.
     """
-    deprecated: Optional[bool] = Field(default=None)
+    __root__: Dict[str, Union[str, Path]]
 
-
-class Encoding(ObjectBase):
-    """
-    A single encoding definition applied to a single schema property.
-
-    .. _Encoding: https://github.com/OAI/OpeI-Specification/blob/main/versions/3.1.0.md#encodingObject
-    """
-    contentType: Optional[str] = Field(default=None)
-    headers: Optional[Dict[str, Union[Header, Reference]]] = Field(default_factory=dict)
-    style: Optional[str] = Field(default=None)
-    explode: Optional[bool] = Field(default=None)
-    allowReserved: Optional[bool] = Field(default=None)
-
-
-class MediaType(ObjectBase):
-    """
-    A `MediaType`_ object provides schema and examples for the media type identified
-    by its key.  These are used in a RequestBody object.
-
-    .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
-    """
-
-    schema_: Optional[Union['Schema', 'Reference']] = Field(required=True, alias="schema")
-    example: Optional[Any] = Field(default=None)  # 'any' type
-    examples: Optional[Dict[str, Union['Example', 'Reference']]] = Field(default_factory=dict)
-    encoding: Optional[Dict[str, Encoding]] = Field(default_factory=dict)
-
-
-
-class Response(ObjectBase):
-    """
-    A `Response Object`_ describes a single response from an API Operation,
-    including design-time, static links to operations based on the response.
-
-    .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
-    """
-
-    description: str = Field(required=True)
-    content: Optional[Dict[str, ForwardRef('MediaType')]] = Field(default_factory=dict)
-    links: Optional[Dict[str, Union['Link', 'Reference']]] = Field(default_factory=dict)
-
-
-from pydantic import root_validator, validator
-
-class Link(ObjectBase):
-    """
-    A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
-
-    .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
-    """
-
-    operationId: Optional[str] = Field(default=None)
-    operationRef: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)
-    parameters: Optional[dict] = Field(default=None)
-    requestBody: Optional[dict] = Field(default=None)
-    server: Optional[ForwardRef('Server')] = Field(default=None)
-
-    @root_validator(pre=False)
-    def validate_Link_operation(cls, values):
-        if values["operationId"] != None and values["operationRef"] != None:
-            raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
-
-        if values["operationId"] == values["operationRef"] == None:
-            raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")
-
-        return values
-
-
-Path.update_forward_refs()
 Operation.update_forward_refs()
-MediaType.update_forward_refs()
-RequestBody.update_forward_refs()
-Response.update_forward_refs()
+Parameter.update_forward_refs()
+Header.update_forward_refs()

@@ -3,10 +3,10 @@ from typing import Optional
 
 from pydantic import Field, root_validator
 
-from .object_base import ObjectBase
+from .object_base import ObjectExtended, ObjectBase
 
 
-class ExternalDocumentation(ObjectBase):
+class ExternalDocumentation(ObjectExtended):
     """
     An `External Documentation Object`_ references external resources for extended
     documentation.

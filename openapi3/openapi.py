@@ -7,7 +7,7 @@ from pydantic import Field, ValidationError
 import requests
 import yaml
 
-from .object_base import ObjectBase
+from .object_base import ObjectExtended, ObjectBase
 from .errors import ReferenceResolutionError, SpecError
 
 from .info import Info
@@ -283,7 +283,7 @@ class OpenAPI:
 
 
 
-class OpenAPISpec(ObjectBase):
+class OpenAPISpec(ObjectExtended):
     """
     This class represents the root of the OpenAPI schema document, as defined
     in `the spec`_

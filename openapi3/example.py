@@ -2,11 +2,10 @@ import dataclasses
 from typing import Union, Optional
 
 from pydantic import Field
+from .object_base import ObjectExtended
 
-from .object_base import ObjectBase
 
-
-class Example(ObjectBase):
+class Example(ObjectExtended):
     """
     A `Example Object`_ holds a reusable set of different aspects of the OAS
     spec.

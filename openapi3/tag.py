@@ -3,10 +3,10 @@ from typing import Optional
 
 from pydantic import Field
 
-from .object_base import ObjectBase
+from .object_base import ObjectExtended
 
 
-class Tag(ObjectBase):
+class Tag(ObjectExtended):
     """
     A `Tag Object`_ holds a reusable set of different aspects of the OAS
     spec.

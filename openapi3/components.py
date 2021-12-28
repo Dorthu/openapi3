@@ -3,14 +3,14 @@ from typing import Union, Optional, Dict
 
 from pydantic import Field
 
-from .object_base import ObjectBase
+from .object_base import ObjectExtended
 
 from .example import Example
 from .paths import Reference, RequestBody, Link, Parameter, Response
 from .schemas import Schema
 from .security import SecurityScheme
 
-class Components(ObjectBase):
+class Components(ObjectExtended):
     """
     A `Components Object`_ holds a reusable set of different aspects of the OAS
     spec.

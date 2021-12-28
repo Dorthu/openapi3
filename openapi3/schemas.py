@@ -5,7 +5,7 @@ from typing import Union, List, Any, Optional, Dict
 from pydantic import Field, root_validator, Extra, BaseModel
 
 from .general import Reference  # need this for Model below
-from .object_base import ObjectBase
+from .object_base import ObjectExtended
 
 TYPE_LOOKUP = {
     'array': list,
@@ -17,7 +17,7 @@ TYPE_LOOKUP = {
 
 
 
-class Schema(ObjectBase):
+class Schema(ObjectExtended):
     """
     The `Schema Object`_ allows the definition of input and output data types.
 
