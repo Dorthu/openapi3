@@ -248,9 +248,6 @@ class Operation(ObjectExtended):
         # Set self._request.url to base_url w/ path
         self._request.url = base_url + self._path
 
-        self._session = requests.Session()
-
-
         if security and self.security:
             security_requirement = None
             for scheme, value in security.items():
@@ -273,7 +270,7 @@ class Operation(ObjectExtended):
         self._request_handle_parameters(parameters)
 
         if session is None:
-            session = self._session
+            session = self._session = requests.Session()
 
         # send the prepared request
         result = session.send(self._request.prepare())
@@ -369,6 +366,4 @@ class RuntimeExpression(ObjectBase):
 
 
 Operation.update_forward_refs()
-Parameter.update_forward_refs()
-Header.update_forward_refs()
 Link.update_forward_refs()

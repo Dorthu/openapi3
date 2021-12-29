@@ -1,6 +1,6 @@
 import types
+import uuid
 from typing import Union, List, Any, Optional, Dict
-
 
 from pydantic import Field, root_validator, Extra, BaseModel
 
@@ -103,8 +103,6 @@ class Schema(ObjectExtended):
            isinstance(object1, example._schema.get_type()) # true
            type(object1) == type(object2) # true
         """
-        # this is defined in ObjectBase.__init__ as all slots are
-
         try:
             return self._model_type
         except AttributeError:
@@ -121,7 +119,9 @@ class Schema(ObjectExtended):
         :returns: A new :any:`Model` created in this Schema's type from the data.
         :rtype: self.get_type()
         """
-        if self.properties is None and self.type in ('string', 'number'):  # more simple types
+        if self.type in ('string', 'number'):
+            assert len(self.properties) == 0
+            # more simple types
             # if this schema represents a simple type, simply return the data
             # TODO - perhaps assert that the type of data matches the type we
             # expected
@@ -133,6 +133,9 @@ class Schema(ObjectExtended):
 
 
 class Model(BaseModel):
+    class Config:
+        extra: Extra.forbid
+
     @classmethod
     def from_schema(cls, shma):
 
@@ -143,7 +146,9 @@ class Model(BaseModel):
             elif schema.type == "integer":
                 r = int
             elif schema.type == "array":
-                r = schema.items.get_type()
+                r = List[schema.items.get_type()]
+            elif schema.type == 'object':
+                return schema.get_type()
             else:
                 raise TypeError(schema.type)
 
@@ -152,7 +157,7 @@ class Model(BaseModel):
         def annotationsof(schema):
             annos = dict()
             if schema.type == "array":
-                annos["__root__"] = List[typeof(schema)]
+                annos["__root__"] = typeof(schema)
             else:
                 for name, f in schema.properties.items():
                     r = typeof(f)
@@ -162,21 +167,37 @@ class Model(BaseModel):
                         annos[name] = r
             return annos
 
-        type_name = shma.title or shma._identity
+        def fieldof(schema):
+            r = dict()
+            if schema.type == "array":
+                return r
+            else:
+                for name, f in schema.properties.items():
+                    args = dict()
+                    for i in ["enum"]:
+                        if (v:=getattr(f, i, None)):
+                            args[i] = v
+                    r[name] = Field(**args)
+            return r
+
+        # do not create models for primitive types
+        if shma.type in ("string","integer"):
+            return typeof(shma)
+
+        type_name = shma.title or shma._identity if hasattr(shma, '_identity') else str(uuid.uuid4())
         namespace = dict()
         annos = dict()
         if shma.allOf:
             for i in shma.allOf:
                 annos.update(annotationsof(i))
         elif shma.anyOf:
-            #                types = [i.get_type() for i in self.anyOf]
-            #                namespace["__root__"] = Union[types]
-            raise NotImplementedError("anyOf")
+            t = tuple([i.get_type() for i in shma.anyOf])
+            annos["__root__"] = Union[t]
         elif shma.oneOf:
             raise NotImplementedError("oneOf")
         else:
-
             annos = annotationsof(shma)
+            namespace.update(fieldof(shma))
 
         namespace['__annotations__'] = annos
 
