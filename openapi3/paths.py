@@ -1,18 +1,17 @@
 import json
 import re
-from typing import Union, List, Optional, Dict, Any
+from typing import Union, List, Optional, Dict
 
 import requests
 from pydantic import Field, BaseModel, root_validator
 
 from .errors import SpecError
-from .object_base import ObjectBase, ObjectExtended
-
-from .servers import Server
-from .general import Reference
 from .general import ExternalDocumentation
-from .schemas import Schema
-from .example import Example
+from .general import Reference
+from .media import MediaType
+from .object_base import ObjectBase, ObjectExtended
+from .parameter import Header, Parameter
+from .servers import Server
 
 
 def _validate_parameters(op: "Operation", path):
@@ -26,42 +25,6 @@ def _validate_parameters(op: "Operation", path):
         if c.in_ == 'path':
             if c.name not in allowed_path_parameters:
                 raise SpecError('Parameter name not found in path: {}'.format(c.name))
-
-
-class ParameterBase(ObjectExtended):
-    """
-    A `Parameter Object`_ defines a single operation parameter.
-
-    .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#external-documentation-object
-    """
-
-    description: Optional[str] = Field(default=None)
-    required: Optional[bool] = Field(default=None)
-    deprecated: Optional[bool] = Field(default=None)
-    allowEmptyValue: Optional[bool] = Field(default=None)
-
-    style: Optional[str] = Field(default=None)
-    explode: Optional[bool] = Field(default=None)
-    allowReserved: Optional[bool] = Field(default=None)
-    schema_: Optional[Union[Schema, Reference]] = Field(default=None, alias="schema")
-    example: Optional[Any] = Field(default=None)
-    examples: Optional[Dict[str, Union['Example',Reference]]] = Field(default_factory=dict)
-
-    content: Optional[Dict[str, "MediaType"]]
-
-    @root_validator
-    def validate_ParameterBase(cls, values):
-#        if values["in_"] ==
-#        if self.in_ == "path" and self.required is not True:
-#            err_msg = 'Parameter {} must be required since it is in the path'
-#            raise SpecError(err_msg.format(self.get_path()), path=self._path)
-        return values
-
-
-class Parameter(ParameterBase):
-    name: str = Field(required=True)
-    in_: str = Field(required=True, alias="in")  # TODO must be one of ["query","header","path","cookie"]
-
 
 
 class SecurityRequirement(BaseModel):
@@ -91,40 +54,6 @@ class SecurityRequirement(BaseModel):
         if self.name:
             return self.__root__[self.name]
         return None
-
-
-class Header(ParameterBase):
-    """
-
-    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#header-object
-    """
-
-
-class Encoding(ObjectExtended):
-    """
-    A single encoding definition applied to a single schema property.
-
-    .. _Encoding: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#encoding-object
-    """
-    contentType: Optional[str] = Field(default=None)
-    headers: Optional[Dict[str, Union[Header, Reference]]] = Field(default_factory=dict)
-    style: Optional[str] = Field(default=None)
-    explode: Optional[bool] = Field(default=None)
-    allowReserved: Optional[bool] = Field(default=None)
-
-
-class MediaType(ObjectExtended):
-    """
-    A `MediaType`_ object provides schema and examples for the media type identified
-    by its key.  These are used in a RequestBody object.
-
-    .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#media-type-object
-    """
-
-    schema_: Optional[Union[Schema, Reference]] = Field(required=True, alias="schema")
-    example: Optional[Any] = Field(default=None)  # 'any' type
-    examples: Optional[Dict[str, Union[Example, Reference]]] = Field(default_factory=dict)
-    encoding: Optional[Dict[str, Encoding]] = Field(default_factory=dict)
 
 
 class RequestBody(ObjectExtended):
