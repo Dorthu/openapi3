@@ -108,52 +108,7 @@ class Schema(ObjectExtended):
         try:
             return self._model_type
         except AttributeError:
-
-            def typeof(schema):
-                r = None
-                if schema.type == "string":
-                    r = str
-                elif schema.type == "integer":
-                    r = int
-                elif schema.type == "array":
-                    r = schema.items.get_type()
-                else:
-                    raise TypeError(schema.type)
-
-                return r
-            def annotationsof(schema):
-                annos = dict()
-                if schema.type == "array":
-                    annos["__root__"] = List[typeof(schema)]
-                else:
-                    for name, f in schema.properties.items():
-                        r = typeof(f)
-                        if name not in schema.required:
-                            annos[name] = Optional[r]
-                        else:
-                            annos[name] = r
-                return annos
-
-            type_name = self.title or self._identity
-            namespace = dict()
-            annos = dict()
-            if self.allOf:
-                for i in self.allOf:
-                    annos.update(annotationsof(i))
-            elif self.anyOf:
-#                types = [i.get_type() for i in self.anyOf]
-#                namespace["__root__"] = Union[types]
-                raise NotImplementedError("anyOf")
-            elif self.oneOf:
-                raise NotImplementedError("oneOf")
-            else:
-
-                annos = annotationsof(self)
-
-            namespace['__annotations__'] = annos
-
-            self._model_type = types.new_class(type_name, (BaseModel, ), {}, lambda ns: ns.update(namespace))
-
+            self._model_type = Model.from_schema(self)
         return self._model_type
 
     def model(self, data):
@@ -176,27 +131,57 @@ class Schema(ObjectExtended):
         else:
             return self.get_type().parse_obj(data)
 
-    def get_request_type(self):
-        """
-        Similar to :any:`get_type`, but the resulting type does not accept readOnly
-        fields
-        """
-        # this is defined in ObjectBase.__init__ as all slots are
-        if self._request_model_type is None:  # pylint: disable=access-member-before-definition
-            type_name = self.title or self._path[-1]
-            self._request_model_type = type(type_name + 'Request', (BaseModel, ),
-                                            {  # pylint: disable=attribute-defined-outside-init
-                '__slots__': [k for k, v in self.properties.items() if not v.readOnly]
-            })
 
-        return self._request_model_type
+class Model(BaseModel):
+    @classmethod
+    def from_schema(cls, shma):
 
-    def request_model(self, **kwargs):
-        """
-        Converts the kwargs passed into a model of writeable fields of this
-        schema
-        """
-        # TODO - this doesn't get nested schemas
-        return self.get_request_type()(kwargs, self)
+        def typeof(schema):
+            r = None
+            if schema.type == "string":
+                r = str
+            elif schema.type == "integer":
+                r = int
+            elif schema.type == "array":
+                r = schema.items.get_type()
+            else:
+                raise TypeError(schema.type)
+
+            return r
+
+        def annotationsof(schema):
+            annos = dict()
+            if schema.type == "array":
+                annos["__root__"] = List[typeof(schema)]
+            else:
+                for name, f in schema.properties.items():
+                    r = typeof(f)
+                    if name not in schema.required:
+                        annos[name] = Optional[r]
+                    else:
+                        annos[name] = r
+            return annos
+
+        type_name = shma.title or shma._identity
+        namespace = dict()
+        annos = dict()
+        if shma.allOf:
+            for i in shma.allOf:
+                annos.update(annotationsof(i))
+        elif shma.anyOf:
+            #                types = [i.get_type() for i in self.anyOf]
+            #                namespace["__root__"] = Union[types]
+            raise NotImplementedError("anyOf")
+        elif shma.oneOf:
+            raise NotImplementedError("oneOf")
+        else:
+
+            annos = annotationsof(shma)
+
+        namespace['__annotations__'] = annos
+
+        r = types.new_class(type_name, (BaseModel,), {}, lambda ns: ns.update(namespace))
+        return r
+
 
 Schema.update_forward_refs()

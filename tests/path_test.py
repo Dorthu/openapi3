@@ -102,6 +102,22 @@ def test_securityparameters(with_securityparameters):
     api = OpenAPI(with_securityparameters)
     auth=str(uuid.uuid4())
 
+
+    for i in api.paths.values():
+        if not i.post or not i.post.security:
+            continue
+        s = i.post.security[0]
+        assert type(s.name) == str
+        assert type(s.types) == list
+        break
+    else:
+        assert False
+
+    with pytest.raises(ValueError, match="does not accept security scheme"):
+        api.authenticate('xAuth', auth)
+        api.call_api_v1_auth_login_create(data={}, parameters={})
+
+
     # global security
     api.authenticate('cookieAuth', auth)
     resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
