@@ -11,7 +11,7 @@ class Example(ObjectExtended):
     A `Example Object`_ holds a reusable set of different aspects of the OAS
     spec.
 
-    .. _Example Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#exampleObject
+    .. _Example Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#example-object
     """
 
     summary: Optional[str] = Field(default=None)

@@ -12,7 +12,7 @@ from .errors import ReferenceResolutionError, SpecError
 from .general import Reference, JSONPointer, JSONReference
 from .info import Info
 from .object_base import ObjectExtended, ObjectBase
-from .paths import Path, SecurityRequirement, _validate_parameters
+from .paths import PathItem, SecurityRequirement, _validate_parameters
 from .servers import Server
 from .schemas import Schema
 from .tag import Tag
@@ -276,18 +276,17 @@ class OpenAPISpec(ObjectExtended):
     This class represents the root of the OpenAPI schema document, as defined
     in `the spec`_
 
-    .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#openapi-object
+    .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#openapi-object
     """
 
-    openapi: str = Field(required=True)
-    info: Info = Field(required=True)
-    paths: Dict[str, Path] = Field(required=True, default_factory=dict)
-
-    components: Optional[Components] = Field(default_factory=Components)
-    externalDocs: Optional[Dict[Any, Any]] = Field(default_factory=dict)
-    security: Optional[List[SecurityRequirement]] = Field(default=None)
+    openapi: str = Field(...)
+    info: Info = Field(...)
     servers: Optional[List[Server]] = Field(default=None)
+    paths: Dict[str, PathItem] = Field(required=True, default_factory=dict)
+    components: Optional[Components] = Field(default_factory=Components)
+    security: Optional[List[SecurityRequirement]] = Field(default=None)
     tags: Optional[List[Tag]] = Field(default=None)
+    externalDocs: Optional[Dict[Any, Any]] = Field(default_factory=dict)
 
     class Config:
         underscore_attrs_are_private = True
@@ -310,7 +309,7 @@ class OpenAPISpec(ObjectExtended):
                     if value is None:
                         continue
 
-                    if isinstance(obj, Path) and slot == "ref":
+                    if isinstance(obj, PathItem) and slot == "ref":
                         resolved_value = api.resolve_jr(root, obj, Reference.construct(ref=value))
                         setattr(obj, slot, resolved_value)
                     if isinstance(value, reference_type):

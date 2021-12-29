@@ -32,7 +32,7 @@ class ParameterBase(ObjectExtended):
     """
     A `Parameter Object`_ defines a single operation parameter.
 
-    .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#parameterObject
+    .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#external-documentation-object
     """
 
     description: Optional[str] = Field(default=None)
@@ -44,7 +44,7 @@ class ParameterBase(ObjectExtended):
     explode: Optional[bool] = Field(default=None)
     allowReserved: Optional[bool] = Field(default=None)
     schema_: Optional[Union[Schema, Reference]] = Field(default=None, alias="schema")
-    example: Optional[str] = Field(default=None)
+    example: Optional[Any] = Field(default=None)
     examples: Optional[Dict[str, Union['Example',Reference]]] = Field(default_factory=dict)
 
     content: Optional[Dict[str, "MediaType"]]
@@ -59,15 +59,16 @@ class ParameterBase(ObjectExtended):
 
 
 class Parameter(ParameterBase):
-    in_: str = Field(required=True, alias="in")  # TODO must be one of ["query","header","path","cookie"]
     name: str = Field(required=True)
+    in_: str = Field(required=True, alias="in")  # TODO must be one of ["query","header","path","cookie"]
+
 
 
 class SecurityRequirement(BaseModel):
     """
     A `SecurityRequirement`_ object describes security schemes for API access.
 
-    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#securityRequirementObject
+    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#security-requirement-object
     """
     __root__: Dict[str, List[str]]
 
@@ -95,7 +96,7 @@ class SecurityRequirement(BaseModel):
 class Header(ParameterBase):
     """
 
-    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#headerObject
+    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#header-object
     """
 
 
@@ -103,7 +104,7 @@ class Encoding(ObjectExtended):
     """
     A single encoding definition applied to a single schema property.
 
-    .. _Encoding: https://github.com/OAI/OpeI-Specification/blob/main/versions/3.1.0.md#encodingObject
+    .. _Encoding: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#encoding-object
     """
     contentType: Optional[str] = Field(default=None)
     headers: Optional[Dict[str, Union[Header, Reference]]] = Field(default_factory=dict)
@@ -117,7 +118,7 @@ class MediaType(ObjectExtended):
     A `MediaType`_ object provides schema and examples for the media type identified
     by its key.  These are used in a RequestBody object.
 
-    .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#mediaTypeObject
+    .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#media-type-object
     """
 
     schema_: Optional[Union[Schema, Reference]] = Field(required=True, alias="schema")
@@ -130,26 +131,26 @@ class RequestBody(ObjectExtended):
     """
     A `RequestBody`_ object describes a single request body.
 
-    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#requestBodyObject
+    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#request-body-object
     """
 
-    content: Dict[str, MediaType] = Field(default_factory=dict)
     description: Optional[str] = Field(default=None)
-    required: Optional[bool] = Field(default=None)
+    content: Dict[str, MediaType] = Field(...)
+    required: Optional[bool] = Field(default=False)
 
 
 class Link(ObjectExtended):
     """
     A `Link Object`_ describes a single Link from an API Operation Response to an API Operation Request
 
-    .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#linkObject
+    .. _Link Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#link-object
     """
 
-    operationId: Optional[str] = Field(default=None)
     operationRef: Optional[str] = Field(default=None)
-    description: Optional[str] = Field(default=None)
-    parameters: Optional[dict] = Field(default=None)
+    operationId: Optional[str] = Field(default=None)
+    parameters: Optional[Dict[str, Union["RuntimeExpression", str]]] = Field(default=None)
     requestBody: Optional[dict] = Field(default=None)
+    description: Optional[str] = Field(default=None)
     server: Optional[Server] = Field(default=None)
 
     @root_validator(pre=False)
@@ -168,10 +169,10 @@ class Response(ObjectExtended):
     A `Response Object`_ describes a single response from an API Operation,
     including design-time, static links to operations based on the response.
 
-    .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
+    .. _Response Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#responses-object
     """
 
-    description: str = Field(required=True)
+    description: str = Field(...)
     headers: Optional[Dict[str, Union[Header, Reference]]] = Field(default_factory=dict)
     content: Optional[Dict[str, MediaType]] = Field(default_factory=dict)
     links: Optional[Dict[str, Union[Link, Reference]]] = Field(default_factory=dict)
@@ -181,23 +182,22 @@ class Operation(ObjectExtended):
     """
     An Operation object as defined `here`_
 
-    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#operationObject
+    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#operation-object
     """
 
-    responses: Dict[str, Union[Response, Reference]] = Field(required=True)
-
-    deprecated: Optional[bool] = Field(default=None)
+    tags: Optional[List[str]] = Field(default=None)
+    summary: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
     externalDocs: Optional[ExternalDocumentation] = Field(default=None)
     operationId: Optional[str] = Field(default=None)
     parameters: List[Union[Parameter, Reference]] = Field(default_factory=list)
     requestBody: Optional[Union[RequestBody, Reference]] = Field(default=None)
+    responses: Dict[str, Union[Response, Reference]] = Field(required=True)
+    callbacks: Optional[Dict[str, Union["Callback", Reference]]] = Field(default_factory=dict)
+    deprecated: Optional[bool] = Field(default=None)
     security: Optional[List[SecurityRequirement]] = Field(default_factory=list)
     servers: Optional[List[Server]] = Field(default=None)
-    summary: Optional[str] = Field(default=None)
-    tags: Optional[List[str]] = Field(default=None)
 
-    callbacks: Optional[Dict[str, "Callback"]] = Field(default_factory=dict)
 
     """
     The OpenAPISpec this is part of
@@ -377,7 +377,7 @@ class Operation(ObjectExtended):
             # accept media type ranges in the spec. the most specific matching
             # type should always be chosen, but if we do not have a match here
             # a generic range should be accepted if one if provided
-            # https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#response-object
+            # https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#response-object
 
             generic_type   = content_type.split('/')[0] + '/*'
             expected_media = expected_response.content.get(generic_type, None)
@@ -397,12 +397,12 @@ class Operation(ObjectExtended):
             raise NotImplementedError()
 
 
-class Path(ObjectExtended):
+class PathItem(ObjectExtended):
     """
-    A Path object, as defined `here`_.  Path objects represent URL paths that
-    may be accessed by appending them to a Server
+    A Path Item, as defined `here`_.
+    Describes the operations available on a single path.
 
-    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#paths-object
+    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#paths-object
     """
     ref: Optional[str] = Field(default=None, alias="$ref")
     summary: Optional[str] = Field(default=None)
@@ -423,12 +423,23 @@ class Callback(ObjectBase):
     """
     A map of possible out-of band callbacks related to the parent operation.
 
-    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.1.md#callbackObject
+    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#callback-object
 
     This object MAY be extended with Specification Extensions.
     """
-    __root__: Dict[str, Union[str, Path]]
+    __root__: Dict[str, PathItem]
+
+
+class RuntimeExpression(ObjectBase):
+    """
+
+
+    .. Runtime Expression: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#runtime-expressions
+    """
+    __root__: str = Field(...)
+
 
 Operation.update_forward_refs()
 Parameter.update_forward_refs()
 Header.update_forward_refs()
+Link.update_forward_refs()

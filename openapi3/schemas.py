@@ -6,6 +6,7 @@ from pydantic import Field, root_validator, Extra, BaseModel
 
 from .general import Reference  # need this for Model below
 from .object_base import ObjectExtended
+from .xml import XML
 
 TYPE_LOOKUP = {
     'array': list,
@@ -19,9 +20,9 @@ TYPE_LOOKUP = {
 class Discriminator(ObjectExtended):
     """
 
-    .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.1.md#discriminator-object
+    .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#discriminator-object
     """
-    propertyName: str = Field(required=True)
+    propertyName: str = Field(...)
     mapping: Optional[Dict[str, str]] = Field(default_factory=dict)
 
 
@@ -29,7 +30,7 @@ class Schema(ObjectExtended):
     """
     The `Schema Object`_ allows the definition of input and output data types.
 
-    .. _Schema Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#schemaObject
+    .. _Schema Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#schema-object
     """
 
     title: Optional[str] = Field(default=None)
@@ -64,13 +65,13 @@ class Schema(ObjectExtended):
     discriminator: Optional[Discriminator] = Field(default=None)  # 'Discriminator'
     readOnly: Optional[bool] = Field(default=None)
     writeOnly: Optional[bool] = Field(default=None)
-    xml: Optional[dict] = Field(default=None)  # 'XML'
+    xml: Optional[XML] = Field(default=None)  # 'XML'
     externalDocs: Optional[dict] = Field(default=None)  # 'ExternalDocs'
-    deprecated: Optional[bool] = Field(default=None)
     example: Optional[Any] = Field(default=None)
-    contentEncoding: Optional[str] = Field(default=None)
-    contentMediaType: Optional[str] = Field(default=None)
-    contentSchema: Optional[str] = Field(default=None)
+    deprecated: Optional[bool] = Field(default=None)
+#    contentEncoding: Optional[str] = Field(default=None)
+#    contentMediaType: Optional[str] = Field(default=None)
+#    contentSchema: Optional[str] = Field(default=None)
 
     _model_type: object
     _request_model_type: object

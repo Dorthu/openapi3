@@ -12,11 +12,10 @@ class ExternalDocumentation(ObjectExtended):
     An `External Documentation Object`_ references external resources for extended
     documentation.
 
-    .. _External Documentation Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#externalDocumentationObject
+    .. _External Documentation Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#external-documentation-object
     """
 
-    url: str
-
+    url: str = Field(...)
     description: Optional[str] = Field(default=None)
 
 
@@ -42,7 +41,7 @@ class Reference(ObjectBase):
     """
     A `Reference Object`_ designates a reference to another node in the specification.
 
-    .. _Reference Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#referenceObject
+    .. _Reference Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#reference-object
     """
     ref: str = Field(alias="$ref")
 
