@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import errno
+import uuid
 from typing import Optional
 
 import starlette.status
@@ -46,6 +47,7 @@ def createPet(response: Response,
                                           message=f"{pet.name} already exists"
                                           ).dict()
                             )
+    pet.identifier = str(uuid.uuid4())
     ZOO[pet.name] = r = pet
     response.status_code = starlette.status.HTTP_201_CREATED
     return r

@@ -1,3 +1,4 @@
+import pydantic
 import pytest
 
 from pydantic import Extra
@@ -81,42 +82,55 @@ async def test_model(event_loop, server, client):
     assert crea == orig
 
 
-def randomPet(name=None):
+def randomPet(client, name=None):
     if name:
-        return {"pet":Dog(name=name, pet_type="dog").dict()}
+        return {"pet": client.components.schemas["Dog"].model({"name":name}).dict()}
     else:
-        return {"pet":WhiteCat(name=str(uuid.uuid4()), pet_type="cat", white_name=str(uuid.uuid4()), color="white").dict()}
+        return {"pet": client.components.schemas["WhiteCat"].model({"name":str(uuid.uuid4()), "white_name":str(uuid.uuid4())}).dict()}
 
 @pytest.mark.asyncio
 async def test_createPet(event_loop, server, client):
-    r = await asyncio.to_thread(client.call_createPet, data=randomPet())
-    assert type(r.__root__.__root__) == client.components.schemas["WhiteCat"].get_type()
+    data = {
+        "pet": client.components.schemas["WhiteCat"].model(
+            {
+                "name":str(uuid.uuid4()),
+                "white_name":str(uuid.uuid4())
+            }).dict()
+    }
+#    r = await asyncio.to_thread(client.call_createPet, data=data)
+    r = await asyncio.to_thread(client._.createPet, data=data)
+    assert type(r.__root__.__root__).schema() == client.components.schemas["WhiteCat"].get_type().schema()
 
-    r = await asyncio.to_thread(client.call_createPet,  data=randomPet(name=r.__root__.__root__.name))
-    assert type(r) == client.components.schemas["Error"].get_type()
+    r = await asyncio.to_thread(client.call_createPet,  data=randomPet(client, name=r.__root__.__root__.name))
+    assert type(r).schema() == client.components.schemas["Error"].get_type().schema()
+
+    with pytest.raises(pydantic.ValidationError):
+        args = client._.createPet.args()
+        cls = args['data'].get_type()
+        cls()
 
 
 @pytest.mark.asyncio
 async def test_listPet(event_loop, server, client):
-    r = await asyncio.to_thread(client.call_createPet, data=randomPet(str(uuid.uuid4())))
+    r = await asyncio.to_thread(client.call_createPet, data=randomPet(client, str(uuid.uuid4())))
     l = await asyncio.to_thread(client.call_listPet)
     assert len(l) > 0
 
 @pytest.mark.asyncio
 async def test_getPet(event_loop, server, client):
-    pet = await asyncio.to_thread(client.call_createPet, data=randomPet(str(uuid.uuid4())))
+    pet = await asyncio.to_thread(client.call_createPet, data=randomPet(client, str(uuid.uuid4())))
     r = await asyncio.to_thread(client.call_getPet, parameters={"pet_id":pet.__root__.identifier})
-    assert type(r.__root__) == type(pet.__root__)
+    assert type(r.__root__).schema() == type(pet.__root__).schema()
 
     r = await asyncio.to_thread(client.call_getPet, parameters={"pet_id":"-1"})
-    assert type(r) == client.components.schemas["Error"].get_type()
+    assert type(r).schema() == client.components.schemas["Error"].get_type().schema()
 
 @pytest.mark.asyncio
 async def test_deletePet(event_loop, server, client):
     r = await asyncio.to_thread(client.call_deletePet, parameters={"pet_id":-1})
-    assert type(r) == client.components.schemas["Error"].get_type()
+    assert type(r).schema() == client.components.schemas["Error"].get_type().schema()
 
-    await asyncio.to_thread(client.call_createPet, data=randomPet(str(uuid.uuid4())))
+    await asyncio.to_thread(client.call_createPet, data=randomPet(client, str(uuid.uuid4())))
     zoo = await asyncio.to_thread(client.call_listPet)
     for pet in zoo:
         while hasattr(pet, '__root__'):

@@ -86,7 +86,7 @@ def test_operation_populated(petstore_expanded_spec):
     assert con1.schema_ is not None
     assert con1.schema_.type == "array"
     # we're not going to test that the ref resolved correctly here - that's a separate test
-    assert type(con1.schema_.items) == Schema
+    assert type(con1.schema_.items._target) == Schema
 
     resp2 = op.responses['default']
     assert resp2.description == "unexpected error"
@@ -95,7 +95,7 @@ def test_operation_populated(petstore_expanded_spec):
     con2 = resp2.content['application/json']
     assert con2.schema_ is not None
     # again, test ref resolution elsewhere
-    assert type(con2.schema_) == Schema
+    assert type(con2.schema_._target) == Schema
 
 
 def test_securityparameters(with_securityparameters):

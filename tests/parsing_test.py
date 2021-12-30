@@ -95,7 +95,7 @@ def test_parsing_with_links(with_links):
 
     response_b = spec.paths["/with-links-two/{param}"].get.responses["200"]
     assert "exampleWithRef" in response_b.links
-    assert response_b.links["exampleWithRef"] == spec.components.links["exampleWithOperationRef"]
+    assert response_b.links["exampleWithRef"]._target == spec.components.links["exampleWithOperationRef"]
 
 
 def test_parsing_broken_links(with_broken_links):

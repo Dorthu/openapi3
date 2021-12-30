@@ -12,14 +12,14 @@ class PetBase(BaseModel):
 
 
 class BlackCat(PetBase):
-    pet_type: Literal['cat']
-    color: Literal['black']
+    pet_type: Literal['cat'] = "cat"
+    color: Literal['black'] = "black"
     black_name: str
 
 
 class WhiteCat(PetBase):
-    pet_type: Literal['cat']
-    color: Literal['white']
+    pet_type: Literal['cat'] = "cat"
+    color: Literal['white'] = "white"
     white_name: str
 
 
@@ -30,12 +30,14 @@ class Cat(BaseModel):
 
     def __getattr__(self, item):
         return getattr(self.__root__, item)
+    def __setattr__(self, item, value):
+        return setattr(self.__root__, item, value)
 
 #Cat = Annotated[Union[BlackCat, WhiteCat], Field(default=Undefined, discriminator='color')]
 
 
 class Dog(PetBase):
-    pet_type: Literal['dog']
+    pet_type: Literal['dog'] = "dog"
     name: str
 
 
@@ -45,7 +47,8 @@ class Pet(BaseModel):
     __root__: Annotated[Union[Cat, Dog], Field(discriminator='pet_type')]
     def __getattr__(self, item):
         return getattr(self.__root__, item)
-
+    def __setattr__(self, item, value):
+        return setattr(self.__root__, item, value)
 
 class Pets(BaseModel):
     __root__: List[Pet] = Field(..., description='list of pet')

@@ -1,7 +1,7 @@
 import types
 import uuid
 from typing import Union, List, Any, Optional, Dict, Literal, Annotated
-
+from functools import lru_cache
 from pydantic import Field, root_validator, Extra, BaseModel
 
 from .general import Reference  # need this for Model below
@@ -81,6 +81,10 @@ class Schema(ObjectExtended):
     """
     _identity: str
 
+    class Config:
+#        keep_untouched = (lru_cache,)
+        extra = Extra.forbid
+
     @root_validator
     def validate_Schema_number_type(cls, values):
         conv = ["minimum","maximum"]
@@ -91,25 +95,9 @@ class Schema(ObjectExtended):
                     values[i] = int(v)
         return values
 
+#    @lru_cache
     def get_type(self, names=None, discriminators=None):
-        """
-        Returns the Type that this schema represents.  This Type is created once
-        per Schema and cached so that all instances of the same schema are the
-        same Type.  For example::
-
-           object1 = example_schema.model({"some":"json"})
-           object2 = example_schema.model({"other":"json"})
-
-           isinstance(object1, example._schema.get_type()) # true
-           type(object1) == type(object2) # true
-        """
-        if discriminators and hasattr(self, "_model_type") and getattr(self._model_type, "discriminator", None) == None:
-            return Model.from_schema(self, names, discriminators)
-        try:
-            return self._model_type
-        except AttributeError:
-            self._model_type = Model.from_schema(self, names, discriminators)
-        return self._model_type
+        return Model.from_schema(self, names, discriminators)
 
     def model(self, data):
         """
@@ -157,6 +145,8 @@ class Model(BaseModel):
                 r = List[schema.items.get_type()]
             elif schema.type == 'object':
                 return schema.get_type()
+            elif schema.type is None: # discriminated root
+                return None
             else:
                 raise TypeError(schema.type)
 
@@ -195,7 +185,7 @@ class Model(BaseModel):
             else:
                 for name, f in schema.properties.items():
                     args = dict()
-                    for i in ["enum"]:
+                    for i in ["enum","default"]:
                         if (v:=getattr(f, i, None)):
                             args[i] = v
                     r[name] = Field(**args)
