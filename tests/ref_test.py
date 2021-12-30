@@ -18,7 +18,7 @@ def test_ref_resolution(petstore_expanded_spec):
     """
     ref = petstore_expanded_spec.paths['/pets'].get.responses['default'].content['application/json'].schema_
 
-    assert type(ref) == Schema
+    assert type(ref._target) == Schema
     assert ref.type == "object"
     assert len(ref.properties) == 2
     assert 'code' in ref.properties

@@ -45,6 +45,19 @@ class Reference(ObjectBase):
     """
     ref: str = Field(alias="$ref")
 
+    _target: object = None
     class Config:
         """This object cannot be extended with additional properties and any properties added SHALL be ignored."""
         extra = Extra.ignore
+
+    def __getattr__(self, item):
+        if item != "_target":
+            return getattr(self._target, item)
+        else:
+            return getattr(self, item)
+
+    def __setattr__(self, item, value):
+        if item != "_target":
+            setattr(self._target, item, value)
+        else:
+            super().__setattr__(item, value)

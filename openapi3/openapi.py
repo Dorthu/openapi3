@@ -12,9 +12,9 @@ from .errors import ReferenceResolutionError, SpecError
 from .general import Reference, JSONPointer, JSONReference
 from .info import Info
 from .object_base import ObjectExtended, ObjectBase
-from .paths import PathItem, SecurityRequirement, _validate_parameters
+from .paths import PathItem, SecurityRequirement, _validate_parameters, Operation
 from .servers import Server
-from .schemas import Schema
+from .schemas import Schema, Discriminator
 from .tag import Tag
 
 
@@ -299,7 +299,6 @@ class OpenAPISpec(ObjectExtended):
         """
         # don't circular import
 
-        reference_type = Reference
         root = self
 
         def resolve(obj):
@@ -310,11 +309,20 @@ class OpenAPISpec(ObjectExtended):
                         continue
 
                     if isinstance(obj, PathItem) and slot == "ref":
-                        resolved_value = api.resolve_jr(root, obj, Reference.construct(ref=value))
-                        setattr(obj, slot, resolved_value)
-                    if isinstance(value, reference_type):
-                        resolved_value = api.resolve_jr(root, obj, value)
-                        setattr(obj, slot, resolved_value)
+                        ref = Reference.construct(ref=value)
+                        ref._target = api.resolve_jr(root, obj, ref)
+                        setattr(obj, slot, ref)
+
+#                    if isinstance(obj, Discriminator) and slot == "mapping":
+#                        mapping = dict()
+#                        for k,v in value.items():
+#                            mapping[k] = Reference.construct(ref=v)
+#                        setattr(obj, slot, mapping)
+
+                    value = getattr(obj, slot)
+                    if isinstance(value, Reference):
+                        value._target = api.resolve_jr(root, obj, value)
+#                        setattr(obj, slot, resolved_value)
                     elif issubclass(type(value), ObjectBase):
                         # otherwise, continue resolving down the tree
                         resolve(value)
@@ -322,26 +330,20 @@ class OpenAPISpec(ObjectExtended):
                         resolve(value)
                     elif isinstance(value, list):
                         # if it's a list, resolve its item's references
-                        resolved_list = []
                         for item in value:
-                            if isinstance(item, reference_type):
-                                resolved_value = api.resolve_jr(root, obj, item)
-                                resolved_list.append(resolved_value)
+                            if isinstance(item, Reference):
+                                item._target = api.resolve_jr(root, obj, item)
                             elif isinstance(item, (ObjectBase, dict, list)):
                                 resolve(item)
-                                resolved_list.append(item)
-                            else:
-                                resolved_list.append(item)
-                        setattr(obj, slot, resolved_list)
                     elif isinstance(value, (str, int, float, datetime.datetime)):
                         continue
                     else:
                         raise TypeError(type(value))
             elif isinstance(obj, dict):
                 for k, v in obj.items():
-                    if isinstance(v, reference_type):
+                    if isinstance(v, Reference):
                         if v.ref:
-                            obj[k] = api.resolve_jr(root, obj, v)
+                            v._target = api.resolve_jr(root, obj, v)
                     elif isinstance(v, (ObjectBase, dict, list)):
                         resolve(v)
 
@@ -384,7 +386,7 @@ class OperationCallable:
     with the configured values included.  This class is not intended to be used
     directly.
     """
-    def __init__(self, operation, base_url, security, ssl_verify, session):
+    def __init__(self, operation: Operation.request, base_url, security, ssl_verify, session):
         self.operation = operation
         self.base_url = base_url
         self.security = security
