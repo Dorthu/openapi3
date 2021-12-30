@@ -16,7 +16,9 @@ from .paths import PathItem, SecurityRequirement, _validate_parameters, Operatio
 from .servers import Server
 from .schemas import Schema, Discriminator
 from .tag import Tag
+from .request import Request
 
+HTTP_METHODS = frozenset(["get","delete","head","post","put","patch","trace"])
 
 class Loader:
     def load(self, name):
@@ -135,14 +137,13 @@ class OpenAPI:
             schema._identity = name
 
         for path,obj in self.paths.items():
-            for m in obj.__fields_set__ & frozenset(["get","delete","head","post","put","patch","trace"]):
+            for m in obj.__fields_set__ & HTTP_METHODS:
                 op = getattr(obj, m)
-                op._path, op._method, op._spec = path, m, self
                 _validate_parameters(op, path)
                 if op.operationId is None:
                     continue
                 formatted_operation_id = op.operationId.replace(" ", "_")
-                self._register_operation(formatted_operation_id, op)
+                self._register_operation(formatted_operation_id, (m, path, op))
                 for r, response in op.responses.items():
                     if isinstance(response, Reference):
                         continue
@@ -187,38 +188,35 @@ class OpenAPI:
 
 
     # private methods
-    def _register_operation(self, operation_id, operation):
+    def _register_operation(self, operation_id, opInfo):
         """
         Adds an Operation to this spec's _operation_map, raising an error if the
         OperationId has already been registered.
 
         :param operation_id: The operation ID to register
         :type operation_id: str
-        :param operation: The operation to register
-        :type operation: Operation
+        :param opInfo: The operation to register
+        :type opInfo: Operation
         """
         if operation_id in self._operation_map:
-            raise SpecError(f"Duplicate operationId {operation_id}", element=operation)
-        self._operation_map[operation_id] = operation
+            raise SpecError(f"Duplicate operationId {operation_id}", element=opInfo)
+        self._operation_map[operation_id] = opInfo
 
-    def _get_callable(self, operation):
+    def _get_callable(self, method, path, request:Operation):
         """
         A helper function to create OperationCallable objects for __getattribute__,
         pre-initialized with the required values from this object.
 
-        :param operation: The Operation the callable should call
-        :type operation: callable (Operation.request)
+        :param request: The Operation the callable should call
+        :type request: callable (Operation.request)
 
         :returns: The callable that executes this operation with this object's
                   configuration.
-        :rtype: OperationCallable
+        :rtype: Request
         """
-        base_url = self.servers[0].url
+        return Request(self, method, path, request)
 
-        return OperationCallable(operation, base_url, self._security, self._ssl_verify,
-                                 self._session)
-
-    def __getattribute__(self, attr):
+    def __getattr__(self, attr):
         """
         Extended __getattribute__ function to allow resolving dynamic function
         names.  The purpose of this is to call syntax like this::
@@ -239,19 +237,21 @@ class OpenAPI:
         """
         if attr.startswith('call_'):
             _, operationId = attr.split('_', 1)
-            if operationId in self._operation_map:
-                return self._get_callable(self._operation_map[operationId].request)
-            else:
+            if operationId not in self._operation_map:
                 raise AttributeError('{} has no operation {}'.format(
                     self.info.title, operationId))
-
-        return object.__getattribute__(self, attr)
+            method, path, op = self._operation_map[operationId]
+            return self._get_callable(method, path, op)
+        raise KeyError(attr)
 
     def _load(self, i):
         data = self.loader.load(i)
         return OpenAPISpec.parse_obj(data)
 
 
+    @property
+    def _(self):
+        return OperationIndex(self)
 
 
     def resolve_jr(self, root: "OpenAPISpec", obj, value: Reference):
@@ -268,7 +268,6 @@ class OpenAPI:
             # add metadata to the error
             e.element = obj
             raise
-
 
 
 class OpenAPISpec(ObjectExtended):
@@ -378,27 +377,22 @@ class OpenAPISpec(ObjectExtended):
         return node
 
 
-class OperationCallable:
-    """
-    This class is returned by instances of the OpenAPI class when members
-    formatted like call_operationId are accessed, and a valid Operation is
-    found, and allows calling the operation directly from the OpenAPI object
-    with the configured values included.  This class is not intended to be used
-    directly.
-    """
-    def __init__(self, operation: Operation.request, base_url, security, ssl_verify, session):
-        self.operation = operation
-        self.base_url = base_url
-        self.security = security
-        self.ssl_verify = ssl_verify
-        self.session = session
+class OperationIndex:
+    def __init__(self, api):
+        self._api = api
+        self._spec = api._spec
 
-    def __call__(self, *args, **kwargs):
-        if self.ssl_verify is not None:
-            kwargs['verify'] = self.ssl_verify
-        if self.session:
-            kwargs['session'] = self.session
-        return self.operation(self.base_url, *args, security=self.security,
-                              **kwargs)
+    def __getattr__(self, item):
+        pi: PathItem
+        for path,pi in self._spec.paths.items():
+            op: Operation
+            for method in pi.__fields_set__ & HTTP_METHODS:
+                op = getattr(pi, method)
+                if op.operationId != item:
+                    continue
+                return Request(self._api, method, path, op)
+        raise ValueError(item)
+
+
 
 OpenAPISpec.update_forward_refs()
