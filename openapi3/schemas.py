@@ -91,7 +91,7 @@ class Schema(ObjectExtended):
                     values[i] = int(v)
         return values
 
-    def get_type(self, name=None, discriminator=None):
+    def get_type(self, names=None, discriminators=None):
         """
         Returns the Type that this schema represents.  This Type is created once
         per Schema and cached so that all instances of the same schema are the
@@ -103,12 +103,12 @@ class Schema(ObjectExtended):
            isinstance(object1, example._schema.get_type()) # true
            type(object1) == type(object2) # true
         """
-        if discriminator and hasattr(self, "_model_type") and getattr(self._model_type, "discriminator", None) == None:
-            return Model.from_schema(self, name, discriminator)
+        if discriminators and hasattr(self, "_model_type") and getattr(self._model_type, "discriminator", None) == None:
+            return Model.from_schema(self, names, discriminators)
         try:
             return self._model_type
         except AttributeError:
-            self._model_type = Model.from_schema(self, name, discriminator)
+            self._model_type = Model.from_schema(self, names, discriminators)
         return self._model_type
 
     def model(self, data):
@@ -139,7 +139,14 @@ class Model(BaseModel):
         extra: Extra.forbid
 
     @classmethod
-    def from_schema(cls, shma, shmanm=None, discriminator=None):
+    def from_schema(cls, shma, shmanm=None, discriminators=None):
+
+        if shmanm is None:
+            shmanm = []
+
+        if discriminators is None:
+            discriminators = []
+
         def typeof(schema):
             r = None
             if schema.type == "string":
@@ -160,12 +167,19 @@ class Model(BaseModel):
             if schema.type == "array":
                 annos["__root__"] = typeof(schema)
             else:
+
                 for name, f in schema.properties.items():
-                    if discriminator and name == discriminator.propertyName:
+                    r = None
+                    for discriminator in discriminators:
+                        if name != discriminator.propertyName:
+                            continue
                         for disc,v in discriminator.mapping.items():
-                            if v == shmanm:
+                            if v in shmanm:
                                 r = Literal[disc]
                                 break
+                        else:
+                            raise ValueError(schema)
+                        break
                     else:
                         r = typeof(f)
                     if name not in schema.required:
@@ -198,7 +212,7 @@ class Model(BaseModel):
             for i in shma.allOf:
                 annos.update(annotationsof(i))
         elif shma.anyOf:
-            t = tuple([i.get_type(name=i.ref, discriminator=shma.discriminator) for i in shma.anyOf])
+            t = tuple([i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator]) for i in shma.anyOf])
             if shma.discriminator:
                 annos["__root__"] = Annotated[Union[t], Field(discriminator=shma.discriminator.propertyName)]
             else:
@@ -211,8 +225,8 @@ class Model(BaseModel):
 
         namespace['__annotations__'] = annos
 
-        r = types.new_class(type_name, (BaseModel,), {}, lambda ns: ns.update(namespace))
-        return r
+        m = types.new_class(type_name, (BaseModel,), {}, lambda ns: ns.update(namespace))
+        return m
 
 
 Schema.update_forward_refs()
