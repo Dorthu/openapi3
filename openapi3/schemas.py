@@ -1,6 +1,6 @@
 import types
 import uuid
-from typing import Union, List, Any, Optional, Dict
+from typing import Union, List, Any, Optional, Dict, Literal, Annotated
 
 from pydantic import Field, root_validator, Extra, BaseModel
 
@@ -91,7 +91,7 @@ class Schema(ObjectExtended):
                     values[i] = int(v)
         return values
 
-    def get_type(self):
+    def get_type(self, name=None, discriminator=None):
         """
         Returns the Type that this schema represents.  This Type is created once
         per Schema and cached so that all instances of the same schema are the
@@ -103,10 +103,12 @@ class Schema(ObjectExtended):
            isinstance(object1, example._schema.get_type()) # true
            type(object1) == type(object2) # true
         """
+        if discriminator and hasattr(self, "_model_type") and getattr(self._model_type, "discriminator", None) == None:
+            return Model.from_schema(self, name, discriminator)
         try:
             return self._model_type
         except AttributeError:
-            self._model_type = Model.from_schema(self)
+            self._model_type = Model.from_schema(self, name, discriminator)
         return self._model_type
 
     def model(self, data):
@@ -137,8 +139,7 @@ class Model(BaseModel):
         extra: Extra.forbid
 
     @classmethod
-    def from_schema(cls, shma):
-
+    def from_schema(cls, shma, shmanm=None, discriminator=None):
         def typeof(schema):
             r = None
             if schema.type == "string":
@@ -160,7 +161,13 @@ class Model(BaseModel):
                 annos["__root__"] = typeof(schema)
             else:
                 for name, f in schema.properties.items():
-                    r = typeof(f)
+                    if discriminator and name == discriminator.propertyName:
+                        for disc,v in discriminator.mapping.items():
+                            if v == shmanm:
+                                r = Literal[disc]
+                                break
+                    else:
+                        r = typeof(f)
                     if name not in schema.required:
                         annos[name] = Optional[r]
                     else:
@@ -191,8 +198,11 @@ class Model(BaseModel):
             for i in shma.allOf:
                 annos.update(annotationsof(i))
         elif shma.anyOf:
-            t = tuple([i.get_type() for i in shma.anyOf])
-            annos["__root__"] = Union[t]
+            t = tuple([i.get_type(name=i.ref, discriminator=shma.discriminator) for i in shma.anyOf])
+            if shma.discriminator:
+                annos["__root__"] = Annotated[Union[t], Field(discriminator=shma.discriminator.propertyName)]
+            else:
+                annos["__root__"] = Union[t]
         elif shma.oneOf:
             raise NotImplementedError("oneOf")
         else:
