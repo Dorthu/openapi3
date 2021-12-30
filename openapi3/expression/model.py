@@ -2,6 +2,8 @@ import json
 from yarl import URL
 import requests
 
+import openapi3.general
+
 from ._model import RuntimeExpressionModelBuilderSemantics as RuntimeExpressionModelBuilderSemanticsBase, \
     JSONPointer as JSONPointerBase, \
     Header as HeaderBase, \
@@ -17,8 +19,11 @@ class RuntimeExpressionModelBuilderSemantics(RuntimeExpressionModelBuilderSemant
     def reference_token(self, ast, name=None):
         return "".join(ast)
 
-    def token(self, ast, name=None):
+    def escaped(self, ast):
         return "".join(ast)
+
+#    def token(self, ast, name=None):
+#        return "".join(ast)
 
 
 class RuntimeExpression(RuntimeExpressionBase):
@@ -59,9 +64,11 @@ class Expression(ExpressionBase):
 class JSONPointer(JSONPointerBase):
     def __init__(self, ctx=None, ast=None, parseinfo=None, **kwargs):
         super().__init__(ctx, None, parseinfo, **kwargs)
-        self.tokens = ast.tokens
-    def eval(self, data):
-        pass
+        self._tokens = ast.tokens
+    @property
+    def tokens(self):
+        for i in self._tokens:
+            yield openapi3.general.JSONPointer.decode(i)
 
 
 class Header(HeaderBase):
@@ -99,7 +106,7 @@ class Path(PathBase):
         self.key = ast.key
 
     def eval(self, data):
-        return data.path.get(self.key)
+        return data.path.get(self.key, None)
 
 
 class Body(BodyBase):

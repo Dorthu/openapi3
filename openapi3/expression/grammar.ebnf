@@ -46,6 +46,7 @@ reference_token = { unescaped | escaped }* ;
 # ; %x2F ('/') and %x7E ('~') are excluded from 'unescaped'
 unescaped = /[^\/~]/ ;
 
+
 # escaped         = "~" ( "0" / "1" )
 #; representing '~' and '/', respectively
 escaped = "~" ( "0" | "1" ) ;
@@ -54,8 +55,9 @@ escaped = "~" ( "0" | "1" ) ;
 name = /[\w]*/ ;
 
 # token = 1*tchar
-token = {tchar}+;
+# token = {tchar}+;
+token = /[!#$%&'*+-\.^-`|~\w]+/ ;
 
-#tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." /
-#"^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA"
-tchar = /[^\(\),\/:;<=>?@[\]{}]/ ;
+#tchar = "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~" / DIGIT / ALPHA"
+# tchar = /[^\(\),\/:;<=>?@[\]{}]/ ;
+#tchar = /!#$%&'*+-\.^-`|~\w/ ;
