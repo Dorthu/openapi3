@@ -43,31 +43,19 @@ class OpenAPI:
         return self._spec.servers
 
     @classmethod
-    def load_sync(cls,
-                  url,
-                  ssl_verify=True,
-                  session_factory: Callable[[], httpx.Client] = httpx.Client,
-                  loader=None):
+    def load_sync(cls, url, session_factory: Callable[[], httpx.Client] = httpx.Client, loader=None):
         raw_document = session_factory().get(url)
-        return cls(url, raw_document.json(), ssl_verify, session_factory, loader)
+        return cls(url, raw_document.json(), session_factory, loader)
 
     @classmethod
-    async def load_async(cls,
-                   url,
-                   ssl_verify=True,
-                   session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient,
-                   loader=None):
+    async def load_async(cls, url, session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient, loader=None):
         async with session_factory() as client:
             raw_document = await client.get(url)
-        return cls(url, raw_document.json(), ssl_verify, session_factory, loader)
+        return cls(url, raw_document.json(), session_factory, loader)
 
-    def __init__(
-            self,
-            url,
-            raw_document,
-            ssl_verify=None,
-            session_factory:Callable[[], Union[httpx.Client,httpx.AsyncClient]]=httpx.AsyncClient,
-            loader=None):
+    def __init__(self, url, raw_document,
+                 session_factory: Callable[[], Union[httpx.Client, httpx.AsyncClient]] = httpx.AsyncClient,
+                 loader=None):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -77,15 +65,11 @@ class OpenAPI:
         :type raw_document: dct
         :param session_factory: default uses new session for each call, supply your own if required otherwise.
         :type session_factory: returns httpx.AsyncClient or http.Client
-        :param ssl_verify: Decide if to use ssl verification to the requests or not,
-                           in case an str is passed, will be used as the CA.
-        :type ssl_verify: bool, str, None
         """
 
 
         self._base_url:yarl.URL = yarl.URL(url)
         self.loader:Loader = loader
-        self._ssl_verify = ssl_verify
         self._session_factory = session_factory
 
         self._security:List[str] = None
