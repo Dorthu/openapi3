@@ -6,12 +6,13 @@ import pytest
 from pydantic import ValidationError
 from openapi3 import OpenAPI, SpecError, ReferenceResolutionError, FileSystemLoader
 
+URLBASE = "/"
 
 def test_parse_from_yaml(petstore_expanded):
     """
     Tests that we can parse a valid yaml file
     """
-    spec = OpenAPI(petstore_expanded)
+    spec = OpenAPI(URLBASE, petstore_expanded)
 
 
 def test_parsing_fails(broken):
@@ -19,7 +20,7 @@ def test_parsing_fails(broken):
     Tests that broken specs fail to parse
     """
     with pytest.raises(ValidationError) as e:
-        spec = OpenAPI(broken)
+        spec = OpenAPI(URLBASE, broken)
 
 
 def test_parsing_broken_refernece(broken_reference):
@@ -27,7 +28,7 @@ def test_parsing_broken_refernece(broken_reference):
     Tests that parsing fails correctly when a reference is broken
     """
     with pytest.raises(ReferenceResolutionError):
-        spec = OpenAPI(broken_reference)
+        spec = OpenAPI(URLBASE, broken_reference)
 
 
 def test_parsing_wrong_parameter_name(has_bad_parameter_name):
@@ -36,7 +37,7 @@ def test_parsing_wrong_parameter_name(has_bad_parameter_name):
     actually in the path.
     """
     with pytest.raises(SpecError, match="Parameter name not found in path: different"):
-        spec = OpenAPI(has_bad_parameter_name)
+        spec = OpenAPI(URLBASE, has_bad_parameter_name)
 
 
 def test_parsing_dupe_operation_id(dupe_op_id):
@@ -44,21 +45,21 @@ def test_parsing_dupe_operation_id(dupe_op_id):
     Tests that duplicate operation Ids are an error
     """
     with pytest.raises(SpecError, match="Duplicate operationId dupe"):
-        spec = OpenAPI(dupe_op_id)
+        spec = OpenAPI(URLBASE, dupe_op_id)
 
 
 def test_parsing_parameter_name_with_underscores(parameter_with_underscores):
     """
     Tests that path parameters with underscores in them are accepted
     """
-    spec = OpenAPI(parameter_with_underscores)
+    spec = OpenAPI(URLBASE, parameter_with_underscores)
 
 
 def test_object_example(obj_example_expanded):
     """
     Tests that `example` exists.
     """
-    spec = OpenAPI(obj_example_expanded)
+    spec = OpenAPI(URLBASE, obj_example_expanded)
     schema = spec.paths['/check-dict'].get.responses['200'].content['application/json'].schema_
     assert isinstance(schema.example, dict)
     assert isinstance(schema.example['real'], float)
@@ -71,7 +72,7 @@ def test_parsing_float_validation(float_validation_expanded):
     """
     Tests that `minimum` and similar validators work with floats.
     """
-    spec = OpenAPI(float_validation_expanded)
+    spec = OpenAPI(URLBASE, float_validation_expanded)
     properties = spec.paths['/foo'].get.responses['200'].content['application/json'].schema_.properties
 
     assert isinstance(properties['integer'].minimum, int)
@@ -84,7 +85,7 @@ def test_parsing_with_links(with_links):
     """
     Tests that "links" parses correctly
     """
-    spec = OpenAPI(with_links)
+    spec = OpenAPI(URLBASE, with_links)
 
     assert "exampleWithOperationRef" in spec.components.links
     assert spec.components.links["exampleWithOperationRef"].operationRef == "/with-links"

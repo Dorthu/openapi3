@@ -4,7 +4,7 @@ from yaml import safe_load
 from openapi3 import OpenAPI
 
 LOADED_FILES = {}
-
+URLBASE = "/"
 
 def _get_parsed_yaml(filename):
     """
@@ -36,7 +36,7 @@ def _get_parsed_spec(filename):
     if "spec:"+filename not in LOADED_FILES:
         parsed = _get_parsed_yaml(filename)
 
-        spec = OpenAPI(parsed)
+        spec = OpenAPI(URLBASE, parsed)
 
         LOADED_FILES["spec:"+filename] = spec
 

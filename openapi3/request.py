@@ -1,6 +1,20 @@
+from typing import List, Union
 import json
 
-import requests
+import httpx
+import yarl
+
+from .paths import SecurityRequirement
+
+class RequestParameter:
+    def __init__(self, url:yarl.URL):
+        self.url = str(url)
+        self.auth = None
+        self.cookies = {}
+        self.path = {}
+        self.params = {}
+        self.content = None
+        self.headers = {}
 
 
 class Request:
@@ -17,8 +31,8 @@ class Request:
         self.method = method
         self.path = path
         self.operation = operation
-        self.session:requests.Session = self.api._session or requests.Session()
-        self.req:requests.Request = None
+#        self.session:Union[httpx.Client,httpx.AsyncClient] =
+        self.req:RequestParameter = RequestParameter(self.path)
 
     def __call__(self, *args, **kwargs):
         return self.request(*args, **kwargs)
@@ -28,20 +42,20 @@ class Request:
         return self.api._security
 
 
-    def args(self, content_type="application/json"):
+    def args(self, content_type:str="application/json"):
         op = self.operation
         parameters = op.parameters + self.spec.paths[self.path].parameters
 
         return {"parameters":parameters, "data":op.requestBody.content[content_type].schema_._target}
 
-    def _handle_secschemes(self, security_requirement, value):
+    def _prepare_secschemes(self, security_requirement:SecurityRequirement, value:List[str]):
         ss = self.spec.components.securitySchemes[security_requirement.name]
 
         if ss.type == 'http' and ss.scheme_ == 'basic':
-            self.req.auth = requests.auth.HTTPBasicAuth(*value)
+            self.req.auth = value
 
         if ss.type == 'http' and ss.scheme_ == 'digest':
-            self.req.auth = requests.auth.HTTPDigestAuth(*value)
+            self.req.auth = httpx.DigestAuth(*value)
 
         if ss.type == 'http' and ss.scheme_ == 'bearer':
             header = ss.bearerFormat or 'Bearer {}'
@@ -64,7 +78,7 @@ class Request:
                 self.req.cookies = {ss.name: value}
 
 
-    def _handle_parameters(self, parameters):
+    def _prepare_parameters(self, parameters):
         # Parameters
         path_parameters = {}
         accepted_parameters = {}
@@ -99,53 +113,44 @@ class Request:
 
         self.req.url = self.req.url.format(**path_parameters)
 
-    def _handle_body(self, data):
+    def _prepare_body(self, data):
         if 'application/json' in self.operation.requestBody.content:
             if not isinstance(data, (dict, list)):
                 raise TypeError(data)
             body = json.dumps(data)
-            self.req.data = body
+            self.req.content = body.encode()
             self.req.headers['Content-Type'] = 'application/json'
         else:
             raise NotImplementedError()
 
-    def request(self, data=None, parameters=None):
-        """
-        Sends an HTTP request as described by this Path
-
-        :param data: The request body to send.
-        :type data: any, should match content/type
-        :param parameters: The parameters used to create the path
-        :type parameters: dict{str: str}
-        """
-        # Set request method (e.g. 'GET')
-        self.req = requests.Request(self.method, cookies={})
-
-        # Set self._request.url to base_url w/ path
-        self.req.url = self.spec.servers[0].url + self.path
-
+    def _prepare(self, data, parameters):
         if self.security and self.operation.security:
             for scheme, value in self.security.items():
                 for r in filter(lambda x: x.name == scheme, self.operation.security):
-                    self._handle_secschemes(r, value)
+                    self._prepare_secschemes(r, value)
                     break
                 else:
                     continue
                 break
             else:
-                raise ValueError(f"No security requirement satisfied (accepts {', '.join(self.operation.security.keys())})")
+                raise ValueError(
+                    f"No security requirement satisfied (accepts {', '.join(self.operation.security.keys())})")
 
         if self.operation.requestBody:
             if self.operation.requestBody.required and data is None:
                 raise ValueError('Request Body is required but none was provided.')
 
-            self._handle_body(data)
+            self._prepare_body(data)
 
-        self._handle_parameters(parameters)
+        self._prepare_parameters(parameters)
 
-        # send the prepared request
-        result = self.session.send(self.req.prepare())
+        req = httpx.Request(self.method, str(self.api.url / self.req.url[1:]),
+                            cookies=self.req.cookies,
+                            params=self.req.params,
+                            content=self.req.content)
+        return req
 
+    def _process(self, result):
         # spec enforces these are strings
         status_code = str(result.status_code)
 
@@ -187,3 +192,31 @@ class Request:
             return expected_media.schema_.model(result.json())
         else:
             raise NotImplementedError()
+
+    def request(self, data=None, parameters=None):
+        """
+        Sends an HTTP request as described by this Path
+
+        :param data: The request body to send.
+        :type data: any, should match content/type
+        :param parameters: The parameters used to create the path
+        :type parameters: dict{str: str}
+        """
+
+        req = self._prepare(data, parameters)
+
+        result = self.api._session_factory().send(req)
+        return self._process(result)
+
+
+class AsyncRequest(Request):
+    async def __call__(self, *args, ** kwargs):
+        return await self.request(*args, **kwargs)
+
+    async def request(self, data=None, parameters=None):
+        req = self._prepare(data, parameters)
+
+        async with self.api._session_factory() as client:
+            result = await client.send(req)
+
+        return self._process(result)

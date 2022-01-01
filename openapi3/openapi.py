@@ -42,13 +42,31 @@ class OpenAPI:
     def servers(self):
         return self._spec.servers
 
+    @classmethod
+    def load_sync(cls,
+                  url,
+                  ssl_verify=True,
+                  session_factory: Callable[[], httpx.Client] = httpx.Client,
+                  loader=None):
+        raw_document = session_factory().get(url)
+        return cls(url, raw_document.json(), ssl_verify, session_factory, loader)
+
+    @classmethod
+    async def load_async(cls,
+                   url,
+                   ssl_verify=True,
+                   session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient,
+                   loader=None):
+        async with session_factory() as client:
+            raw_document = await client.get(url)
+        return cls(url, raw_document.json(), ssl_verify, session_factory, loader)
+
     def __init__(
             self,
+            url,
             raw_document,
-            validate=False,
             ssl_verify=None,
-            use_session=False,
-            session_factory=requests.Session,
+            session_factory:Callable[[], Union[httpx.Client,httpx.AsyncClient]]=httpx.AsyncClient,
             loader=None):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
@@ -57,49 +75,35 @@ class OpenAPI:
 
         :param raw_document: The raw OpenAPI file loaded into python
         :type raw_document: dct
-        :param validate: If True, don't fail on errors, but instead capture all
-                         errors, continuing along the spec as best as possible,
-                         and make them available when parsing is complete.
-        :type validate: bool
+        :param session_factory: default uses new session for each call, supply your own if required otherwise.
+        :type session_factory: returns httpx.AsyncClient or http.Client
         :param ssl_verify: Decide if to use ssl verification to the requests or not,
                            in case an str is passed, will be used as the CA.
         :type ssl_verify: bool, str, None
-        :param use_session: Should we use a consistant session between API calls
-        :type use_session: bool
         """
 
-        self.loader = loader
 
-        self._validation_mode = validate
-        self._spec_error = None
-        self._operation_map = dict()
-        self._security = None
-        self._cached = dict()
+        self._base_url:yarl.URL = yarl.URL(url)
+        self.loader:Loader = loader
         self._ssl_verify = ssl_verify
+        self._session_factory = session_factory
 
-        self._session = None
-        if use_session:
-            self._session = session_factory()
+        self._security:List[str] = None
+        self._cached:Dict[str, "OpenAPISpec"] = dict()
 
 
-        try:
-            self._spec = OpenAPISpec.parse_obj(raw_document)
-        except Exception as e:
-            if not self._validation_mode:
-                raise
-            self._spec_error = e
-            return
-
-        try:
-            self._spec._resolve_references(self)
-        except ValueError as e:
-            if not self._validation_mode:
-                raise
-            self._spec_error = e
-            return
+        self._spec = OpenAPISpec.parse_obj(raw_document)
+        self._spec._resolve_references(self)
 
         for name, schema in self.components.schemas.items():
             schema._identity = name
+
+        operation_map = set()
+
+        def test_operation(operation_id):
+            if operation_id in operation_map:
+                raise SpecError(f"Duplicate operationId {operation_id}", element=None)
+            operation_map.add(operation_id)
 
         for path,obj in self.paths.items():
             for m in obj.__fields_set__ & HTTP_METHODS:
@@ -108,7 +112,7 @@ class OpenAPI:
                 if op.operationId is None:
                     continue
                 formatted_operation_id = op.operationId.replace(" ", "_")
-                self._register_operation(formatted_operation_id, (m, path, op))
+                test_operation(formatted_operation_id)
                 for r, response in op.responses.items():
                     if isinstance(response, Reference):
                         continue
@@ -117,6 +121,10 @@ class OpenAPI:
                             continue
                         if isinstance(content.schema_, Schema):
                             content.schema_._identity = f"{path}.{m}.{r}.{c}"
+
+    @property
+    def url(self):
+        return self._base_url.join(yarl.URL(self._spec.servers[0].url))
 
     # public methods
     def authenticate(self, security_scheme, value):
@@ -355,7 +363,12 @@ class OperationIndex:
                 op = getattr(pi, method)
                 if op.operationId != item:
                     continue
-                return Request(self._api, method, path, op)
+
+                if issubclass(self._api._session_factory, httpx.Client):
+                    return Request(self._api, method, path, op)
+                if issubclass(self._api._session_factory, httpx.AsyncClient):
+                    return AsyncRequest(self._api, method, path, op)
+
         raise ValueError(item)
 
 

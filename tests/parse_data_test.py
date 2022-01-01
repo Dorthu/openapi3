@@ -2,12 +2,13 @@ import pytest
 from openapi3 import FileSystemLoader,OpenAPI
 import pathlib
 
+URLBASE = "http://127.1.1.1/open5gs"
 
 def pytest_generate_tests(metafunc):
     argnames, dir, filterfn = metafunc.cls.params[metafunc.function.__name__]
-    dir = pathlib.Path(dir)
+    dir = pathlib.Path(dir).expanduser()
     metafunc.parametrize(
-        argnames, [[dir, i.name] for i in filter(filterfn, dir.iterdir())]
+        argnames, [[dir, i.name] for i in sorted(filter(filterfn, dir.iterdir()), key=lambda x: x.name)]
     )
 
 
@@ -22,11 +23,12 @@ class TestParseData:
     def test_data(self, dir, file):
         loader = FileSystemLoader(pathlib.Path(dir))
         data = loader.load(pathlib.Path(file).name)
-        spec = OpenAPI(data, loader=loader)
+        spec = OpenAPI(URLBASE, data, loader=loader)
 
     def test_data_open5gs(self, dir, file):
         loader = FileSystemLoader(pathlib.Path(dir))
         data = loader.load(pathlib.Path(file).name)
 #        if "servers" in "data":
-        spec = OpenAPI(data, loader=loader)
+        spec = OpenAPI(URLBASE, data, loader=loader)
+
 
