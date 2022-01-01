@@ -145,87 +145,13 @@ class OpenAPI:
 
         self._security = {security_scheme: value}
 
-
-    def errors(self):
-        """
-        In Validation Mode, returns all errors encountered from parsing a spec.
-        This should not be called if not in Validation Mode.
-
-        :returns: The errors encountered during the parsing of this spec.
-        :rtype: ValidationError
-        """
-        if not self._validation_mode:
-            raise RuntimeError('This client is not in Validation Mode, cannot '
-                               'return errors!')
-        return self._spec_error
-
-
-    # private methods
-    def _register_operation(self, operation_id, opInfo):
-        """
-        Adds an Operation to this spec's _operation_map, raising an error if the
-        OperationId has already been registered.
-
-        :param operation_id: The operation ID to register
-        :type operation_id: str
-        :param opInfo: The operation to register
-        :type opInfo: Operation
-        """
-        if operation_id in self._operation_map:
-            raise SpecError(f"Duplicate operationId {operation_id}", element=opInfo)
-        self._operation_map[operation_id] = opInfo
-
-    def _get_callable(self, method, path, request:Operation):
-        """
-        A helper function to create OperationCallable objects for __getattribute__,
-        pre-initialized with the required values from this object.
-
-        :param request: The Operation the callable should call
-        :type request: callable (Operation.request)
-
-        :returns: The callable that executes this operation with this object's
-                  configuration.
-        :rtype: Request
-        """
-        return Request(self, method, path, request)
-
-    def __getattr__(self, attr):
-        """
-        Extended __getattribute__ function to allow resolving dynamic function
-        names.  The purpose of this is to call syntax like this::
-
-           spec = OpenAPI(raw_spec)
-           spec.call_operationId()
-
-        This method will intercept the dot notation above (spec.call_operationId)
-        and look up the requested operation, returning a callable object that
-        will then immediately be called by the parenthesis.
-
-        :param attr: The attribute we're retrieving
-        :type attr: str
-
-        :returns: The attribute requested
-        :rtype: any
-        :raises AttributeError: if the requested attribute does not exist
-        """
-        if attr.startswith('call_'):
-            _, operationId = attr.split('_', 1)
-            if operationId not in self._operation_map:
-                raise AttributeError('{} has no operation {}'.format(
-                    self.info.title, operationId))
-            method, path, op = self._operation_map[operationId]
-            return self._get_callable(method, path, op)
-        raise KeyError(attr)
-
     def _load(self, i):
         data = self.loader.load(i)
         return OpenAPISpec.parse_obj(data)
 
-
     @property
     def _(self):
         return OperationIndex(self)
-
 
     def resolve_jr(self, root: "OpenAPISpec", obj, value: Reference):
         url,jp = JSONReference.split(value.ref)

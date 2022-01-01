@@ -103,22 +103,17 @@ def test_parsing_broken_links(with_broken_links):
     """
     Tests that broken "links" values error properly
     """
-    spec = OpenAPI(with_broken_links, validate=True)
+    with pytest.raises(ValidationError) as e:
+        spec = OpenAPI(URLBASE, with_broken_links)
 
-    errors = spec.errors()
-    error_strs = str(errors)
-    assert all([i in error_strs for i in [
+    assert all([i in str(e.value) for i in [
         "operationId and operationRef are mutually exclusive, only one of them is allowed",
         "operationId and operationRef are mutually exclusive, one of them must be specified",
     ]])
 
 
 def test_securityparameters(with_securityparameters):
-    spec = OpenAPI(with_securityparameters, validate=True)
-    errors = spec.errors()
-    assert errors is None
+    spec = OpenAPI(URLBASE, with_securityparameters)
 
 def test_callback(with_callback):
-    spec = OpenAPI(with_callback, validate=True)
-    errors = spec.errors()
-    assert errors is None
+    spec = OpenAPI(URLBASE, with_callback)
