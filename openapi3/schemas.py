@@ -86,7 +86,7 @@ class Schema(ObjectExtended):
         extra = Extra.forbid
 
     @root_validator
-    def validate_Schema_number_type(cls, values):
+    def validate_Schema_number_type(cls, values:Dict[str, object]):
         conv = ["minimum","maximum"]
         if values.get("type", None) == "integer":
             for i in conv:
@@ -96,10 +96,10 @@ class Schema(ObjectExtended):
         return values
 
 #    @lru_cache
-    def get_type(self, names=None, discriminators=None):
+    def get_type(self, names:List[str]=None, discriminators:List[Discriminator]=None):
         return Model.from_schema(self, names, discriminators)
 
-    def model(self, data):
+    def model(self, data:Dict):
         """
         Generates a model representing this schema from the given data.
 
@@ -127,7 +127,7 @@ class Model(BaseModel):
         extra: Extra.forbid
 
     @classmethod
-    def from_schema(cls, shma, shmanm=None, discriminators=None):
+    def from_schema(cls, shma:Schema, shmanm:List[str]=None, discriminators:List[Discriminator]=None):
 
         if shmanm is None:
             shmanm = []
@@ -135,7 +135,7 @@ class Model(BaseModel):
         if discriminators is None:
             discriminators = []
 
-        def typeof(schema):
+        def typeof(schema:Schema):
             r = None
             if schema.type == "string":
                 r = str
@@ -152,7 +152,7 @@ class Model(BaseModel):
 
             return r
 
-        def annotationsof(schema):
+        def annotationsof(schema:Schema):
             annos = dict()
             if schema.type == "array":
                 annos["__root__"] = typeof(schema)
@@ -178,7 +178,7 @@ class Model(BaseModel):
                         annos[name] = r
             return annos
 
-        def fieldof(schema):
+        def fieldof(schema:Schema):
             r = dict()
             if schema.type == "array":
                 return r
