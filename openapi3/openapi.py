@@ -1,11 +1,10 @@
 import datetime
-import json
 import pathlib
-from typing import Any, List, Optional, Dict
+from typing import Any, List, Optional, Dict, Union, Callable
 
-import requests
-import yaml
 from pydantic import Field
+import httpx
+import yarl
 
 from .components import Components
 from .errors import ReferenceResolutionError, SpecError
@@ -16,44 +15,10 @@ from .paths import PathItem, SecurityRequirement, _validate_parameters, Operatio
 from .servers import Server
 from .schemas import Schema, Discriminator
 from .tag import Tag
-from .request import Request
+from .request import Request, AsyncRequest
+from .loader import Loader
 
 HTTP_METHODS = frozenset(["get","delete","head","post","put","patch","trace"])
-
-class Loader:
-    def load(self, name):
-        raise NotImplementedError("load")
-
-
-class FileSystemLoader(Loader):
-    def __init__(self, base):
-        self.base = pathlib.Path(base)
-
-    def load(self, file, codec=None):
-        file = pathlib.Path(file)
-        path = self.base / file
-        assert path.is_relative_to(self.base)
-        data = path.open("rb").read()
-        if codec is not None:
-            codecs = [codec]
-        else:
-            codecs = ["ascii","utf-8"]
-        for c in codecs:
-            try:
-                r = data.decode(c)
-                break
-            except UnicodeError:
-                continue
-        else:
-            raise ValueError("encoding")
-        if file.suffix == ".yaml":
-            data = yaml.safe_load(data)
-        elif file.suffix == ".json":
-            data = json.loads(data)
-        else:
-            raise ValueError(file.name)
-        return data
-
 
 class OpenAPI:
 
