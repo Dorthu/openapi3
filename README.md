@@ -195,7 +195,9 @@ This project includes a test suite, run via ``pytest``.  To run the test suite,
 ensure that you've installed the dependencies and then run ``pytest`` in the root
 of this project.
 
-
+```shell
+PYTHONPATH=. pytest --cov=./ --cov-report=xml .
+```
 
 
 
