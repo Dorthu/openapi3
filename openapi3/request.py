@@ -48,6 +48,23 @@ class Request:
 
         return {"parameters":parameters, "data":op.requestBody.content[content_type].schema_._target}
 
+    def return_value(self, http_status=200, content_type="application/json"):
+        return self.operation.responses[str(http_status)].content[content_type].schema_
+
+
+    def _prepare_security(self):
+        if self.security and self.operation.security:
+            for scheme, value in self.security.items():
+                for r in filter(lambda x: x.name == scheme, self.operation.security):
+                    self._prepare_secschemes(r, value)
+                    break
+                else:
+                    continue
+                break
+            else:
+                raise ValueError(
+                    f"No security requirement satisfied (accepts {', '.join(self.operation.security.keys())})")
+
     def _prepare_secschemes(self, security_requirement:SecurityRequirement, value:List[str]):
         ss = self.spec.components.securitySchemes[security_requirement.name]
 
@@ -114,6 +131,12 @@ class Request:
         self.req.url = self.req.url.format(**path_parameters)
 
     def _prepare_body(self, data):
+        if not self.operation.requestBody:
+            return
+
+        if data is None and self.operation.requestBody.required:
+            raise ValueError('Request Body is required but none was provided.')
+
         if 'application/json' in self.operation.requestBody.content:
             if not isinstance(data, (dict, list)):
                 raise TypeError(data)
@@ -124,27 +147,12 @@ class Request:
             raise NotImplementedError()
 
     def _prepare(self, data, parameters):
-        if self.security and self.operation.security:
-            for scheme, value in self.security.items():
-                for r in filter(lambda x: x.name == scheme, self.operation.security):
-                    self._prepare_secschemes(r, value)
-                    break
-                else:
-                    continue
-                break
-            else:
-                raise ValueError(
-                    f"No security requirement satisfied (accepts {', '.join(self.operation.security.keys())})")
-
-        if self.operation.requestBody:
-            if self.operation.requestBody.required and data is None:
-                raise ValueError('Request Body is required but none was provided.')
-
-            self._prepare_body(data)
-
+        self._prepare_security()
         self._prepare_parameters(parameters)
+        self._prepare_body(data)
 
         req = httpx.Request(self.method, str(self.api.url / self.req.url[1:]),
+                            headers=self.req.headers,
                             cookies=self.req.cookies,
                             params=self.req.params,
                             content=self.req.content)
@@ -169,24 +177,23 @@ class Request:
         if len(expected_response.content) == 0:
             return None
 
-        content_type = result.headers['Content-Type']
-        expected_media = expected_response.content.get(content_type, None)
+        content_type = result.headers.get('Content-Type', None)
+        if content_type:
+            expected_media = expected_response.content.get(content_type, None)
+            if expected_media is None and '/' in content_type:
+                # accept media type ranges in the spec. the most specific matching
+                # type should always be chosen, but if we do not have a match here
+                # a generic range should be accepted if one if provided
+                # https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#response-object
 
-        if expected_media is None and '/' in content_type:
-            # accept media type ranges in the spec. the most specific matching
-            # type should always be chosen, but if we do not have a match here
-            # a generic range should be accepted if one if provided
-            # https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#response-object
-
-            generic_type = content_type.split('/')[0] + '/*'
-            expected_media = expected_response.content.get(generic_type, None)
+                generic_type = content_type.split('/')[0] + '/*'
+                expected_media = expected_response.content.get(generic_type, None)
+        else:
+            expected_media = None
 
         if expected_media is None:
-            err_msg = '''Unexpected Content-Type {} returned for operation {} \
-                         (expected one of {})'''
-            err_var = result.headers['Content-Type'], self.operation.operationId, ','.join(expected_response.content.keys())
-
-            raise RuntimeError(err_msg.format(*err_var))
+            raise RuntimeError(f"Unexpected Content-Type {content_type} returned for operation {self.operation.operationId} \
+                         (expected one of {','.join(expected_response.content.keys())})")
 
         if content_type.lower() == 'application/json':
             return expected_media.schema_.model(result.json())
@@ -205,7 +212,7 @@ class Request:
 
         req = self._prepare(data, parameters)
 
-        result = self.api._session_factory().send(req)
+        result = self.api._session_factory(auth=self.req.auth).send(req)
         return self._process(result)
 
 
@@ -216,7 +223,7 @@ class AsyncRequest(Request):
     async def request(self, data=None, parameters=None):
         req = self._prepare(data, parameters)
 
-        async with self.api._session_factory() as client:
+        async with self.api._session_factory(auth=self.req.auth) as client:
             result = await client.send(req)
 
         return self._process(result)
