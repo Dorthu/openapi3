@@ -5,16 +5,12 @@ import base64
 import uuid
 import pathlib
 
-from unittest.mock import patch, MagicMock
-from urllib.parse import urlparse
-
 import pytest
-import requests.auth
 import httpx
 import yarl
 
-from openapi3 import OpenAPI
-from openapi3.schemas import Schema
+from aiopenapi3 import OpenAPI
+from aiopenapi3.schemas import Schema
 
 
 URLBASE = "/"

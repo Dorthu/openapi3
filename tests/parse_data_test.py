@@ -1,5 +1,5 @@
 import pytest
-from openapi3 import FileSystemLoader,OpenAPI
+from aiopenapi3 import FileSystemLoader,OpenAPI
 import pathlib
 
 URLBASE = "http://127.1.1.1/open5gs"

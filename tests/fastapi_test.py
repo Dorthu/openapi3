@@ -10,7 +10,7 @@ import uvloop
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 
-import openapi3
+import aiopenapi3
 
 from api.main import app
 
@@ -40,7 +40,7 @@ async def server(event_loop, config):
 
 @pytest.fixture(scope="session")
 async def client(event_loop, server):
-    api = await asyncio.to_thread(openapi3.OpenAPI.load_sync, f"http://{server.bind[0]}/v1/openapi.json")
+    api = await asyncio.to_thread(aiopenapi3.OpenAPI.load_sync, f"http://{server.bind[0]}/v1/openapi.json")
     return api
 
 def randomPet(name=None):

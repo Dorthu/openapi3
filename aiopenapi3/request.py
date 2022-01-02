@@ -1,10 +1,11 @@
-from typing import List, Union
 import json
+from typing import List
 
 import httpx
 import yarl
 
 from .paths import SecurityRequirement
+
 
 class RequestParameter:
     def __init__(self, url:yarl.URL):
@@ -46,7 +47,10 @@ class Request:
         op = self.operation
         parameters = op.parameters + self.spec.paths[self.path].parameters
 
-        return {"parameters":parameters, "data":op.requestBody.content[content_type].schema_._target}
+        schema = op.requestBody.content[content_type].schema_
+#        if isinstance(schema, Reference):
+#            schema = schema._target
+        return {"parameters":parameters, "data":schema}
 
     def return_value(self, http_status=200, content_type="application/json"):
         return self.operation.responses[str(http_status)].content[content_type].schema_

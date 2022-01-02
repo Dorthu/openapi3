@@ -4,13 +4,6 @@ import pytest
 from pydantic import Extra
 
 from tests.api.v2.schema import Pet, Dog, Cat, WhiteCat, BlackCat
-from openapi3.schemas import Schema
-
-def test_Pet():
-    data = Dog.schema()
-    shma = Schema.parse_obj(data)
-    shma._identity = "Dog"
-    assert shma.get_type().schema() == data
 
 import asyncio
 import uuid
@@ -23,7 +16,8 @@ import uvloop
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 
-import openapi3
+import aiopenapi3
+from aiopenapi3.schemas import Schema
 
 from tests.api.main import app
 
@@ -59,14 +53,21 @@ def version(request):
 @pytest.fixture(scope="session")
 async def client(event_loop, server, version):
     url = f"http://{server.bind[0]}/{version}/openapi.json"
-    api = await openapi3.OpenAPI.load_async(url)
+    api = await aiopenapi3.OpenAPI.load_async(url)
     return api
+
+
+def test_Pet():
+    data = Dog.schema()
+    shma = Schema.parse_obj(data)
+    shma._identity = "Dog"
+    assert shma.get_type().schema() == data
 
 
 @pytest.mark.asyncio
 async def test_sync(event_loop, server, version):
     url = f"http://{server.bind[0]}/{version}/openapi.json"
-    api = await asyncio.to_thread(openapi3.OpenAPI.load_sync, url)
+    api = await asyncio.to_thread(aiopenapi3.OpenAPI.load_sync, url)
     return api
 
 

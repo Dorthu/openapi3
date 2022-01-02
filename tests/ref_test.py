@@ -7,8 +7,8 @@ import typing
 import pytest
 
 
-from openapi3 import OpenAPI
-from openapi3.schemas import Schema
+from aiopenapi3 import OpenAPI
+from aiopenapi3.schemas import Schema
 
 from pydantic.main import ModelMetaclass
 

@@ -1,8 +1,6 @@
-import json
 import re
 from typing import Union, List, Optional, Dict
 
-import requests
 from pydantic import Field, BaseModel, root_validator
 
 from .errors import SpecError

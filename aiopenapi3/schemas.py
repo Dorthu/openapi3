@@ -1,7 +1,7 @@
 import types
 import uuid
 from typing import Union, List, Any, Optional, Dict, Literal, Annotated
-from functools import lru_cache
+
 from pydantic import Field, root_validator, Extra, BaseModel
 
 from .general import Reference  # need this for Model below
@@ -52,8 +52,8 @@ class Schema(ObjectExtended):
 
     type: Optional[str] = Field(default=None)
     allOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
-    oneOf: Optional[list] = Field(default=None)
-    anyOf: Optional[List[Union["Schema", Reference]]] = Field(default=None)
+    oneOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
+    anyOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
     not_: Optional[Union["Schema", Reference]] = Field(default=None, alias="not")
     items: Optional[Union['Schema', Reference]] = Field(default=None)
     properties: Optional[Dict[str, Union['Schema', Reference]]] = Field(default_factory=dict)
@@ -141,6 +141,8 @@ class Model(BaseModel):
                 r = str
             elif schema.type == "integer":
                 r = int
+            elif schema.type == "boolean":
+                r = bool
             elif schema.type == "array":
                 r = List[schema.items.get_type()]
             elif schema.type == 'object':
@@ -203,12 +205,16 @@ class Model(BaseModel):
                 annos.update(annotationsof(i))
         elif shma.anyOf:
             t = tuple([i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator]) for i in shma.anyOf])
-            if shma.discriminator:
+            if shma.discriminator and shma.discriminator.mapping:
                 annos["__root__"] = Annotated[Union[t], Field(discriminator=shma.discriminator.propertyName)]
             else:
                 annos["__root__"] = Union[t]
         elif shma.oneOf:
-            raise NotImplementedError("oneOf")
+            t = tuple([i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator]) for i in shma.oneOf])
+            if shma.discriminator and shma.discriminator.mapping:
+                annos["__root__"] = Annotated[Union[t], Field(discriminator=shma.discriminator.propertyName)]
+            else:
+                annos["__root__"] = Union[t]
         else:
             annos = annotationsof(shma)
             namespace.update(fieldof(shma))
@@ -216,6 +222,7 @@ class Model(BaseModel):
         namespace['__annotations__'] = annos
 
         m = types.new_class(type_name, (BaseModel,), {}, lambda ns: ns.update(namespace))
+        m.update_forward_refs()
         return m
 
 

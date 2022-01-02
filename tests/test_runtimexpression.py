@@ -1,12 +1,10 @@
 import json
 
+import httpx
 import pytest
 
-import requests
-import requests_mock
-
 import tatsu
-from openapi3.expression.grammar import loads
+from aiopenapi3.expression.grammar import loads
 
 parse_testdata = [
     "$url",
@@ -49,7 +47,7 @@ get_testdata = {
     "$request.body#/escaped~0content/2/~1/~0/x":"no",
 }
 @pytest.mark.parametrize("param, result", get_testdata.items())
-def test_get(param, result):
+def test_get(httpx_mock, param, result):
     url = "http://example.org/subscribe/myevent?queryUrl=http://clientdomain.com/stillrunning"
     data = {
         "failedUrl": "http://clientdomain.com/failed",
@@ -62,12 +60,12 @@ def test_get(param, result):
         "escaped~content": [0, {"/": {"~": {"x": "no" }}}]
     }
 
-    with requests_mock.Mocker() as m:
-        m.post(url, headers={"Location":"http://example.org/subscription/1"})
-        req = requests.Request(method="POST", url=url, data=json.dumps(data), headers={"Content-Type":"application/json"})
-        req = req.prepare()
-        req.path = {"eventType":"myevent"}
-        resp = requests.Session().send(req)
+    httpx_mock.add_response(headers={"Location":"http://example.org/subscription/1"},)
+    client = httpx.Client()
+    resp = client.post(url, json=data, headers={"Location":"http://example.org/subscription/1", "Content-Type":"application/json"})
+
+    req = httpx_mock.get_requests()[-1]
+    req.path = {"eventType":"myevent"}
 
     m = loads(param)
     r = m.eval(req, resp)

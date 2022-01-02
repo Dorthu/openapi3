@@ -1,8 +1,9 @@
 import json
-from yarl import URL
-import requests
 
-import openapi3.general
+import httpx
+from yarl import URL
+
+import aiopenapi3.general
 
 from ._model import RuntimeExpressionModelBuilderSemantics as RuntimeExpressionModelBuilderSemanticsBase, \
     JSONPointer as JSONPointerBase, \
@@ -68,7 +69,7 @@ class JSONPointer(JSONPointerBase):
     @property
     def tokens(self):
         for i in self._tokens:
-            yield openapi3.general.JSONPointer.decode(i)
+            yield aiopenapi3.general.JSONPointer.decode(i)
 
 
 class Header(HeaderBase):
@@ -78,9 +79,9 @@ class Header(HeaderBase):
 
     def eval(self, data):
         headers = None
-        if isinstance(data, requests.PreparedRequest):
+        if isinstance(data, httpx.Request):
             headers = data.headers
-        elif isinstance(data, requests.Response):
+        elif isinstance(data, httpx.Response):
             headers = data.headers
         if headers is None:
             return None
@@ -93,9 +94,9 @@ class Query(QueryBase):
         self.key = ast.key
 
     def eval(self, data):
-        if isinstance(data, requests.PreparedRequest):
-            url = URL(data.url)
-        elif isinstance(data, requests.Response):
+        if isinstance(data, httpx.Request):
+            url = URL(str(data.url))
+        elif isinstance(data, httpx.Response):
             url = None
         return url.query.get(self.key, None)
 
@@ -116,9 +117,9 @@ class Body(BodyBase):
 
     def eval(self, data):
         try:
-            if isinstance(data, requests.PreparedRequest):
-                body = json.loads(data.body)
-            elif isinstance(data, requests.Response):
+            if isinstance(data, httpx.Request):
+                body = json.loads(data.content)
+            elif isinstance(data, httpx.Response):
                 body = data.json()
         except Exception:
             return None

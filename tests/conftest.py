@@ -1,7 +1,7 @@
 import pytest
 from yaml import safe_load
 
-from openapi3 import OpenAPI
+from aiopenapi3 import OpenAPI
 
 LOADED_FILES = {}
 URLBASE = "/"

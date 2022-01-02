@@ -1,7 +1,9 @@
 import datetime
 import pathlib
+import json
 from typing import Any, List, Optional, Dict, Union, Callable
 
+import yaml
 from pydantic import Field
 import httpx
 import yarl
@@ -42,16 +44,28 @@ class OpenAPI:
     def servers(self):
         return self._spec.servers
 
+
+
+
     @classmethod
     def load_sync(cls, url, session_factory: Callable[[], httpx.Client] = httpx.Client, loader=None):
-        raw_document = session_factory().get(url)
-        return cls(url, raw_document.json(), session_factory, loader)
+        resp = session_factory().get(url)
+        return cls.loads(url, resp.text, session_factory, loader)
 
     @classmethod
     async def load_async(cls, url, session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient, loader=None):
         async with session_factory() as client:
-            raw_document = await client.get(url)
-        return cls(url, raw_document.json(), session_factory, loader)
+            resp = await client.get(url)
+        return cls.loads(url, resp.text, session_factory, loader)
+
+    @classmethod
+    def loads(cls, url, data, session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient, loader=None):
+        if url.endswith(".json"):
+            data = json.loads(data)
+        elif url.endswith(".yaml") or url.endswith(".yml"):
+            data = yaml.safe_load(data)
+
+        return cls(url, data, session_factory, loader)
 
     def __init__(self, url, raw_document,
                  session_factory: Callable[[], Union[httpx.Client, httpx.AsyncClient]] = httpx.AsyncClient,

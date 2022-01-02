@@ -4,7 +4,7 @@ Tests parsing specs
 import pytest
 
 from pydantic import ValidationError
-from openapi3 import OpenAPI, SpecError, ReferenceResolutionError, FileSystemLoader
+from aiopenapi3 import OpenAPI, SpecError, ReferenceResolutionError, FileSystemLoader
 
 URLBASE = "/"
 

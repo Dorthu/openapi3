@@ -1,8 +1,8 @@
 import abc
-import pathlib
-from pathlib import Path
-import yaml
 import json
+from pathlib import Path
+
+import yaml
 
 
 class Loader(abc.ABC):
