@@ -1,10 +1,10 @@
 import asyncio
-import random
 import uuid
 
 import pytest
 
 import requests
+import httpx
 
 import uvloop
 from hypercorn.asyncio import serve
@@ -40,47 +40,45 @@ async def server(event_loop, config):
 
 @pytest.fixture(scope="session")
 async def client(event_loop, server):
-    data = await asyncio.to_thread(requests.get, f"http://{server.bind[0]}/openapi.json")
-    data = data.json()
-    data["servers"][0]["url"] = f"http://{server.bind[0]}"
-    api = openapi3.OpenAPI(data)
+    api = await asyncio.to_thread(openapi3.OpenAPI.load_sync, f"http://{server.bind[0]}/v1/openapi.json")
     return api
 
 def randomPet(name=None):
-    return {"data":{"pet":{"name":str(name) or random.choice(["dog","cat","mouse","eagle"])}}}
+    return {"data":{"pet":{"name":str(name or uuid.uuid4()), "pet_type":"dog"}}}
+
 
 @pytest.mark.asyncio
 async def test_createPet(event_loop, server, client):
-    r = await asyncio.to_thread(client.call_createPet, **randomPet())
-    assert type(r) == client.components.schemas["Pet"].get_type()
+    r = await asyncio.to_thread(client._.createPet, **randomPet())
+    assert type(r).schema() == client.components.schemas["Pet"].get_type().schema()
 
-    r = await asyncio.to_thread(client.call_createPet,  data={"pet":{"name":r.name}})
-    assert type(r) == client.components.schemas["Error"].get_type()
+    r = await asyncio.to_thread(client._.createPet,  data={"pet":{"name":r.name}})
+    assert type(r).schema() == client.components.schemas["Error"].get_type().schema()
 
 
 @pytest.mark.asyncio
 async def test_listPet(event_loop, server, client):
-    r = await asyncio.to_thread(client.call_createPet, **randomPet(uuid.uuid4()))
-    l = await asyncio.to_thread(client.call_listPet)
+    r = await asyncio.to_thread(client._.createPet, **randomPet(uuid.uuid4()))
+    l = await asyncio.to_thread(client._.listPet)
     assert len(l) > 0
 
 @pytest.mark.asyncio
 async def test_getPet(event_loop, server, client):
-    pet = await asyncio.to_thread(client.call_createPet, **randomPet(uuid.uuid4()))
-    r = await asyncio.to_thread(client.call_getPet, parameters={"pet_id":pet.id})
-    assert type(r) == type(pet)
+    pet = await asyncio.to_thread(client._.createPet, **randomPet(uuid.uuid4()))
+    r = await asyncio.to_thread(client._.getPet, parameters={"pet_id":pet.id})
+    assert type(r).schema() == type(pet).schema()
     assert r.id == pet.id
 
-    r = await asyncio.to_thread(client.call_getPet, parameters={"pet_id":-1})
-    assert type(r) == client.components.schemas["Error"].get_type()
+    r = await asyncio.to_thread(client._.getPet, parameters={"pet_id":-1})
+    assert type(r).schema() == client.components.schemas["Error"].get_type().schema()
 
 @pytest.mark.asyncio
 async def test_deletePet(event_loop, server, client):
-    r = await asyncio.to_thread(client.call_deletePet, parameters={"pet_id":-1})
-    assert type(r) == client.components.schemas["Error"].get_type()
+    r = await asyncio.to_thread(client._.deletePet, parameters={"pet_id":-1})
+    assert type(r).schema() == client.components.schemas["Error"].get_type().schema()
 
-    await asyncio.to_thread(client.call_createPet, **randomPet(uuid.uuid4()))
-    zoo = await asyncio.to_thread(client.call_listPet)
+    await asyncio.to_thread(client._.createPet, **randomPet(uuid.uuid4()))
+    zoo = await asyncio.to_thread(client._.listPet)
     for pet in zoo:
-        await asyncio.to_thread(client.call_deletePet, parameters={"pet_id":pet.id})
+        await asyncio.to_thread(client._.deletePet, parameters={"pet_id":pet.id})
 
