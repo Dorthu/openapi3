@@ -170,10 +170,6 @@ class OpenAPISpec(ObjectExtended):
     tags: Optional[List[Tag]] = Field(default=None)
     externalDocs: Optional[Dict[Any, Any]] = Field(default_factory=dict)
 
-    class Config:
-        underscore_attrs_are_private = True
-        arbitrary_types_allowed = True
-
     def _resolve_references(self, api):
         """
         Resolves all reference objects below this object and notes their original

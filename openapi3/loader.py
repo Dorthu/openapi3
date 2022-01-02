@@ -1,5 +1,6 @@
 import abc
 import pathlib
+from pathlib import Path
 import yaml
 import json
 
@@ -11,11 +12,11 @@ class Loader(abc.ABC):
 
 
 class FileSystemLoader(Loader):
-    def __init__(self, base:str):
-        self.base = pathlib.Path(base)
+    def __init__(self, base:Path):
+        assert isinstance(base, Path)
+        self.base = base
 
     def load(self, file:str, codec=None):
-        file = pathlib.Path(file)
         path = self.base / file
         assert path.is_relative_to(self.base)
         data = path.open("rb").read()
@@ -31,9 +32,9 @@ class FileSystemLoader(Loader):
                 continue
         else:
             raise ValueError("encoding")
-        if file.suffix == ".yaml":
+        if path.suffix == ".yaml":
             data = yaml.safe_load(data)
-        elif file.suffix == ".json":
+        elif path.suffix == ".json":
             data = json.loads(data)
         else:
             raise ValueError(file.name)
