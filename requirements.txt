@@ -10,3 +10,4 @@ hypercorn~=0.13.0
 TatSu~=5.6.1
 yarl~=1.7.2
 setuptools~=57.4.0
+pytest-httpx

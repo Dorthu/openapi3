@@ -10,10 +10,14 @@ from urllib.parse import urlparse
 
 import pytest
 import requests.auth
+import httpx
+import yarl
 
 from openapi3 import OpenAPI
 from openapi3.schemas import Schema
 
+
+URLBASE = "/"
 
 def test_paths_exist(petstore_expanded_spec):
     """
@@ -98,10 +102,11 @@ def test_operation_populated(petstore_expanded_spec):
     assert type(con2.schema_._target) == Schema
 
 
-def test_securityparameters(with_securityparameters):
-    api = OpenAPI(with_securityparameters)
-    auth=str(uuid.uuid4())
+def test_securityparameters(httpx_mock, with_securityparameters):
+    api = OpenAPI(URLBASE, with_securityparameters, session_factory=httpx.Client)
+    httpx_mock.add_response(headers={"Content-Type":"application/json"}, content=b"[]")
 
+    auth=str(uuid.uuid4())
 
     for i in api.paths.values():
         if not i.post or not i.post.security:
@@ -113,73 +118,64 @@ def test_securityparameters(with_securityparameters):
     else:
         assert False
 
-    with pytest.raises(ValueError, match="does not accept security scheme"):
+    with pytest.raises(ValueError, match="does not accept security scheme xAuth"):
         api.authenticate('xAuth', auth)
-        api.call_api_v1_auth_login_create(data={}, parameters={})
+        api._.api_v1_auth_login_info(data={}, parameters={})
 
 
     # global security
     api.authenticate('cookieAuth', auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-
+    api._.api_v1_auth_login_info(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
 
     # path
     api.authenticate('tokenAuth', auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert r.call_args.args[0].headers['Authorization'] == auth
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers['Authorization'] == auth
 
     api.authenticate('paramAuth', auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-
-    parsed_url = urlparse(r.call_args.args[0].url)
-    assert parsed_url.query == f"auth={auth}"
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert yarl.URL(str(request.url)).query["auth"] == auth
 
     api.authenticate('cookieAuth', auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert r.call_args.args[0].headers["Cookie"] == "Session=%s" % (auth,)
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers["Cookie"] == "Session=%s" % (auth,)
 
     api.authenticate('basicAuth', (auth, auth))
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    r.call_args.args[0].headers["Authorization"].split(" ")[1] == base64.b64encode((auth + ':' + auth).encode()).decode()
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers["Authorization"].split(" ")[1] == base64.b64encode((auth + ':' + auth).encode()).decode()
 
     api.authenticate('digestAuth', (auth,auth))
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert requests.auth.HTTPDigestAuth.handle_401 == r.call_args.args[0].hooks["response"][0].__func__
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    # can't test?
 
     api.authenticate('bearerAuth', auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert r.call_args.args[0].headers["Authorization"] == "Bearer %s" % (auth,)
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers["Authorization"] == "Bearer %s" % (auth,)
 
+    # null session
     api.authenticate(None, None)
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_info(data={}, parameters={})
+    api._.api_v1_auth_login_info(data={}, parameters={})
 
-def test_parameters(with_parameters):
-    api = OpenAPI(with_parameters)
+
+def test_parameters(httpx_mock, with_parameters):
+    httpx_mock.add_response(headers={"Content-Type": "application/json"}, content=b"[]")
+    api = OpenAPI(URLBASE, with_parameters, session_factory=httpx.Client)
 
     with pytest.raises(ValueError, match="Required parameter \w+ not provided"):
-        api.call_getTest(data={}, parameters={})
+        api._.getTest(data={}, parameters={})
 
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        Header = str([i ** i for i in range(3)])
-        api.call_getTest(data={}, parameters={"Cookie":"Cookie", "Path":"Path", "Header":Header, "Query":"Query"})
-        assert r.call_args.args[0].headers["Header"] == Header
-        assert r.call_args.args[0].headers["Cookie"] == "Cookie=Cookie"
-        assert pathlib.Path(urlparse(r.call_args.args[0].path_url).path).name == "Path"
-        assert urlparse(r.call_args.args[0].path_url).query == "Query=Query"
+    Header = str([i ** i for i in range(3)])
+    api._.getTest(data={}, parameters={"Cookie":"Cookie", "Path":"Path", "Header":Header, "Query":"Query"})
+    request = httpx_mock.get_requests()[-1]
+
+    assert request.headers["Header"] == Header
+    assert request.headers["Cookie"] == "Cookie=Cookie"
+    assert pathlib.Path(request.url.path).name == "Path"
+    assert yarl.URL(str(request.url)).query["Query"] == "Query"
