@@ -3,9 +3,6 @@ import uuid
 
 import pytest
 
-import requests
-import httpx
-
 import uvloop
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
