@@ -1,13 +1,19 @@
 # aiopenapi3
 
-A Python `OpenAPI 3 Specification`_ client and validator for Python 3.
-This project is based on Dorthu/openapi3.
+A Python [OpenAPI 3 Specification](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md) client and validator for Python 3.
+
+<a href="https://codecov.io/gh/commonism/aiopenapi3" target="_blank">
+    <img src="https://img.shields.io/codecov/c/github/commonism/aiopenapi3" alt="Coverage">
+</a>
+
+
+This project is based on [Dorthu/openapi3](github.com/Dorthu/openapi3/).
 
 ## Features
   * implements OpenAPI 3.0.3
   * object parsing via pydantic
-  * request body model creation via pydantic
-  * blocking and nonblocking (asyncio) interface via httpx
+  * request body model creation via [pydantic](https://github.com/samuelcolvin/pydantic)
+  * blocking and nonblocking (asyncio) interface via [httpx](https://www.python-httpx.org/)
 
 
 ## Usage as a Client
@@ -79,33 +85,6 @@ print(json.dumps((list(filter(lambda x: 'eu-west' in x.id, regions.data))[0]).di
 
 #### discriminators
 discriminators are supported as well, but the linode api can't be used to show how to use them.
-```python
-import aiopenapi3
-api = aiopenapi3.OpenAPI.load_sync("https://www.linode.com/docs/api/openapi.yaml")
-api._.getManagedStats.return_value().model({}).dict()
-
-Traceback (most recent call last):
-  File "pydantic/utils.py", line 733, in pydantic.utils.get_discriminator_alias_and_values
-KeyError: 'x-linode-ref-name'
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-…
-    m = types.new_class(type_name, (BaseModel,), {}, lambda ns: ns.update(namespace))
-  File "/usr/lib/python3.9/types.py", line 77, in new_class
-    return meta(name, resolved_bases, ns, **kwds)
-  File "pydantic/main.py", line 204, in pydantic.main.ModelMetaclass.__new__
-  File "pydantic/fields.py", line 488, in pydantic.fields.ModelField.infer
-  File "pydantic/fields.py", line 419, in pydantic.fields.ModelField.__init__
-  File "pydantic/fields.py", line 534, in pydantic.fields.ModelField.prepare
-  File "pydantic/fields.py", line 599, in pydantic.fields.ModelField._type_analysis
-  File "pydantic/fields.py", line 636, in pydantic.fields.ModelField._type_analysis
-  File "pydantic/fields.py", line 750, in pydantic.fields.ModelField.prepare_discriminated_union_sub_fields
-  File "pydantic/utils.py", line 737, in pydantic.utils.get_discriminator_alias_and_values
-pydantic.errors.ConfigError: Model 'StatsDataAvailable' needs a discriminator field for key 'x-linode-ref-name'
-```
-
 look at [tests/model_test.py] test_model.
 
 ### authentication

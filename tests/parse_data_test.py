@@ -8,7 +8,7 @@ def pytest_generate_tests(metafunc):
     argnames, dir, filterfn = metafunc.cls.params[metafunc.function.__name__]
     dir = pathlib.Path(dir).expanduser()
     metafunc.parametrize(
-        argnames, [[dir, i.name] for i in sorted(filter(filterfn, dir.iterdir()), key=lambda x: x.name)]
+        argnames, [[dir, i.name] for i in sorted(filter(filterfn, dir.iterdir() if dir.exists() else []), key=lambda x: x.name)]
     )
 
 
