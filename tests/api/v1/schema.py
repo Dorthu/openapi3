@@ -17,7 +17,7 @@ class Pet(PetBase):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = Field(..., description='list of pet')
+    __root__: List[Pet] = Field(..., description="list of pet")
 
 
 class Error(BaseModel):

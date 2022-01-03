@@ -8,6 +8,7 @@ from aiopenapi3 import OpenAPI, SpecError, ReferenceResolutionError, FileSystemL
 
 URLBASE = "/"
 
+
 def test_parse_from_yaml(petstore_expanded):
     """
     Tests that we can parse a valid yaml file
@@ -60,25 +61,25 @@ def test_object_example(obj_example_expanded):
     Tests that `example` exists.
     """
     spec = OpenAPI(URLBASE, obj_example_expanded)
-    schema = spec.paths['/check-dict'].get.responses['200'].content['application/json'].schema_
+    schema = spec.paths["/check-dict"].get.responses["200"].content["application/json"].schema_
     assert isinstance(schema.example, dict)
-    assert isinstance(schema.example['real'], float)
+    assert isinstance(schema.example["real"], float)
 
-    schema = spec.paths['/check-str'].get.responses['200'].content['text/plain']
+    schema = spec.paths["/check-str"].get.responses["200"].content["text/plain"]
     assert isinstance(schema.example, str)
 
-    
+
 def test_parsing_float_validation(float_validation_expanded):
     """
     Tests that `minimum` and similar validators work with floats.
     """
     spec = OpenAPI(URLBASE, float_validation_expanded)
-    properties = spec.paths['/foo'].get.responses['200'].content['application/json'].schema_.properties
+    properties = spec.paths["/foo"].get.responses["200"].content["application/json"].schema_.properties
 
-    assert isinstance(properties['integer'].minimum, int)
-    assert isinstance(properties['integer'].maximum, int)
-    assert isinstance(properties['real'].minimum, float)
-    assert isinstance(properties['real'].maximum, float)
+    assert isinstance(properties["integer"].minimum, int)
+    assert isinstance(properties["integer"].maximum, int)
+    assert isinstance(properties["real"].minimum, float)
+    assert isinstance(properties["real"].maximum, float)
 
 
 def test_parsing_with_links(with_links):
@@ -106,14 +107,20 @@ def test_parsing_broken_links(with_broken_links):
     with pytest.raises(ValidationError) as e:
         spec = OpenAPI(URLBASE, with_broken_links)
 
-    assert all([i in str(e.value) for i in [
-        "operationId and operationRef are mutually exclusive, only one of them is allowed",
-        "operationId and operationRef are mutually exclusive, one of them must be specified",
-    ]])
+    assert all(
+        [
+            i in str(e.value)
+            for i in [
+                "operationId and operationRef are mutually exclusive, only one of them is allowed",
+                "operationId and operationRef are mutually exclusive, one of them must be specified",
+            ]
+        ]
+    )
 
 
 def test_securityparameters(with_securityparameters):
     spec = OpenAPI(URLBASE, with_securityparameters)
+
 
 def test_callback(with_callback):
     spec = OpenAPI(URLBASE, with_callback)
