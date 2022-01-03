@@ -142,7 +142,7 @@ print(json.dumps(body.dict(exclude_unset=True), indent=2))
 }
 
 
->>> 
+>>>
 new_linode = api._.createLinodeInstance(data=body)
 ```
 
@@ -178,7 +178,3 @@ of this project.
 ```shell
 PYTHONPATH=. pytest --cov=./ --cov-report=xml .
 ```
-
-
-
-
