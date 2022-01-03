@@ -267,6 +267,27 @@ class OpenAPISpec(ObjectExtended):
 
 
 class OperationIndex:
+    class Iter:
+        def __init__(self, spec):
+            self.operations = []
+            self.r = 0
+            pi: PathItem
+            for path,pi in spec.paths.items():
+                op: Operation
+                for method in pi.__fields_set__ & HTTP_METHODS:
+                    op = getattr(pi, method)
+                    if op.operationId is None:
+                        continue
+                    self.operations.append(op.operationId)
+            self.r = iter(range(len(self.operations)))
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return self.operations[next(self.r)]
+
+
     def __init__(self, api):
         self._api = api
         self._spec = api._spec
@@ -286,6 +307,9 @@ class OperationIndex:
                     return AsyncRequest(self._api, method, path, op)
 
         raise ValueError(item)
+
+    def __iter__(self):
+        return self.Iter(self._spec)
 
 
 
