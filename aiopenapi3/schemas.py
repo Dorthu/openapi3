@@ -188,7 +188,8 @@ class Model(BaseModel):
                 for name, f in schema.properties.items():
                     args = dict()
                     for i in ["enum","default"]:
-                        if (v:=getattr(f, i, None)):
+                        v = getattr(f, i, None)
+                        if v:
                             args[i] = v
                     r[name] = Field(**args)
             return r
