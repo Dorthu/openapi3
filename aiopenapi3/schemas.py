@@ -9,11 +9,11 @@ from .object_base import ObjectExtended
 from .xml import XML
 
 TYPE_LOOKUP = {
-    'array': list,
-    'integer': int,
-    'object': dict,
-    'string': str,
-    'boolean': bool,
+    "array": list,
+    "integer": int,
+    "object": dict,
+    "string": str,
+    "boolean": bool,
 }
 
 
@@ -22,6 +22,7 @@ class Discriminator(ObjectExtended):
 
     .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#discriminator-object
     """
+
     propertyName: str = Field(...)
     mapping: Optional[Dict[str, str]] = Field(default_factory=dict)
 
@@ -35,7 +36,7 @@ class Schema(ObjectExtended):
 
     title: Optional[str] = Field(default=None)
     multipleOf: Optional[int] = Field(default=None)
-    maximum: Optional[float] = Field(default=None) # FIXME Field(discriminator='type') would be better
+    maximum: Optional[float] = Field(default=None)  # FIXME Field(discriminator='type') would be better
     exclusiveMaximum: Optional[bool] = Field(default=None)
     minimum: Optional[float] = Field(default=None)
     exclusiveMinimum: Optional[bool] = Field(default=None)
@@ -55,9 +56,9 @@ class Schema(ObjectExtended):
     oneOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
     anyOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
     not_: Optional[Union["Schema", Reference]] = Field(default=None, alias="not")
-    items: Optional[Union['Schema', Reference]] = Field(default=None)
-    properties: Optional[Dict[str, Union['Schema', Reference]]] = Field(default_factory=dict)
-    additionalProperties: Optional[Union[bool, 'Schema', Reference]] = Field(default=None)
+    items: Optional[Union["Schema", Reference]] = Field(default=None)
+    properties: Optional[Dict[str, Union["Schema", Reference]]] = Field(default_factory=dict)
+    additionalProperties: Optional[Union[bool, "Schema", Reference]] = Field(default=None)
     description: Optional[str] = Field(default=None)
     format: Optional[str] = Field(default=None)
     default: Optional[str] = Field(default=None)  # TODO - str as a default?
@@ -69,9 +70,9 @@ class Schema(ObjectExtended):
     externalDocs: Optional[dict] = Field(default=None)  # 'ExternalDocs'
     example: Optional[Any] = Field(default=None)
     deprecated: Optional[bool] = Field(default=None)
-#    contentEncoding: Optional[str] = Field(default=None)
-#    contentMediaType: Optional[str] = Field(default=None)
-#    contentSchema: Optional[str] = Field(default=None)
+    #    contentEncoding: Optional[str] = Field(default=None)
+    #    contentMediaType: Optional[str] = Field(default=None)
+    #    contentSchema: Optional[str] = Field(default=None)
 
     _model_type: object
     _request_model_type: object
@@ -82,12 +83,12 @@ class Schema(ObjectExtended):
     _identity: str
 
     class Config:
-#        keep_untouched = (lru_cache,)
+        #        keep_untouched = (lru_cache,)
         extra = Extra.forbid
 
     @root_validator
-    def validate_Schema_number_type(cls, values:Dict[str, object]):
-        conv = ["minimum","maximum"]
+    def validate_Schema_number_type(cls, values: Dict[str, object]):
+        conv = ["minimum", "maximum"]
         if values.get("type", None) == "integer":
             for i in conv:
                 v = values.get(i, None)
@@ -95,11 +96,11 @@ class Schema(ObjectExtended):
                     values[i] = int(v)
         return values
 
-#    @lru_cache
-    def get_type(self, names:List[str]=None, discriminators:List[Discriminator]=None):
+    #    @lru_cache
+    def get_type(self, names: List[str] = None, discriminators: List[Discriminator] = None):
         return Model.from_schema(self, names, discriminators)
 
-    def model(self, data:Dict):
+    def model(self, data: Dict):
         """
         Generates a model representing this schema from the given data.
 
@@ -109,7 +110,7 @@ class Schema(ObjectExtended):
         :returns: A new :any:`Model` created in this Schema's type from the data.
         :rtype: self.get_type()
         """
-        if self.type in ('string', 'number'):
+        if self.type in ("string", "number"):
             assert len(self.properties) == 0
             # more simple types
             # if this schema represents a simple type, simply return the data
@@ -127,7 +128,7 @@ class Model(BaseModel):
         extra: Extra.forbid
 
     @classmethod
-    def from_schema(cls, shma:Schema, shmanm:List[str]=None, discriminators:List[Discriminator]=None):
+    def from_schema(cls, shma: Schema, shmanm: List[str] = None, discriminators: List[Discriminator] = None):
 
         if shmanm is None:
             shmanm = []
@@ -135,7 +136,7 @@ class Model(BaseModel):
         if discriminators is None:
             discriminators = []
 
-        def typeof(schema:Schema):
+        def typeof(schema: Schema):
             r = None
             if schema.type == "integer":
                 r = int
@@ -147,16 +148,16 @@ class Model(BaseModel):
                 r = bool
             elif schema.type == "array":
                 r = List[schema.items.get_type()]
-            elif schema.type == 'object':
+            elif schema.type == "object":
                 return schema.get_type()
-            elif schema.type is None: # discriminated root
+            elif schema.type is None:  # discriminated root
                 return None
             else:
                 raise TypeError(schema.type)
 
             return r
 
-        def annotationsof(schema:Schema):
+        def annotationsof(schema: Schema):
             annos = dict()
             if schema.type == "array":
                 annos["__root__"] = typeof(schema)
@@ -167,7 +168,7 @@ class Model(BaseModel):
                     for discriminator in discriminators:
                         if name != discriminator.propertyName:
                             continue
-                        for disc,v in discriminator.mapping.items():
+                        for disc, v in discriminator.mapping.items():
                             if v in shmanm:
                                 r = Literal[disc]
                                 break
@@ -182,14 +183,14 @@ class Model(BaseModel):
                         annos[name] = r
             return annos
 
-        def fieldof(schema:Schema):
+        def fieldof(schema: Schema):
             r = dict()
             if schema.type == "array":
                 return r
             else:
                 for name, f in schema.properties.items():
                     args = dict()
-                    for i in ["enum","default"]:
+                    for i in ["enum", "default"]:
                         v = getattr(f, i, None)
                         if v:
                             args[i] = v
@@ -197,23 +198,33 @@ class Model(BaseModel):
             return r
 
         # do not create models for primitive types
-        if shma.type in ("string","integer"):
+        if shma.type in ("string", "integer"):
             return typeof(shma)
 
-        type_name = shma.title or shma._identity if hasattr(shma, '_identity') else str(uuid.uuid4())
+        type_name = shma.title or shma._identity if hasattr(shma, "_identity") else str(uuid.uuid4())
         namespace = dict()
         annos = dict()
         if shma.allOf:
             for i in shma.allOf:
                 annos.update(annotationsof(i))
         elif shma.anyOf:
-            t = tuple([i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator]) for i in shma.anyOf])
+            t = tuple(
+                [
+                    i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator])
+                    for i in shma.anyOf
+                ]
+            )
             if shma.discriminator and shma.discriminator.mapping:
                 annos["__root__"] = Annotated[Union[t], Field(discriminator=shma.discriminator.propertyName)]
             else:
                 annos["__root__"] = Union[t]
         elif shma.oneOf:
-            t = tuple([i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator]) for i in shma.oneOf])
+            t = tuple(
+                [
+                    i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator])
+                    for i in shma.oneOf
+                ]
+            )
             if shma.discriminator and shma.discriminator.mapping:
                 annos["__root__"] = Annotated[Union[t], Field(discriminator=shma.discriminator.propertyName)]
             else:
@@ -222,7 +233,7 @@ class Model(BaseModel):
             annos = annotationsof(shma)
             namespace.update(fieldof(shma))
 
-        namespace['__annotations__'] = annos
+        namespace["__annotations__"] = annos
 
         m = types.new_class(type_name, (BaseModel,), {}, lambda ns: ns.update(namespace))
         m.update_forward_refs()

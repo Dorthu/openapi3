@@ -5,23 +5,25 @@ from yarl import URL
 
 import aiopenapi3.general
 
-from ._model import RuntimeExpressionModelBuilderSemantics as RuntimeExpressionModelBuilderSemanticsBase, \
-    JSONPointer as JSONPointerBase, \
-    Header as HeaderBase, \
-    Query as QueryBase, \
-    Path as PathBase, \
-    Body as BodyBase, \
-    RuntimeExpression as RuntimeExpressionBase, \
-    Expression as ExpressionBase
+from ._model import (
+    RuntimeExpressionModelBuilderSemantics as RuntimeExpressionModelBuilderSemanticsBase,
+    JSONPointer as JSONPointerBase,
+    Header as HeaderBase,
+    Query as QueryBase,
+    Path as PathBase,
+    Body as BodyBase,
+    RuntimeExpression as RuntimeExpressionBase,
+    Expression as ExpressionBase,
+)
 
 
 class RuntimeExpressionModelBuilderSemantics(RuntimeExpressionModelBuilderSemanticsBase):
-
     def reference_token(self, ast, name=None):
         return "".join(ast)
 
     def escaped(self, ast):
         return "".join(ast)
+
 
 #    def token(self, ast, name=None):
 #        return "".join(ast)
@@ -61,11 +63,11 @@ class Expression(ExpressionBase):
                 return resp.status_code
 
 
-
 class JSONPointer(JSONPointerBase):
     def __init__(self, ctx=None, ast=None, parseinfo=None, **kwargs):
         super().__init__(ctx, None, parseinfo, **kwargs)
         self._tokens = ast.tokens
+
     @property
     def tokens(self):
         for i in self._tokens:
@@ -128,7 +130,7 @@ class Body(BodyBase):
         try:
             for i in self.fragment.tokens:
                 if isinstance(data, list):
-                    i = int(i)-1
+                    i = int(i) - 1
                 data = data[i]
             return data
         except KeyError:

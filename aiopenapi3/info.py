@@ -41,6 +41,3 @@ class Info(ObjectExtended):
     license: Optional[License] = Field(default=None)
     contact: Optional[Contact] = Field(default=None)
     version: str = Field(...)
-
-
-

@@ -17,7 +17,6 @@ class ServerVariable(ObjectExtended):
     description: Optional[str] = Field(default=None)
 
 
-
 class Server(ObjectExtended):
     """
     The Server object, as described `here`_
@@ -28,4 +27,3 @@ class Server(ObjectExtended):
     url: str = Field(...)
     description: Optional[str] = Field(default=None)
     variables: Optional[Dict[str, ServerVariable]] = Field(default_factory=dict)
-

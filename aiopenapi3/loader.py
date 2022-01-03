@@ -7,7 +7,7 @@ import yaml
 
 class Loader(abc.ABC):
     @abc.abstractmethod
-    def load(self, name:str):
+    def load(self, name: str):
         raise NotImplementedError("load")
 
     @classmethod
@@ -15,7 +15,7 @@ class Loader(abc.ABC):
         if codec is not None:
             codecs = [codec]
         else:
-            codecs = ["ascii","utf-8"]
+            codecs = ["ascii", "utf-8"]
         for c in codecs:
             try:
                 data = data.decode(c)
@@ -37,13 +37,12 @@ class Loader(abc.ABC):
         return data
 
 
-
 class FileSystemLoader(Loader):
-    def __init__(self, base:Path):
+    def __init__(self, base: Path):
         assert isinstance(base, Path)
         self.base = base
 
-    def load(self, file:str, codec=None):
+    def load(self, file: str, codec=None):
         path = self.base / file
         assert path.is_relative_to(self.base)
         data = path.open("rb").read()

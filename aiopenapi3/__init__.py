@@ -4,5 +4,4 @@ from .errors import SpecError, ReferenceResolutionError
 
 
 __version__ = "0.1.0"
-__all__ = ['__version__', 'OpenAPI', 'FileSystemLoader', 'SpecError', 'ReferenceResolutionError']
-
+__all__ = ["__version__", "OpenAPI", "FileSystemLoader", "SpecError", "ReferenceResolutionError"]

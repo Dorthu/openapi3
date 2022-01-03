@@ -14,6 +14,7 @@ class Encoding(ObjectExtended):
 
     .. _Encoding: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#encoding-object
     """
+
     contentType: Optional[str] = Field(default=None)
     headers: Optional[Dict[str, Union["Header", Reference]]] = Field(default_factory=dict)
     style: Optional[str] = Field(default=None)
@@ -34,5 +35,7 @@ class MediaType(ObjectExtended):
     examples: Optional[Dict[str, Union[Example, Reference]]] = Field(default_factory=dict)
     encoding: Optional[Dict[str, Encoding]] = Field(default_factory=dict)
 
+
 from .parameter import Header
+
 Encoding.update_forward_refs()

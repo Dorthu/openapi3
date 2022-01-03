@@ -20,20 +20,12 @@ repos:
         files: |
           .gitignore
       - id: check-case-conflict
-      - id: check-json
       - id: check-xml
       - id: check-executables-have-shebangs
-      - id: check-toml
-      - id: check-xml
-      - id: check-yaml
       - id: debug-statements
       - id: check-added-large-files
       - id: check-symlinks
       - id: debug-statements
-      - id: detect-aws-credentials
-        args:
-          - '--allow-missing-credentials'
-      - id: detect-private-key
   - repo: 'https://gitlab.com/pycqa/flake8'
     rev: 3.9.2
     hooks:
@@ -42,3 +34,13 @@ repos:
         - "--max-line-length=120"
         - "--ignore=E203,W503"
         - "--select=W504"
+
+ci:
+    autofix_commit_msg: |
+        [pre-commit.ci] auto fixes from pre-commit.ci hooks
+    autofix_prs: true
+    autoupdate_branch: ''
+    autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+    autoupdate_schedule: weekly
+    skip: []
+    submodules: false

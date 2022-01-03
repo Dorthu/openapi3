@@ -8,6 +8,7 @@ from .object_base import ObjectExtended
 from .schemas import Schema
 from .media import MediaType
 
+
 class ParameterBase(ObjectExtended):
     """
     A `Parameter Object`_ defines a single operation parameter.
@@ -25,16 +26,16 @@ class ParameterBase(ObjectExtended):
     allowReserved: Optional[bool] = Field(default=None)
     schema_: Optional[Union[Schema, Reference]] = Field(default=None, alias="schema")
     example: Optional[Any] = Field(default=None)
-    examples: Optional[Dict[str, Union['Example',Reference]]] = Field(default_factory=dict)
+    examples: Optional[Dict[str, Union["Example", Reference]]] = Field(default_factory=dict)
 
     content: Optional[Dict[str, "MediaType"]]
 
     @root_validator
     def validate_ParameterBase(cls, values):
-#        if values["in_"] ==
-#        if self.in_ == "path" and self.required is not True:
-#            err_msg = 'Parameter {} must be required since it is in the path'
-#            raise SpecError(err_msg.format(self.get_path()), path=self._path)
+        #        if values["in_"] ==
+        #        if self.in_ == "path" and self.required is not True:
+        #            err_msg = 'Parameter {} must be required since it is in the path'
+        #            raise SpecError(err_msg.format(self.get_path()), path=self._path)
         return values
 
 

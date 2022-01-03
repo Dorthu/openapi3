@@ -21,10 +21,7 @@ class ModelBase(Node):
 
 class RuntimeExpressionModelBuilderSemantics(ModelBuilderSemantics):
     def __init__(self, context=None, types=None):
-        types = [
-            t for t in globals().values()
-            if type(t) is type and issubclass(t, ModelBase)
-        ] + (types or [])
+        types = [t for t in globals().values() if type(t) is type and issubclass(t, ModelBase)] + (types or [])
         super(RuntimeExpressionModelBuilderSemantics, self).__init__(context=context, types=types)
 
 

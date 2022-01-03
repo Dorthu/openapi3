@@ -17,12 +17,12 @@ def _validate_parameters(op: "Operation", path):
     Ensures that all parameters for this path are valid
     """
     assert isinstance(path, str)
-    allowed_path_parameters = re.findall(r'{([a-zA-Z0-9\-\._~]+)}', path)
+    allowed_path_parameters = re.findall(r"{([a-zA-Z0-9\-\._~]+)}", path)
 
     for c in op.parameters:
-        if c.in_ == 'path':
+        if c.in_ == "path":
             if c.name not in allowed_path_parameters:
-                raise SpecError('Parameter name not found in path: {}'.format(c.name))
+                raise SpecError("Parameter name not found in path: {}".format(c.name))
 
 
 class SecurityRequirement(BaseModel):
@@ -31,6 +31,7 @@ class SecurityRequirement(BaseModel):
 
     .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#security-requirement-object
     """
+
     __root__: Dict[str, List[str]]
 
     @root_validator
@@ -39,7 +40,6 @@ class SecurityRequirement(BaseModel):
         if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
             raise ValueError(root)
         return values
-
 
     @property
     def name(self):
@@ -136,6 +136,7 @@ class PathItem(ObjectExtended):
 
     .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#paths-object
     """
+
     ref: Optional[str] = Field(default=None, alias="$ref")
     summary: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
@@ -159,6 +160,7 @@ class Callback(ObjectBase):
 
     This object MAY be extended with Specification Extensions.
     """
+
     __root__: Dict[str, PathItem]
 
 
@@ -168,6 +170,7 @@ class RuntimeExpression(ObjectBase):
 
     .. Runtime Expression: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#runtime-expressions
     """
+
     __root__: str = Field(...)
 
 

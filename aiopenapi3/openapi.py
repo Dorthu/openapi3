@@ -1,6 +1,5 @@
 import datetime
 import pathlib
-import json
 from typing import Any, List, Optional, Dict, Union, Callable
 
 import yaml
@@ -20,10 +19,10 @@ from .tag import Tag
 from .request import Request, AsyncRequest
 from .loader import Loader
 
-HTTP_METHODS = frozenset(["get","delete","head","post","put","patch","trace"])
+HTTP_METHODS = frozenset(["get", "delete", "head", "post", "put", "patch", "trace"])
+
 
 class OpenAPI:
-
     @property
     def paths(self):
         return self._spec.paths
@@ -44,9 +43,6 @@ class OpenAPI:
     def servers(self):
         return self._spec.servers
 
-
-
-
     @classmethod
     def load_sync(cls, url, session_factory: Callable[[], httpx.Client] = httpx.Client, loader=None):
         resp = session_factory().get(url)
@@ -63,9 +59,13 @@ class OpenAPI:
         data = Loader.dict(pathlib.Path(url), data)
         return cls(url, data, session_factory, loader)
 
-    def __init__(self, url, raw_document,
-                 session_factory: Callable[[], Union[httpx.Client, httpx.AsyncClient]] = httpx.AsyncClient,
-                 loader=None):
+    def __init__(
+        self,
+        url,
+        raw_document,
+        session_factory: Callable[[], Union[httpx.Client, httpx.AsyncClient]] = httpx.AsyncClient,
+        loader=None,
+    ):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
         overridden here because we need to specify the path in the parent
@@ -77,14 +77,12 @@ class OpenAPI:
         :type session_factory: returns httpx.AsyncClient or http.Client
         """
 
-
-        self._base_url:yarl.URL = yarl.URL(url)
-        self.loader:Loader = loader
+        self._base_url: yarl.URL = yarl.URL(url)
+        self.loader: Loader = loader
         self._session_factory = session_factory
 
-        self._security:List[str] = None
-        self._cached:Dict[str, "OpenAPISpec"] = dict()
-
+        self._security: List[str] = None
+        self._cached: Dict[str, "OpenAPISpec"] = dict()
 
         self._spec = OpenAPISpec.parse_obj(raw_document)
         self._spec._resolve_references(self)
@@ -99,7 +97,7 @@ class OpenAPI:
                 raise SpecError(f"Duplicate operationId {operation_id}", element=None)
             operation_map.add(operation_id)
 
-        for path,obj in self.paths.items():
+        for path, obj in self.paths.items():
             for m in obj.__fields_set__ & HTTP_METHODS:
                 op = getattr(obj, m)
                 _validate_parameters(op, path)
@@ -134,8 +132,7 @@ class OpenAPI:
             return
 
         if security_scheme not in self._spec.components.securitySchemes:
-            raise ValueError('{} does not accept security scheme {}'.format(
-                self.info.title, security_scheme))
+            raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
 
         self._security = {security_scheme: value}
 
@@ -148,8 +145,8 @@ class OpenAPI:
         return OperationIndex(self)
 
     def resolve_jr(self, root: "OpenAPISpec", obj, value: Reference):
-        url,jp = JSONReference.split(value.ref)
-        if url != '':
+        url, jp = JSONReference.split(value.ref)
+        if url != "":
             url = pathlib.Path(url)
             if url not in self._cached:
                 self._cached[url] = self._load(url)
@@ -201,16 +198,16 @@ class OpenAPISpec(ObjectExtended):
                         ref._target = api.resolve_jr(root, obj, ref)
                         setattr(obj, slot, ref)
 
-#                    if isinstance(obj, Discriminator) and slot == "mapping":
-#                        mapping = dict()
-#                        for k,v in value.items():
-#                            mapping[k] = Reference.construct(ref=v)
-#                        setattr(obj, slot, mapping)
+                    #                    if isinstance(obj, Discriminator) and slot == "mapping":
+                    #                        mapping = dict()
+                    #                        for k,v in value.items():
+                    #                            mapping[k] = Reference.construct(ref=v)
+                    #                        setattr(obj, slot, mapping)
 
                     value = getattr(obj, slot)
                     if isinstance(value, Reference):
                         value._target = api.resolve_jr(root, obj, value)
-#                        setattr(obj, slot, resolved_value)
+                    #                        setattr(obj, slot, resolved_value)
                     elif issubclass(type(value), ObjectBase):
                         # otherwise, continue resolving down the tree
                         resolve(value)
@@ -237,7 +234,6 @@ class OpenAPISpec(ObjectExtended):
 
         resolve(self)
 
-
     def resolve_jp(self, jp):
         """
         Given a $ref path, follows the document tree and returns the given attribute.
@@ -256,11 +252,11 @@ class OpenAPISpec(ObjectExtended):
             part = JSONPointer.decode(part)
             if isinstance(node, dict):
                 if part not in node:  # pylint: disable=unsupported-membership-test
-                    raise ReferenceResolutionError(f'Invalid path {path} in Reference')
+                    raise ReferenceResolutionError(f"Invalid path {path} in Reference")
                 node = node.get(part)
             else:
                 if not hasattr(node, part):
-                    raise ReferenceResolutionError(f'Invalid path {path} in Reference')
+                    raise ReferenceResolutionError(f"Invalid path {path} in Reference")
                 node = getattr(node, part)
 
         return node
@@ -272,7 +268,7 @@ class OperationIndex:
             self.operations = []
             self.r = 0
             pi: PathItem
-            for path,pi in spec.paths.items():
+            for path, pi in spec.paths.items():
                 op: Operation
                 for method in pi.__fields_set__ & HTTP_METHODS:
                     op = getattr(pi, method)
@@ -287,14 +283,13 @@ class OperationIndex:
         def __next__(self):
             return self.operations[next(self.r)]
 
-
     def __init__(self, api):
         self._api = api
         self._spec = api._spec
 
     def __getattr__(self, item):
         pi: PathItem
-        for path,pi in self._spec.paths.items():
+        for path, pi in self._spec.paths.items():
             op: Operation
             for method in pi.__fields_set__ & HTTP_METHODS:
                 op = getattr(pi, method)
@@ -310,7 +305,6 @@ class OperationIndex:
 
     def __iter__(self):
         return self.Iter(self._spec)
-
 
 
 OpenAPISpec.update_forward_refs()

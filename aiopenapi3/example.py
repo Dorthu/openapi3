@@ -16,5 +16,5 @@ class Example(ObjectExtended):
 
     summary: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    value: Optional[Union[Reference, dict, str]] = Field(default=None) # 'any' type
+    value: Optional[Union[Reference, dict, str]] = Field(default=None)  # 'any' type
     externalValue: Optional[str] = Field(default=None)

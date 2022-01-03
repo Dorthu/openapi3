@@ -16,20 +16,20 @@ import sys
 from tatsu.buffering import Buffer
 from tatsu.parsing import Parser
 from tatsu.parsing import tatsumasu
-from tatsu.parsing import leftrec, nomemo, isname # noqa
+from tatsu.parsing import leftrec, nomemo, isname  # noqa
 from tatsu.util import re, generic_main  # noqa
 
 
 KEYWORDS = {
-    'pool',
-    'elsif',
-    'subclass',
-    'subnet',
-    'shared-network',
-    'if',
-    'class',
-    'group',
-    'host',
+    "pool",
+    "elsif",
+    "subclass",
+    "subnet",
+    "shared-network",
+    "if",
+    "class",
+    "group",
+    "host",
 }  # type: ignore
 
 
@@ -39,10 +39,10 @@ class RuntimeExpressionBuffer(Buffer):
         text,
         whitespace=None,
         nameguard=None,
-        comments_re='',
-        eol_comments_re='',
+        comments_re="",
+        eol_comments_re="",
         ignorecase=None,
-        namechars='',
+        namechars="",
         **kwargs
     ):
         super().__init__(
@@ -62,13 +62,13 @@ class RuntimeExpressionParser(Parser):
         self,
         whitespace=None,
         nameguard=None,
-        comments_re='',
-        eol_comments_re='',
+        comments_re="",
+        eol_comments_re="",
         ignorecase=None,
         left_recursion=True,
         parseinfo=True,
         keywords=None,
-        namechars='',
+        namechars="",
         tokenizercls=RuntimeExpressionBuffer,
         **kwargs
     ):
@@ -88,42 +88,35 @@ class RuntimeExpressionParser(Parser):
             **kwargs
         )
 
-    @tatsumasu('RuntimeExpression')
+    @tatsumasu("RuntimeExpression")
     def _start_(self):  # noqa
         self._expression_()
         self._check_eof()
 
-    @tatsumasu('Expression')
+    @tatsumasu("Expression")
     def _expression_(self):  # noqa
         with self._choice():
             with self._option():
-                self._token('$url')
-                self.name_last_node('root')
+                self._token("$url")
+                self.name_last_node("root")
             with self._option():
-                self._token('$method')
-                self.name_last_node('root')
+                self._token("$method")
+                self.name_last_node("root")
             with self._option():
-                self._token('$statusCode')
-                self.name_last_node('root')
+                self._token("$statusCode")
+                self.name_last_node("root")
             with self._option():
-                self._token('$request.')
-                self.name_last_node('root')
+                self._token("$request.")
+                self.name_last_node("root")
                 self._source_()
-                self.name_last_node('next')
+                self.name_last_node("next")
             with self._option():
-                self._token('$response.')
-                self.name_last_node('root')
+                self._token("$response.")
+                self.name_last_node("root")
                 self._source_()
-                self.name_last_node('next')
-            self._error(
-                'expecting one of: '
-                "'$url' '$method' '$statusCode'"
-                "'$request.' '$response.'"
-            )
-        self._define(
-            ['next', 'root'],
-            []
-        )
+                self.name_last_node("next")
+            self._error("expecting one of: " "'$url' '$method' '$statusCode'" "'$request.' '$response.'")
+        self._define(["next", "root"], [])
 
     @tatsumasu()
     def _source_(self):  # noqa
@@ -137,105 +130,85 @@ class RuntimeExpressionParser(Parser):
             with self._option():
                 self._body_reference_()
             self._error(
-                'expecting one of: '
+                "expecting one of: "
                 "'header.' <header_reference> 'query.'"
                 "<query_reference> 'path.'"
                 "<path_reference> 'body' <body_reference>"
             )
 
-    @tatsumasu('Header')
+    @tatsumasu("Header")
     def _header_reference_(self):  # noqa
-        self._token('header.')
+        self._token("header.")
         self._token_()
-        self.name_last_node('key')
-        self._define(
-            ['key'],
-            []
-        )
+        self.name_last_node("key")
+        self._define(["key"], [])
 
-    @tatsumasu('Query')
+    @tatsumasu("Query")
     def _query_reference_(self):  # noqa
-        self._token('query.')
+        self._token("query.")
         self._name_()
-        self.name_last_node('key')
-        self._define(
-            ['key'],
-            []
-        )
+        self.name_last_node("key")
+        self._define(["key"], [])
 
-    @tatsumasu('Path')
+    @tatsumasu("Path")
     def _path_reference_(self):  # noqa
-        self._token('path.')
+        self._token("path.")
         self._name_()
-        self.name_last_node('key')
-        self._define(
-            ['key'],
-            []
-        )
+        self.name_last_node("key")
+        self._define(["key"], [])
 
-    @tatsumasu('Body')
+    @tatsumasu("Body")
     def _body_reference_(self):  # noqa
-        self._token('body')
+        self._token("body")
         with self._optional():
             self._json_pointer_()
-        self.name_last_node('fragment')
-        self._define(
-            ['fragment'],
-            []
-        )
+        self.name_last_node("fragment")
+        self._define(["fragment"], [])
 
-    @tatsumasu('JSONPointer')
+    @tatsumasu("JSONPointer")
     def _json_pointer_(self):  # noqa
-        self._token('#/')
+        self._token("#/")
 
         def sep1():
-            self._token('/')
+            self._token("/")
 
         def block1():
             self._reference_token_()
+
         self._gather(block1, sep1)
-        self.name_last_node('tokens')
-        self._define(
-            ['tokens'],
-            []
-        )
+        self.name_last_node("tokens")
+        self._define(["tokens"], [])
 
     @tatsumasu()
     def _reference_token_(self):  # noqa
-
         def block0():
             with self._choice():
                 with self._option():
                     self._unescaped_()
                 with self._option():
                     self._escaped_()
-                self._error(
-                    'expecting one of: '
-                    "[^\\/~] <unescaped> '~' <escaped>"
-                )
+                self._error("expecting one of: " "[^\\/~] <unescaped> '~' <escaped>")
+
         self._closure(block0)
 
     @tatsumasu()
     def _unescaped_(self):  # noqa
-        self._pattern('[^\\/~]')
+        self._pattern("[^\\/~]")
 
     @tatsumasu()
     def _escaped_(self):  # noqa
-        self._token('~')
+        self._token("~")
         with self._group():
             with self._choice():
                 with self._option():
-                    self._token('0')
+                    self._token("0")
                 with self._option():
-                    self._token('1')
-                self._error(
-                    'expecting one of: '
-                    "'0' '1'"
-                )
+                    self._token("1")
+                self._error("expecting one of: " "'0' '1'")
 
     @tatsumasu()
     def _name_(self):  # noqa
-        self._pattern('[\\w]*')
+        self._pattern("[\\w]*")
 
     @tatsumasu()
     def _token_(self):  # noqa
@@ -285,25 +258,20 @@ class RuntimeExpressionSemantics(object):
 
 def main(filename, start=None, **kwargs):
     if start is None:
-        start = 'start'
-    if not filename or filename == '-':
+        start = "start"
+    if not filename or filename == "-":
         text = sys.stdin.read()
     else:
         with open(filename) as f:
             text = f.read()
     parser = RuntimeExpressionParser()
-    return parser.parse(
-        text,
-        rule_name=start,
-        filename=filename,
-        **kwargs
-    )
+    return parser.parse(text, rule_name=start, filename=filename, **kwargs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import json
     from tatsu.util import asjson
 
-    ast = generic_main(main, RuntimeExpressionParser, name='RuntimeExpression')
+    ast = generic_main(main, RuntimeExpressionParser, name="RuntimeExpression")
     data = asjson(ast)
     print(json.dumps(data, indent=2))

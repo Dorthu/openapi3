@@ -6,6 +6,7 @@ from .openapi import OpenAPI
 
 from .loader import FileSystemLoader
 
+
 def main():
     name = sys.argv[1]
     loader = FileSystemLoader(Path().cwd())
@@ -18,5 +19,5 @@ def main():
         print("OK")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

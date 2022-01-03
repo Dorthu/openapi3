@@ -11,6 +11,7 @@ class OAuthFlow(ObjectExtended):
 
     .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#oauth-flow-object
     """
+
     authorizationUrl: Optional[str] = Field(default=None)
     tokenUrl: Optional[str] = Field(default=None)
     refreshUrl: Optional[str] = Field(default=None)
@@ -23,6 +24,7 @@ class OAuthFlows(ObjectExtended):
 
     .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#oauth-flows-object
     """
+
     implicit: Optional[OAuthFlow] = Field(default=None)
     password: Optional[OAuthFlow] = Field(default=None)
     clientCredentials: Optional[OAuthFlow] = Field(default=None)
@@ -49,11 +51,11 @@ class SecurityScheme(ObjectExtended):
     def validate_SecurityScheme(cls, values):
         t = values.get("type", None)
         keys = set(map(lambda x: x[0], filter(lambda x: x[1] is not None, values.items())))
-        keys -= frozenset(["type","description"])
+        keys -= frozenset(["type", "description"])
         if t == "apikey":
-            assert keys == set(["in_","name"])
+            assert keys == set(["in_", "name"])
         if t == "http":
-            assert keys - frozenset(["scheme_","bearerFormat"]) == set([])
+            assert keys - frozenset(["scheme_", "bearerFormat"]) == set([])
         if t == "oauth2":
             assert keys == frozenset(["flows"])
         if t == "openIdConnect":
