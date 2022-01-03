@@ -1,10 +1,15 @@
 import json
+import sys
 
 import httpx
 import pytest
 
 import tatsu
 from aiopenapi3.expression.grammar import loads
+
+not310 = pytest.mark.skipif(
+    sys.version_info >= (3, 10, 0), reason="tatsu 5.7 requires 3.10, we rely on 5.6"
+)
 
 parse_testdata = [
     "$url",
@@ -14,15 +19,18 @@ parse_testdata = [
     "$request.body#/url",
 ]
 
+@not310
 @pytest.mark.parametrize("data", parse_testdata)
 def test_parse(data):
     m = loads(data)
     assert m is not None
 
+@not310
 def test_parse_fail():
     with pytest.raises(tatsu.exceptions.FailedParse):
         loads("$request.body#/~test")
 
+@not310
 def test_parse_escape():
     loads("$request.body#/~0test")
     loads("$request.body#/~1test")
@@ -46,6 +54,8 @@ get_testdata = {
     "$request.body#/escaped~1content/2/~0/~1/y":"yes",
     "$request.body#/escaped~0content/2/~1/~0/x":"no",
 }
+
+@not310
 @pytest.mark.parametrize("param, result", get_testdata.items())
 def test_get(httpx_mock, param, result):
     url = "http://example.org/subscribe/myevent?queryUrl=http://clientdomain.com/stillrunning"
