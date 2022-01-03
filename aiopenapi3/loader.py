@@ -10,6 +10,33 @@ class Loader(abc.ABC):
     def load(self, name:str):
         raise NotImplementedError("load")
 
+    @classmethod
+    def decode(cls, data, codec):
+        if codec is not None:
+            codecs = [codec]
+        else:
+            codecs = ["ascii","utf-8"]
+        for c in codecs:
+            try:
+                data = data.decode(c)
+                break
+            except UnicodeError:
+                continue
+        else:
+            raise ValueError("encoding")
+        return data
+
+    @classmethod
+    def dict(cls, file, data):
+        if file.suffix == ".yaml":
+            data = yaml.safe_load(data)
+        elif file.suffix == ".json":
+            data = json.loads(data)
+        else:
+            raise ValueError(file.name)
+        return data
+
+
 
 class FileSystemLoader(Loader):
     def __init__(self, base:Path):
@@ -20,22 +47,6 @@ class FileSystemLoader(Loader):
         path = self.base / file
         assert path.is_relative_to(self.base)
         data = path.open("rb").read()
-        if codec is not None:
-            codecs = [codec]
-        else:
-            codecs = ["ascii","utf-8"]
-        for c in codecs:
-            try:
-                r = data.decode(c)
-                break
-            except UnicodeError:
-                continue
-        else:
-            raise ValueError("encoding")
-        if path.suffix == ".yaml":
-            data = yaml.safe_load(data)
-        elif path.suffix == ".json":
-            data = json.loads(data)
-        else:
-            raise ValueError(file.name)
+        data = self.decode(data, codec)
+        data = self.dict(path, data)
         return data

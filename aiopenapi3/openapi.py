@@ -60,11 +60,7 @@ class OpenAPI:
 
     @classmethod
     def loads(cls, url, data, session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient, loader=None):
-        if url.endswith(".json"):
-            data = json.loads(data)
-        elif url.endswith(".yaml") or url.endswith(".yml"):
-            data = yaml.safe_load(data)
-
+        data = Loader.dict(pathlib.Path(url), data)
         return cls(url, data, session_factory, loader)
 
     def __init__(self, url, raw_document,
