@@ -6,16 +6,17 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
+        python: ["3.9","3.10"]
     env:
       OS: ${{ matrix.os }}
-      PYTHON: '3.8'
+      PYTHON: ${{ matrix.python }}
       PYTHONPATH: "."
     steps:
     - uses: actions/checkout@master
     - name: Setup Python
       uses: actions/setup-python@master
       with:
-        python-version: 3.8
+        python-version: ${{ matrix.python }}
     - name: Generate coverage report
       run: |
         pip install '.[tests]'
