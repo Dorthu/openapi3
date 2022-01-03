@@ -2,5 +2,7 @@ from .openapi import OpenAPI
 from .loader import FileSystemLoader
 from .errors import SpecError, ReferenceResolutionError
 
-__all__ = ['OpenAPI', 'FileSystemLoader', 'SpecError', 'ReferenceResolutionError']
+
+__version__ = "0.1.0"
+__all__ = ['__version__', 'OpenAPI', 'FileSystemLoader', 'SpecError', 'ReferenceResolutionError']
 
