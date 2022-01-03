@@ -1,16 +1,16 @@
 repos:
   - repo: https://github.com/hadialqattan/pycln
-    rev: v0.0.4 # Possible releases: https://github.com/hadialqattan/pycln/releases
+    rev: v1.1.0 # Possible releases: https://github.com/hadialqattan/pycln/releases
     hooks:
       - id: pycln
   - repo: 'https://github.com/psf/black'
-    rev: 21.6b0
+    rev: 21.12b0
     hooks:
       - id: black
         args:
         - "--line-length=120"
   - repo: 'https://github.com/pre-commit/pre-commit-hooks'
-    rev: v4.0.1
+    rev: v4.1.0
     hooks:
       - id: end-of-file-fixer
         exclude: '^docs/[^/]*\.svg$'
