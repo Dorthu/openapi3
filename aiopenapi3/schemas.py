@@ -137,10 +137,12 @@ class Model(BaseModel):
 
         def typeof(schema:Schema):
             r = None
-            if schema.type == "string":
-                r = str
-            elif schema.type == "integer":
+            if schema.type == "integer":
                 r = int
+            elif schema.type == "number":
+                r = float
+            elif schema.type == "string":
+                r = str
             elif schema.type == "boolean":
                 r = bool
             elif schema.type == "array":
