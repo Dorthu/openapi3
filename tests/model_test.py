@@ -123,8 +123,7 @@ async def test_createPet(event_loop, server, client):
     assert type(r).schema() == client.components.schemas["Error"].get_type().schema()
 
     with pytest.raises(pydantic.ValidationError):
-        args = client._.createPet.args()
-        cls = args["data"].get_type()
+        cls = client._.createPet.data.get_type()
         cls()
 
 

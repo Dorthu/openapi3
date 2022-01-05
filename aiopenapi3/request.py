@@ -5,6 +5,8 @@ import httpx
 import yarl
 
 from .paths import SecurityRequirement
+from .schemas import Schema
+from .parameter import Parameter
 
 
 class RequestParameter:
@@ -43,16 +45,21 @@ class Request:
     def security(self):
         return self.api._security
 
+    @property
+    def data(self) -> Schema:
+        return self.operation.requestBody.content["application/json"].schema_
+
+    @property
+    def parameters(self) -> Dict[str, Parameter]:
+        return self.operation.parameters + self.spec.paths[self.path].parameters
+
     def args(self, content_type: str = "application/json"):
         op = self.operation
         parameters = op.parameters + self.spec.paths[self.path].parameters
-
         schema = op.requestBody.content[content_type].schema_
-        #        if isinstance(schema, Reference):
-        #            schema = schema._target
         return {"parameters": parameters, "data": schema}
 
-    def return_value(self, http_status=200, content_type="application/json"):
+    def return_value(self, http_status: int = 200, content_type: str = "application/json") -> Schema:
         return self.operation.responses[str(http_status)].content[content_type].schema_
 
     def _prepare_security(self):
