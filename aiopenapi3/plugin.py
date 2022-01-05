@@ -16,8 +16,8 @@ class Init(Plugin):
     class Context:
         initialized: "OpenAPISpec"
 
-    def initialized(self, ctx: "Init.Context") -> "Init.Context":
-        return ctx
+    def initialized(self, ctx: "Init.Context") -> "Init.Context":  # pragma: no cover
+        pass
 
 
 class Document(Plugin):
@@ -30,13 +30,13 @@ class Document(Plugin):
     loaded(text) -> parsed(dict)
     """
 
-    def loaded(self, ctx: "Document.Context") -> "Document.Context":
+    def loaded(self, ctx: "Document.Context") -> "Document.Context":  # pragma: no cover
         """modify the text before parsing"""
-        return ctx
+        pass
 
-    def parsed(self, ctx: "Document.Context") -> "Document.Context":
+    def parsed(self, ctx: "Document.Context") -> "Document.Context":  # pragma: no cover
         """modify the parsed dict before …"""
-        return ctx
+        pass
 
 
 class Message(Plugin):
@@ -55,35 +55,35 @@ class Message(Plugin):
     receiving: received -> parsed -> unmarshalled
     """
 
-    def marshalled(self, ctx: "Message.Context") -> "Message.Context":
+    def marshalled(self, ctx: "Message.Context") -> "Message.Context":  # pragma: no cover
         """
         modify the dict before sending
         """
-        return ctx
+        pass
 
-    def sending(self, ctx: "Message.Context") -> "Message.Context":
+    def sending(self, ctx: "Message.Context") -> "Message.Context":  # pragma: no cover
         """
         modify the text before sending
         """
-        return ctx
+        pass
 
-    def received(self, ctx: "Message.Context") -> "Message.Context":
+    def received(self, ctx: "Message.Context") -> "Message.Context":  # pragma: no cover
         """
         modify the received text
         """
-        return ctx
+        pass
 
-    def parsed(self, ctx: "Message.Context") -> "Message.Context":
+    def parsed(self, ctx: "Message.Context") -> "Message.Context":  # pragma: no cover
         """
         modify the parsed dict structure
         """
-        return ctx
+        pass
 
-    def unmarshalled(self, ctx: "Message.Context") -> "Message.Context":
+    def unmarshalled(self, ctx: "Message.Context") -> "Message.Context":  # pragma: no cover
         """
         modify the object
         """
-        return ctx
+        pass
 
 
 class Domain:

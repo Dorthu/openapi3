@@ -110,6 +110,12 @@ def randomPet(client, name=None):
 
 @pytest.mark.asyncio
 async def test_createPet(event_loop, server, client):
+
+    client._.createPet.data
+    client._.createPet.parameters
+    client._.createPet.args()
+    client._.createPet.return_value()
+
     data = {
         "pet": client.components.schemas["WhiteCat"]
         .model({"name": str(uuid.uuid4()), "white_name": str(uuid.uuid4())})
