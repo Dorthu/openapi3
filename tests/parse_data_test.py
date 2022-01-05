@@ -2,7 +2,9 @@ import pytest
 from aiopenapi3 import FileSystemLoader, OpenAPI
 import pathlib
 
-URLBASE = "http://127.1.1.1/open5gs"
+import yarl
+
+URLBASE = yarl.URL("http://127.1.1.1/open5gs/")
 
 
 def pytest_generate_tests(metafunc):
@@ -28,12 +30,7 @@ class TestParseData:
     }
 
     def test_data(self, dir, file):
-        loader = FileSystemLoader(pathlib.Path(dir))
-        data = loader.load(pathlib.Path(file).name)
-        spec = OpenAPI(URLBASE, data, loader=loader)
+        OpenAPI.load_file(str(URLBASE / file), pathlib.Path(file), loader=FileSystemLoader(pathlib.Path(dir)))
 
     def test_data_open5gs(self, dir, file):
-        loader = FileSystemLoader(pathlib.Path(dir))
-        data = loader.load(pathlib.Path(file).name, codec="utf-8")
-        #        if "servers" in "data":
-        spec = OpenAPI(URLBASE, data, loader=loader)
+        OpenAPI.load_file(str(URLBASE / file), pathlib.Path(file), loader=FileSystemLoader(pathlib.Path(dir)))

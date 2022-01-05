@@ -1,7 +1,8 @@
 import json
-from typing import List
+from typing import List, Dict
 
 import httpx
+import pydantic
 import yarl
 
 from .paths import SecurityRequirement
@@ -148,10 +149,19 @@ class Request:
             raise ValueError("Request Body is required but none was provided.")
 
         if "application/json" in self.operation.requestBody.content:
-            if not isinstance(data, (dict, list)):
+            if isinstance(data, (dict, list)):
+                pass
+            elif isinstance(data, pydantic.BaseModel):
+                data = data.dict()
+            else:
                 raise TypeError(data)
-            body = json.dumps(data)
-            self.req.content = body.encode()
+            data = self.api.plugins.message.marshalled(
+                operationId=self.operation.operationId, marshalled=data
+            ).marshalled
+            data = json.dumps(data)
+            data = data.encode()
+            data = self.api.plugins.message.sending(operationId=self.operation.operationId, sending=data).sending
+            self.req.content = data
             self.req.headers["Content-Type"] = "application/json"
         else:
             raise NotImplementedError()
@@ -161,7 +171,8 @@ class Request:
         self._prepare_parameters(parameters)
         self._prepare_body(data)
 
-        req = httpx.Request(
+    def _build_req(self, session):
+        req = session.build_request(
             self.method,
             str(self.api.url / self.req.url[1:]),
             headers=self.req.headers,
@@ -213,7 +224,15 @@ class Request:
             )
 
         if content_type.lower() == "application/json":
-            return expected_media.schema_.model(result.json())
+            data = result.text
+            data = self.api.plugins.message.received(operationId=self.operation.operationId, received=data).received
+            data = json.loads(data)
+            data = self.api.plugins.message.parsed(operationId=self.operation.operationId, parsed=data).parsed
+            data = expected_media.schema_.model(data)
+            data = self.api.plugins.message.unmarshalled(
+                operationId=self.operation.operationId, unmarshalled=data
+            ).unmarshalled
+            return data
         else:
             raise NotImplementedError()
 
@@ -227,9 +246,10 @@ class Request:
         :type parameters: dict{str: str}
         """
 
-        req = self._prepare(data, parameters)
-
-        result = self.api._session_factory(auth=self.req.auth).send(req)
+        self._prepare(data, parameters)
+        session = self.api._session_factory(auth=self.req.auth)
+        req = self._build_req(session)
+        result = session.send(req)
         return self._process(result)
 
 
@@ -238,9 +258,10 @@ class AsyncRequest(Request):
         return await self.request(*args, **kwargs)
 
     async def request(self, data=None, parameters=None):
-        req = self._prepare(data, parameters)
 
-        async with self.api._session_factory(auth=self.req.auth) as client:
-            result = await client.send(req)
+        self._prepare(data, parameters)
+        async with self.api._session_factory(auth=self.req.auth) as session:
+            req = self._build_req(session)
+            result = await session.send(req)
 
         return self._process(result)

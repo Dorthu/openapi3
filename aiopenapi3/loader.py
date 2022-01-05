@@ -2,12 +2,14 @@ import abc
 import json
 from pathlib import Path
 
+from .plugin import Plugins
+
 import yaml
 
 
 class Loader(abc.ABC):
     @abc.abstractmethod
-    def load(self, name: str):
+    def load(self, plugins, file: Path, codec=None):
         raise NotImplementedError("load")
 
     @classmethod
@@ -27,7 +29,7 @@ class Loader(abc.ABC):
         return data
 
     @classmethod
-    def dict(cls, file, data):
+    def parse(cls, plugins, file, data):
         if file.suffix == ".yaml":
             data = yaml.safe_load(data)
         elif file.suffix == ".json":
@@ -36,16 +38,28 @@ class Loader(abc.ABC):
             raise ValueError(file.name)
         return data
 
+    def get(self, plugins, file):
+        data = self.load(plugins, file)
+        return self.parse(plugins, file, data)
+
 
 class FileSystemLoader(Loader):
     def __init__(self, base: Path):
         assert isinstance(base, Path)
         self.base = base
 
-    def load(self, file: str, codec=None):
+    def load(self, plugins: Plugins, file: Path, codec=None):
+        assert plugins
+        assert isinstance(file, Path)
         path = self.base / file
         assert path.is_relative_to(self.base)
         data = path.open("rb").read()
         data = self.decode(data, codec)
-        data = self.dict(path, data)
+        data = plugins.document.loaded(url=str(file), document=data).document
+        return data
+
+    @classmethod
+    def parse(cls, plugins, file, data):
+        data = Loader.parse(plugins, file, data)
+        data = plugins.document.parsed(url=str(file), document=data).document
         return data

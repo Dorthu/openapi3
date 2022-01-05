@@ -18,6 +18,7 @@ from .schemas import Schema, Discriminator
 from .tag import Tag
 from .request import Request, AsyncRequest
 from .loader import Loader
+from .plugin import Plugin, Plugins
 
 HTTP_METHODS = frozenset(["get", "delete", "head", "post", "put", "patch", "trace"])
 
@@ -44,20 +45,48 @@ class OpenAPI:
         return self._spec.servers
 
     @classmethod
-    def load_sync(cls, url, session_factory: Callable[[], httpx.Client] = httpx.Client, loader=None):
+    def load_sync(
+        cls, url, session_factory: Callable[[], httpx.Client] = httpx.Client, loader=None, plugins: List[Plugin] = None
+    ):
         resp = session_factory().get(url)
-        return cls.loads(url, resp.text, session_factory, loader)
+        return cls.loads(url, resp.text, session_factory, loader, plugins)
 
     @classmethod
-    async def load_async(cls, url, session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient, loader=None):
+    async def load_async(
+        cls,
+        url,
+        session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient,
+        loader=None,
+        plugins: List[Plugin] = None,
+    ):
         async with session_factory() as client:
             resp = await client.get(url)
-        return cls.loads(url, resp.text, session_factory, loader)
+        return cls.loads(url, resp.text, session_factory, loader, plugins)
 
     @classmethod
-    def loads(cls, url, data, session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient, loader=None):
-        data = Loader.dict(pathlib.Path(url), data)
-        return cls(url, data, session_factory, loader)
+    def load_file(
+        cls,
+        url,
+        path,
+        session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient,
+        loader=None,
+        plugins: List[Plugin] = None,
+    ):
+        assert loader
+        data = loader.load(Plugins(plugins or []), path)
+        return cls.loads(url, data, session_factory, loader, plugins)
+
+    @classmethod
+    def loads(
+        cls,
+        url,
+        data,
+        session_factory: Callable[[], httpx.AsyncClient] = httpx.AsyncClient,
+        loader=None,
+        plugins: List[Plugin] = None,
+    ):
+        data = Loader.parse(Plugins(plugins or []), pathlib.Path(url), data)
+        return cls(url, data, session_factory, loader, plugins)
 
     def __init__(
         self,
@@ -65,6 +94,7 @@ class OpenAPI:
         raw_document,
         session_factory: Callable[[], Union[httpx.Client, httpx.AsyncClient]] = httpx.AsyncClient,
         loader=None,
+        plugins: List[Plugin] = None,
     ):
         """
         Creates a new OpenAPI document from a loaded spec file.  This is
@@ -83,9 +113,14 @@ class OpenAPI:
 
         self._security: List[str] = None
         self._cached: Dict[str, "OpenAPISpec"] = dict()
+        self.plugins = Plugins(plugins or [])
 
+        raw_document = self.plugins.document.parsed(url=url, document=raw_document).document
         self._spec = OpenAPISpec.parse_obj(raw_document)
+
         self._spec._resolve_references(self)
+        for i in list(self._cached.values()):
+            i._resolve_references(self)
 
         for name, schema in self.components.schemas.items():
             schema._identity = name
@@ -114,6 +149,8 @@ class OpenAPI:
                         if isinstance(content.schema_, Schema):
                             content.schema_._identity = f"{path}.{m}.{r}.{c}"
 
+        self.plugins.init.initialized(initialized=self._spec)
+
     @property
     def url(self):
         return self._base_url.join(yarl.URL(self._spec.servers[0].url))
@@ -137,7 +174,7 @@ class OpenAPI:
         self._security = {security_scheme: value}
 
     def _load(self, i):
-        data = self.loader.load(i)
+        data = self.loader.get(self.plugins, i)
         return OpenAPISpec.parse_obj(data)
 
     @property
