@@ -8,6 +8,7 @@ import yarl
 from .paths import SecurityRequirement
 from .schemas import Schema
 from .parameter import Parameter
+from .version import __version__
 
 
 class RequestParameter:
@@ -62,6 +63,9 @@ class Request:
 
     def return_value(self, http_status: int = 200, content_type: str = "application/json") -> Schema:
         return self.operation.responses[str(http_status)].content[content_type].schema_
+
+    def _factory_args(self):
+        return {"auth": self.req.auth, "headers": {"user-agent": f"aiopenapi3/{__version__}"}}
 
     def _prepare_security(self):
         if self.security and self.operation.security:
@@ -247,7 +251,7 @@ class Request:
         """
 
         self._prepare(data, parameters)
-        session = self.api._session_factory(auth=self.req.auth)
+        session = self.api._session_factory(**self._factory_args())
         req = self._build_req(session)
         result = session.send(req)
         return self._process(result)
@@ -260,7 +264,7 @@ class AsyncRequest(Request):
     async def request(self, data=None, parameters=None):
 
         self._prepare(data, parameters)
-        async with self.api._session_factory(auth=self.req.auth) as session:
+        async with self.api._session_factory(**self._factory_args()) as session:
             req = self._build_req(session)
             result = await session.send(req)
 
