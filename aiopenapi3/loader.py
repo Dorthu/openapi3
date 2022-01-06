@@ -35,7 +35,7 @@ class Loader(abc.ABC):
         elif file.suffix == ".json":
             data = json.loads(data)
         else:
-            raise ValueError(file.name)
+            raise ValueError(f"{file.name} is not yaml/json")
         return data
 
     def get(self, plugins, file):

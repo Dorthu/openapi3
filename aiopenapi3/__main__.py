@@ -1,5 +1,4 @@
 import sys
-import yaml
 from pathlib import Path
 
 from .openapi import OpenAPI
@@ -9,10 +8,9 @@ from .loader import FileSystemLoader
 
 def main():
     name = sys.argv[1]
-    loader = FileSystemLoader(Path().cwd())
-    spec = loader.load(name)
+
     try:
-        OpenAPI(name, spec, loader=loader)
+        OpenAPI.load_file(name, Path(name), loader=FileSystemLoader(Path().cwd()))
     except ValueError as e:
         print(e)
     else:
