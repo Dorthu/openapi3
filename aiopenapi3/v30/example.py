@@ -2,8 +2,9 @@ from typing import Union, Optional
 
 from pydantic import Field
 
+from ..base import ObjectExtended
+
 from .general import Reference
-from .object_base import ObjectExtended
 
 
 class Example(ObjectExtended):

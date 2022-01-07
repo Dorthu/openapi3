@@ -4,11 +4,7 @@ allOfs are populated as expected as well.
 """
 import typing
 
-import pytest
-
-
-from aiopenapi3 import OpenAPI
-from aiopenapi3.schemas import Schema
+from aiopenapi3.v30.schemas import Schema
 
 from pydantic.main import ModelMetaclass
 

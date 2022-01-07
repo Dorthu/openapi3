@@ -1,23 +1,18 @@
 import pydantic
-import pytest
 
-from pydantic import Extra
-
-from tests.api.v2.schema import Pet, Dog, Cat, WhiteCat, BlackCat
+from tests.api.v2.schema import Dog
 
 import asyncio
 import uuid
 
 import pytest
 
-import httpx
-
 import uvloop
 from hypercorn.asyncio import serve
 from hypercorn.config import Config
 
 import aiopenapi3
-from aiopenapi3.schemas import Schema
+from aiopenapi3.v30.schemas import Schema
 
 from tests.api.main import app
 

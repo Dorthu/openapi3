@@ -1,64 +1,22 @@
-import re
 from typing import Union, List, Optional, Dict
 
 from pydantic import Field, BaseModel, root_validator
 
-from .errors import SpecError
+from ..base import ObjectBase, ObjectExtended
+from ..errors import SpecError
 from .general import ExternalDocumentation
 from .general import Reference
 from .media import MediaType
-from .object_base import ObjectBase, ObjectExtended
 from .parameter import Header, Parameter
 from .servers import Server
-
-
-def _validate_parameters(op: "Operation", path):
-    """
-    Ensures that all parameters for this path are valid
-    """
-    assert isinstance(path, str)
-    allowed_path_parameters = re.findall(r"{([a-zA-Z0-9\-\._~]+)}", path)
-
-    for c in op.parameters:
-        if c.in_ == "path":
-            if c.name not in allowed_path_parameters:
-                raise SpecError("Parameter name not found in path: {}".format(c.name))
-
-
-class SecurityRequirement(BaseModel):
-    """
-    A `SecurityRequirement`_ object describes security schemes for API access.
-
-    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#security-requirement-object
-    """
-
-    __root__: Dict[str, List[str]]
-
-    @root_validator
-    def validate_SecurityRequirement(cls, values):
-        root = values.get("__root__", {})
-        if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
-            raise ValueError(root)
-        return values
-
-    @property
-    def name(self):
-        if len(self.__root__.keys()):
-            return list(self.__root__.keys())[0]
-        return None
-
-    @property
-    def types(self):
-        if self.name:
-            return self.__root__[self.name]
-        return None
+from .security import SecurityRequirement
 
 
 class RequestBody(ObjectExtended):
     """
     A `RequestBody`_ object describes a single request body.
 
-    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#request-body-object
+    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#requestBodyObject
     """
 
     description: Optional[str] = Field(default=None)
@@ -117,16 +75,13 @@ class Operation(ObjectExtended):
     description: Optional[str] = Field(default=None)
     externalDocs: Optional[ExternalDocumentation] = Field(default=None)
     operationId: Optional[str] = Field(default=None)
-    parameters: List[Union[Parameter, Reference]] = Field(default_factory=list)
+    parameters: Optional[List[Union[Parameter, Reference]]] = Field(default_factory=list)
     requestBody: Optional[Union[RequestBody, Reference]] = Field(default=None)
-    responses: Dict[str, Union[Response, Reference]] = Field(required=True)
+    responses: Dict[str, Union[Response, Reference]] = Field(...)
     callbacks: Optional[Dict[str, Union["Callback", Reference]]] = Field(default_factory=dict)
     deprecated: Optional[bool] = Field(default=None)
     security: Optional[List[SecurityRequirement]] = Field(default_factory=list)
     servers: Optional[List[Server]] = Field(default=None)
-
-    class Config:
-        underscore_attrs_are_private = True
 
 
 class PathItem(ObjectExtended):

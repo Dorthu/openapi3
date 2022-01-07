@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import Field
 
-from .object_base import ObjectExtended
+from ..base import ObjectExtended
 
 
 class Contact(ObjectExtended):

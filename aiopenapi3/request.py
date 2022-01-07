@@ -5,9 +5,8 @@ import httpx
 import pydantic
 import yarl
 
-from .paths import SecurityRequirement
-from .schemas import Schema
-from .parameter import Parameter
+from . import v30
+from .base import SchemaBase, ParameterBase, HTTP_METHODS
 from .version import __version__
 
 
@@ -33,7 +32,7 @@ class Request:
 
     def __init__(self, api: "OpenAPI", method: str, path: str, operation: "Operation.request"):
         self.api = api
-        self.spec = api._spec
+        self.spec = api._root
         self.method = method
         self.path = path
         self.operation = operation
@@ -48,11 +47,11 @@ class Request:
         return self.api._security
 
     @property
-    def data(self) -> Schema:
+    def data(self) -> SchemaBase:
         return self.operation.requestBody.content["application/json"].schema_
 
     @property
-    def parameters(self) -> Dict[str, Parameter]:
+    def parameters(self) -> Dict[str, ParameterBase]:
         return self.operation.parameters + self.spec.paths[self.path].parameters
 
     def args(self, content_type: str = "application/json"):
@@ -61,7 +60,7 @@ class Request:
         schema = op.requestBody.content[content_type].schema_
         return {"parameters": parameters, "data": schema}
 
-    def return_value(self, http_status: int = 200, content_type: str = "application/json") -> Schema:
+    def return_value(self, http_status: int = 200, content_type: str = "application/json") -> SchemaBase:
         return self.operation.responses[str(http_status)].content[content_type].schema_
 
     def _factory_args(self):
@@ -81,7 +80,7 @@ class Request:
                     f"No security requirement satisfied (accepts {', '.join(self.operation.security.keys())})"
                 )
 
-    def _prepare_secschemes(self, security_requirement: SecurityRequirement, value: List[str]):
+    def _prepare_secschemes(self, security_requirement: v30.SecurityRequirement, value: List[str]):
         ss = self.spec.components.securitySchemes[security_requirement.name]
 
         if ss.type == "http" and ss.scheme_ == "basic":
@@ -199,11 +198,11 @@ class Request:
 
         if expected_response is None:
             # TODO - custom exception class that has the response object in it
+            options = ",".join(self.operation.responses.keys())
             raise ValueError(
-                f"""Unexpected response {result.status_code} from {self.operation.operationId} (expected one of { ",".join(self.operation.responses.keys()) }), no default is defined"""
+                f"""Unexpected response {result.status_code} from {self.operation.operationId} (expected one of {options}), no default is defined"""
             )
 
-        # defined as "no content"
         if len(expected_response.content) == 0:
             return None
 
@@ -222,9 +221,10 @@ class Request:
             expected_media = None
 
         if expected_media is None:
-            raise RuntimeError(
+            options = ",".join(expected_response.content.keys())
+            raise ValueError(
                 f"Unexpected Content-Type {content_type} returned for operation {self.operation.operationId} \
-                         (expected one of {','.join(expected_response.content.keys())})"
+                         (expected one of {options})"
             )
 
         if content_type.lower() == "application/json":
@@ -269,3 +269,52 @@ class AsyncRequest(Request):
             result = await session.send(req)
 
         return self._process(result)
+
+
+class OperationIndex:
+    class Iter:
+        def __init__(self, spec):
+            self.operations = []
+            self.r = 0
+            #            pi: PathItem
+            for path, pi in spec.paths.items():
+                #                op: Operation
+                for method in pi.__fields_set__ & HTTP_METHODS:
+                    op = getattr(pi, method)
+                    if op.operationId is None:
+                        continue
+                    self.operations.append(op.operationId)
+            self.r = iter(range(len(self.operations)))
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            return self.operations[next(self.r)]
+
+    def __init__(self, api):
+        self._api = api
+        self._spec = api._root
+
+    def __getattr__(self, item):
+        #        pi: PathItem
+        for path, pi in self._spec.paths.items():
+            #            op: Operation
+            for method in pi.__fields_set__ & HTTP_METHODS:
+                op = getattr(pi, method)
+                if op.operationId != item:
+                    continue
+                sf = self._api._session_factory
+                if issubclass(
+                    getattr(sf, "__annotations__", {}).get("return", None.__class__), httpx.Client
+                ) or issubclass(sf, httpx.Client):
+                    return Request(self._api, method, path, op)
+                if issubclass(
+                    getattr(sf, "__annotations__", {}).get("return", None.__class__), httpx.AsyncClient
+                ) or issubclass(sf, httpx.AsyncClient):
+                    return AsyncRequest(self._api, method, path, op)
+
+        raise ValueError(item)
+
+    def __iter__(self):
+        return self.Iter(self._spec)

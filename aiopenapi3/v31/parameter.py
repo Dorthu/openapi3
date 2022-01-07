@@ -1,19 +1,19 @@
 from typing import Union, Optional, Dict, Any
 
-from pydantic import Field, root_validator
+from pydantic import Field
+
+from ..base import ObjectExtended
 
 from .example import Example
 from .general import Reference
-from .object_base import ObjectExtended
 from .schemas import Schema
-from .media import MediaType
 
 
 class ParameterBase(ObjectExtended):
     """
     A `Parameter Object`_ defines a single operation parameter.
 
-    .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#external-documentation-object
+    .. _Parameter Object: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#parameterObject
     """
 
     description: Optional[str] = Field(default=None)
@@ -30,14 +30,6 @@ class ParameterBase(ObjectExtended):
 
     content: Optional[Dict[str, "MediaType"]]
 
-    @root_validator
-    def validate_ParameterBase(cls, values):
-        #        if values["in_"] ==
-        #        if self.in_ == "path" and self.required is not True:
-        #            err_msg = 'Parameter {} must be required since it is in the path'
-        #            raise SpecError(err_msg.format(self.get_path()), path=self._path)
-        return values
-
 
 class Parameter(ParameterBase):
     name: str = Field(required=True)
@@ -47,5 +39,13 @@ class Parameter(ParameterBase):
 class Header(ParameterBase):
     """
 
-    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#header-object
+    .. _HeaderObject: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#headerObject
     """
+
+    pass
+
+
+from .media import MediaType
+
+Parameter.update_forward_refs()
+Header.update_forward_refs()

@@ -1,8 +1,8 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
-from pydantic import Field, root_validator
+from pydantic import Field, root_validator, BaseModel
 
-from .object_base import ObjectExtended
+from ..base import ObjectExtended
 
 
 class OAuthFlow(ObjectExtended):
@@ -61,3 +61,32 @@ class SecurityScheme(ObjectExtended):
         if t == "openIdConnect":
             assert keys - frozenset(["openIdConnectUrl"]) == set([])
         return values
+
+
+class SecurityRequirement(BaseModel):
+    """
+    A `SecurityRequirement`_ object describes security schemes for API access.
+
+    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#securityRequirementObject
+    """
+
+    __root__: Dict[str, List[str]]
+
+    @root_validator
+    def validate_SecurityRequirement(cls, values):
+        root = values.get("__root__", {})
+        if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
+            raise ValueError(root)
+        return values
+
+    @property
+    def name(self):
+        if len(self.__root__.keys()):
+            return list(self.__root__.keys())[0]
+        return None
+
+    @property
+    def types(self):
+        if self.name:
+            return self.__root__[self.name]
+        return None

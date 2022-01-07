@@ -1,48 +1,43 @@
-import datetime
 import pathlib
-from typing import Any, List, Optional, Dict, Union, Callable
+import re
+from typing import List, Dict, Union, Callable
 
-import yaml
-from pydantic import Field
 import httpx
 import yarl
 
-from .components import Components
+from aiopenapi3.v30.general import Reference
+from .json import JSONReference
+from . import v30
+from . import v31
+from .request import OperationIndex, HTTP_METHODS
 from .errors import ReferenceResolutionError, SpecError
-from .general import Reference, JSONPointer, JSONReference
-from .info import Info
-from .object_base import ObjectExtended, ObjectBase
-from .paths import PathItem, SecurityRequirement, _validate_parameters, Operation
-from .servers import Server
-from .schemas import Schema, Discriminator
-from .tag import Tag
-from .request import Request, AsyncRequest
 from .loader import Loader
 from .plugin import Plugin, Plugins
-
-HTTP_METHODS = frozenset(["get", "delete", "head", "post", "put", "patch", "trace"])
+from .base import RootBase
+from .v30.paths import Operation
+from .base import SchemaBase
 
 
 class OpenAPI:
     @property
     def paths(self):
-        return self._spec.paths
+        return self._root.paths
 
     @property
     def components(self):
-        return self._spec.components
+        return self._root.components
 
     @property
     def info(self):
-        return self._spec.info
+        return self._root.info
 
     @property
     def openapi(self):
-        return self._spec.openapi
+        return self._root.openapi
 
     @property
     def servers(self):
-        return self._spec.servers
+        return self._root.servers
 
     @classmethod
     def load_sync(
@@ -88,6 +83,19 @@ class OpenAPI:
         data = Loader.parse(Plugins(plugins or []), pathlib.Path(url), data)
         return cls(url, data, session_factory, loader, plugins)
 
+    def _parse_obj(self, raw_document):
+        if not (v := raw_document.get("openapi", None)):
+            raise ValueError("missing openapi field")
+        v = list(map(int, v.split(".")))
+        if v[0] != 3:
+            raise ValueError(f"openapi major version {v[0]} not supported")
+        if v[1] == 0:
+            return v30.Root.parse_obj(raw_document)
+        elif v[1] == 1:
+            return v31.Root.parse_obj(raw_document)
+        else:
+            raise ValueError(f"openapi major version {v[0]} not supported")
+
     def __init__(
         self,
         url,
@@ -112,48 +120,51 @@ class OpenAPI:
         self._session_factory = session_factory
 
         self._security: List[str] = None
-        self._cached: Dict[str, "OpenAPISpec"] = dict()
+        self._cached: Dict[str, RootBase] = dict()
         self.plugins = Plugins(plugins or [])
 
         raw_document = self.plugins.document.parsed(url=url, document=raw_document).document
-        self._spec = OpenAPISpec.parse_obj(raw_document)
 
-        self._spec._resolve_references(self)
+        self._root = self._parse_obj(raw_document)
+
+        self._root._resolve_references(self)
         for i in list(self._cached.values()):
             i._resolve_references(self)
 
-        for name, schema in self.components.schemas.items():
-            schema._identity = name
+        if self.components:
+            for name, schema in filter(lambda v: isinstance(v[1], SchemaBase), self.components.schemas.items()):
+                schema._identity = name
 
-        operation_map = set()
+        if self.paths:
+            operation_map = set()
 
-        def test_operation(operation_id):
-            if operation_id in operation_map:
-                raise SpecError(f"Duplicate operationId {operation_id}", element=None)
-            operation_map.add(operation_id)
+            def test_operation(operation_id):
+                if operation_id in operation_map:
+                    raise SpecError(f"Duplicate operationId {operation_id}", element=None)
+                operation_map.add(operation_id)
 
-        for path, obj in self.paths.items():
-            for m in obj.__fields_set__ & HTTP_METHODS:
-                op = getattr(obj, m)
-                _validate_parameters(op, path)
-                if op.operationId is None:
-                    continue
-                formatted_operation_id = op.operationId.replace(" ", "_")
-                test_operation(formatted_operation_id)
-                for r, response in op.responses.items():
-                    if isinstance(response, Reference):
+            for path, obj in self.paths.items():
+                for m in obj.__fields_set__ & HTTP_METHODS:
+                    op = getattr(obj, m)
+                    _validate_parameters(op, path)
+                    if op.operationId is None:
                         continue
-                    for c, content in response.content.items():
-                        if content.schema_ is None:
+                    formatted_operation_id = op.operationId.replace(" ", "_")
+                    test_operation(formatted_operation_id)
+                    for r, response in op.responses.items():
+                        if isinstance(response, Reference):
                             continue
-                        if isinstance(content.schema_, Schema):
-                            content.schema_._identity = f"{path}.{m}.{r}.{c}"
+                        for c, content in response.content.items():
+                            if content.schema_ is None:
+                                continue
+                            if isinstance(content.schema_, (v30.Schema,)):
+                                content.schema_._identity = f"{path}.{m}.{r}.{c}"
 
-        self.plugins.init.initialized(initialized=self._spec)
+        self.plugins.init.initialized(initialized=self._root)
 
     @property
     def url(self):
-        return self._base_url.join(yarl.URL(self._spec.servers[0].url))
+        return self._base_url.join(yarl.URL(self._root.servers[0].url))
 
     # public methods
     def authenticate(self, security_scheme, value):
@@ -168,20 +179,20 @@ class OpenAPI:
             self._security = None
             return
 
-        if security_scheme not in self._spec.components.securitySchemes:
+        if security_scheme not in self._root.components.securitySchemes:
             raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
 
         self._security = {security_scheme: value}
 
     def _load(self, i):
         data = self.loader.get(self.plugins, i)
-        return OpenAPISpec.parse_obj(data)
+        return self._parse_obj(data)
 
     @property
     def _(self):
         return OperationIndex(self)
 
-    def resolve_jr(self, root: "OpenAPISpec", obj, value: Reference):
+    def resolve_jr(self, root: "Rootv30", obj, value: Reference):
         url, jp = JSONReference.split(value.ref)
         if url != "":
             url = pathlib.Path(url)
@@ -197,151 +208,14 @@ class OpenAPI:
             raise
 
 
-class OpenAPISpec(ObjectExtended):
+def _validate_parameters(op: "Operation", path):
     """
-    This class represents the root of the OpenAPI schema document, as defined
-    in `the spec`_
-
-    .. _the spec: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#openapi-object
+    Ensures that all parameters for this path are valid
     """
+    assert isinstance(path, str)
+    allowed_path_parameters = re.findall(r"{([a-zA-Z0-9\-\._~]+)}", path)
 
-    openapi: str = Field(...)
-    info: Info = Field(...)
-    servers: Optional[List[Server]] = Field(default=None)
-    paths: Dict[str, PathItem] = Field(required=True, default_factory=dict)
-    components: Optional[Components] = Field(default_factory=Components)
-    security: Optional[List[SecurityRequirement]] = Field(default=None)
-    tags: Optional[List[Tag]] = Field(default=None)
-    externalDocs: Optional[Dict[Any, Any]] = Field(default_factory=dict)
-
-    def _resolve_references(self, api):
-        """
-        Resolves all reference objects below this object and notes their original
-        value was a reference.
-        """
-        # don't circular import
-
-        root = self
-
-        def resolve(obj):
-            if isinstance(obj, ObjectBase):
-                for slot in filter(lambda x: not x.startswith("_"), obj.__fields_set__):
-                    value = getattr(obj, slot)
-                    if value is None:
-                        continue
-
-                    if isinstance(obj, PathItem) and slot == "ref":
-                        ref = Reference.construct(ref=value)
-                        ref._target = api.resolve_jr(root, obj, ref)
-                        setattr(obj, slot, ref)
-
-                    #                    if isinstance(obj, Discriminator) and slot == "mapping":
-                    #                        mapping = dict()
-                    #                        for k,v in value.items():
-                    #                            mapping[k] = Reference.construct(ref=v)
-                    #                        setattr(obj, slot, mapping)
-
-                    value = getattr(obj, slot)
-                    if isinstance(value, Reference):
-                        value._target = api.resolve_jr(root, obj, value)
-                    #                        setattr(obj, slot, resolved_value)
-                    elif issubclass(type(value), ObjectBase):
-                        # otherwise, continue resolving down the tree
-                        resolve(value)
-                    elif isinstance(value, dict):  # pydantic does not use Map
-                        resolve(value)
-                    elif isinstance(value, list):
-                        # if it's a list, resolve its item's references
-                        for item in value:
-                            if isinstance(item, Reference):
-                                item._target = api.resolve_jr(root, obj, item)
-                            elif isinstance(item, (ObjectBase, dict, list)):
-                                resolve(item)
-                    elif isinstance(value, (str, int, float, datetime.datetime)):
-                        continue
-                    else:
-                        raise TypeError(type(value))
-            elif isinstance(obj, dict):
-                for k, v in obj.items():
-                    if isinstance(v, Reference):
-                        if v.ref:
-                            v._target = api.resolve_jr(root, obj, v)
-                    elif isinstance(v, (ObjectBase, dict, list)):
-                        resolve(v)
-
-        resolve(self)
-
-    def resolve_jp(self, jp):
-        """
-        Given a $ref path, follows the document tree and returns the given attribute.
-
-        :param jp: The path down the spec tree to follow
-        :type jp: str #/foo/bar
-
-        :returns: The node requested
-        :rtype: ObjectBase
-        :raises ValueError: if the given path is not valid
-        """
-        path = jp.split("/")[1:]
-        node = self
-
-        for part in path:
-            part = JSONPointer.decode(part)
-            if isinstance(node, dict):
-                if part not in node:  # pylint: disable=unsupported-membership-test
-                    raise ReferenceResolutionError(f"Invalid path {path} in Reference")
-                node = node.get(part)
-            else:
-                if not hasattr(node, part):
-                    raise ReferenceResolutionError(f"Invalid path {path} in Reference")
-                node = getattr(node, part)
-
-        return node
-
-
-class OperationIndex:
-    class Iter:
-        def __init__(self, spec):
-            self.operations = []
-            self.r = 0
-            pi: PathItem
-            for path, pi in spec.paths.items():
-                op: Operation
-                for method in pi.__fields_set__ & HTTP_METHODS:
-                    op = getattr(pi, method)
-                    if op.operationId is None:
-                        continue
-                    self.operations.append(op.operationId)
-            self.r = iter(range(len(self.operations)))
-
-        def __iter__(self):
-            return self
-
-        def __next__(self):
-            return self.operations[next(self.r)]
-
-    def __init__(self, api):
-        self._api = api
-        self._spec = api._spec
-
-    def __getattr__(self, item):
-        pi: PathItem
-        for path, pi in self._spec.paths.items():
-            op: Operation
-            for method in pi.__fields_set__ & HTTP_METHODS:
-                op = getattr(pi, method)
-                if op.operationId != item:
-                    continue
-
-                if issubclass(self._api._session_factory, httpx.Client):
-                    return Request(self._api, method, path, op)
-                if issubclass(self._api._session_factory, httpx.AsyncClient):
-                    return AsyncRequest(self._api, method, path, op)
-
-        raise ValueError(item)
-
-    def __iter__(self):
-        return self.Iter(self._spec)
-
-
-OpenAPISpec.update_forward_refs()
+    for c in op.parameters:
+        if c.in_ == "path":
+            if c.name not in allowed_path_parameters:
+                raise SpecError("Parameter name not found in path: {}".format(c.name))

@@ -10,7 +10,7 @@ import httpx
 import yarl
 
 from aiopenapi3 import OpenAPI
-from aiopenapi3.schemas import Schema
+from aiopenapi3.v30.schemas import Schema
 
 
 URLBASE = "/"
