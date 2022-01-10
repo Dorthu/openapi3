@@ -8,12 +8,13 @@ class ExternalDocumentation(ObjectBase):
 
     .. _External Documentation Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#externalDocumentationObject
     """
-    __slos__ = ['description', 'url']
-    required_fields = 'url'
+
+    __slos__ = ["description", "url"]
+    required_fields = "url"
 
     def _parse_data(self):
-        self.description = self._get('description', str)
-        self.url         = self._get('url', str)
+        self.description = self._get("description", str)
+        self.url = self._get("url", str)
 
 
 class Reference(ObjectBase):
@@ -22,12 +23,13 @@ class Reference(ObjectBase):
 
     .. _Reference Object: https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.1.md#referenceObject
     """
+
     # can't start a variable name with a $
-    __slots__ = ['ref']
-    required_fields = ['$ref']
+    __slots__ = ["ref"]
+    required_fields = ["$ref"]
 
     def _parse_data(self):
-        self.ref = self._get('$ref', str)
+        self.ref = self._get("$ref", str)
 
     @classmethod
     def can_parse(cls, dct):
@@ -36,6 +38,6 @@ class Reference(ObjectBase):
         in __slots__ (since that's not a valid python variable name)
         """
         # TODO - can a reference object have spec extensions?
-        cleaned_keys = [k for k in dct.keys() if not k.startswith('x-')]
+        cleaned_keys = [k for k in dct.keys() if not k.startswith("x-")]
 
-        return len(cleaned_keys) == 1 and '$ref' in dct
+        return len(cleaned_keys) == 1 and "$ref" in dct

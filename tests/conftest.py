@@ -15,8 +15,8 @@ def _get_parsed_yaml(filename):
                      include extension.
     :type filename: str
     """
-    if filename  not in LOADED_FILES:
-        with open("tests/fixtures/"+filename) as f:
+    if filename not in LOADED_FILES:
+        with open("tests/fixtures/" + filename) as f:
             raw = f.read()
         parsed = safe_load(raw)
 
@@ -33,14 +33,14 @@ def _get_parsed_spec(filename):
                      include extension.
     :type filename: str
     """
-    if "spec:"+filename not in LOADED_FILES:
+    if "spec:" + filename not in LOADED_FILES:
         parsed = _get_parsed_yaml(filename)
 
         spec = OpenAPI(parsed)
 
-        LOADED_FILES["spec:"+filename] = spec
+        LOADED_FILES["spec:" + filename] = spec
 
-    return LOADED_FILES["spec:"+filename]
+    return LOADED_FILES["spec:" + filename]
 
 
 @pytest.fixture
@@ -105,7 +105,7 @@ def obj_example_expanded():
     """
     yield _get_parsed_yaml("obj-example.yaml")
 
-    
+
 @pytest.fixture
 def float_validation_expanded():
     """
@@ -136,6 +136,7 @@ def with_broken_links():
     Provides a spec with broken links defined
     """
     yield _get_parsed_yaml("with-broken-links.yaml")
+
 
 @pytest.fixture
 def with_securityparameters():
