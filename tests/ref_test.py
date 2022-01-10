@@ -74,8 +74,6 @@ def test_resolving_nested_allof_ref(with_nested_allof_ref):
 
     assert type(schema.properties['data'].items) == Schema
     assert 'bar' in schema.properties['data'].items.properties
-    tag = items.properties['tag']
-    assert tag.type == 'string'
 
 
 def test_ref_allof_handling(with_ref_allof):
