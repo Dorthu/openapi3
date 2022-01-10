@@ -23,5 +23,5 @@ setup(
     packages=['openapi3'],
     license="BSD 3-Clause License",
     install_requires=["PyYaml", "requests"],
-    tests_require=["pytest"],
+    tests_require=["pytest", "pytest-asyncio", "uvloop", "hypercorn", "pydantic", "fastapi"],
 )

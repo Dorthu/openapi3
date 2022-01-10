@@ -320,6 +320,11 @@ class Operation(ObjectBase):
 
             raise RuntimeError(err_msg.format(*err_var))
 
+        # if we got back a valid response code (or there was a default) and no
+        # response content was expected, return None
+        if expected_response.content is None:
+            return
+
         content_type   = result.headers['Content-Type']
         expected_media = expected_response.content.get(content_type, None)
 
