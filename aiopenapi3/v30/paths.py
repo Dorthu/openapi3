@@ -1,6 +1,6 @@
-from typing import Union, List, Optional, Dict
+from typing import Union, List, Optional, Dict, Any
 
-from pydantic import Field, BaseModel, root_validator
+from pydantic import Field, root_validator
 
 from ..base import ObjectBase, ObjectExtended
 from ..errors import SpecError
@@ -16,7 +16,7 @@ class RequestBody(ObjectExtended):
     """
     A `RequestBody`_ object describes a single request body.
 
-    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#requestBodyObject
+    .. _RequestBody: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#request-body-object
     """
 
     description: Optional[str] = Field(default=None)
@@ -33,8 +33,8 @@ class Link(ObjectExtended):
 
     operationRef: Optional[str] = Field(default=None)
     operationId: Optional[str] = Field(default=None)
-    parameters: Optional[Dict[str, Union["RuntimeExpression", str]]] = Field(default=None)
-    requestBody: Optional[dict] = Field(default=None)
+    parameters: Optional[Dict[str, Union[str, Any, "RuntimeExpression"]]] = Field(default=None)
+    requestBody: Optional[Union[str, "RuntimeExpression"]] = Field(default=None)
     description: Optional[str] = Field(default=None)
     server: Optional[Server] = Field(default=None)
 

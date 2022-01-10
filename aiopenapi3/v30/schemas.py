@@ -6,14 +6,6 @@ from ..base import ObjectExtended, SchemaBase, DiscriminatorBase
 from .general import Reference
 from .xml import XML
 
-TYPE_LOOKUP = {
-    "array": list,
-    "integer": int,
-    "object": dict,
-    "string": str,
-    "boolean": bool,
-}
-
 
 class Discriminator(ObjectExtended, DiscriminatorBase):
     """
@@ -68,9 +60,6 @@ class Schema(ObjectExtended, SchemaBase):
     externalDocs: Optional[dict] = Field(default=None)  # 'ExternalDocs'
     example: Optional[Any] = Field(default=None)
     deprecated: Optional[bool] = Field(default=None)
-    #    contentEncoding: Optional[str] = Field(default=None)
-    #    contentMediaType: Optional[str] = Field(default=None)
-    #    contentSchema: Optional[str] = Field(default=None)
 
     _model_type: object
     _request_model_type: object

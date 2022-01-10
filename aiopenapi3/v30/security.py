@@ -67,7 +67,7 @@ class SecurityRequirement(BaseModel):
     """
     A `SecurityRequirement`_ object describes security schemes for API access.
 
-    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#securityRequirementObject
+    .. _SecurityRequirement: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#security-requirement-object
     """
 
     __root__: Dict[str, List[str]]
