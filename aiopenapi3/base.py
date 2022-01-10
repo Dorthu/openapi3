@@ -62,29 +62,25 @@ class RootBase:
                         value = _Reference.construct(ref=r)
                         setattr(obj, slot, value)
 
+                """
+                ref fields embedded in objects -> replace the object with a Reference object
+
+                PathItem Ref is ambigous
+                https://github.com/OAI/OpenAPI-Specification/issues/2635
+                """
                 if isinstance(obj, _PathItem) and slot == "ref":
                     ref = _Reference.construct(ref=value)
                     ref._target = api.resolve_jr(root, obj, ref)
                     setattr(obj, slot, ref)
 
                 value = getattr(obj, slot)
-                if isinstance(value, _Reference):
+                if isinstance(value, (str, int, float, datetime.datetime)):
+                    continue
+                elif isinstance(value, _Reference):
                     value._target = api.resolve_jr(root, obj, value)
-                #                        setattr(obj, slot, resolved_value)
-                elif issubclass(type(value), ObjectBase):
+                elif issubclass(type(value), ObjectBase) or isinstance(value, (dict, list)):
                     # otherwise, continue resolving down the tree
                     RootBase.resolve(api, root, value, _PathItem, _Reference)
-                elif isinstance(value, dict):  # pydantic does not use Map
-                    RootBase.resolve(api, root, value, _PathItem, _Reference)
-                elif isinstance(value, list):
-                    # if it's a list, resolve its item's references
-                    for item in value:
-                        if isinstance(item, _Reference):
-                            item._target = api.resolve_jr(root, obj, item)
-                        elif isinstance(item, (ObjectBase, dict, list)):
-                            RootBase.resolve(api, root, item, _PathItem, _Reference)
-                elif isinstance(value, (str, int, float, datetime.datetime)):
-                    continue
                 else:
                     raise TypeError(type(value))
         elif isinstance(obj, dict):
@@ -94,6 +90,13 @@ class RootBase:
                         v._target = api.resolve_jr(root, obj, v)
                 elif isinstance(v, (ObjectBase, dict, list)):
                     RootBase.resolve(api, root, v, _PathItem, _Reference)
+        elif isinstance(obj, list):
+            # if it's a list, resolve its item's references
+            for item in obj:
+                if isinstance(item, _Reference):
+                    item._target = api.resolve_jr(root, obj, item)
+                elif isinstance(item, (ObjectBase, dict, list)):
+                    RootBase.resolve(api, root, item, _PathItem, _Reference)
 
     def _resolve_references(self, api):
         """
