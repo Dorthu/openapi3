@@ -58,7 +58,6 @@ def test_allOf_resolution(petstore_expanded_spec):
     assert name.type == "string"
 
     tag = items.properties["tag"]
-    tag = items.properties["tag"]
     assert tag.type == "string"
 
 
@@ -74,8 +73,4 @@ def test_resolving_nested_allof_ref(with_nested_allof_ref):
     assert schema.properties['other'].type == 'string'
 
     assert type(schema.properties['data'].items) == Schema
-    tag = items.properties['tag']
-    tag = items.properties['tag']
-    assert tag.type == 'string'
-
     assert 'bar' in schema.properties['data'].items.properties
