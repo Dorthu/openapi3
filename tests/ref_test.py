@@ -60,3 +60,22 @@ def test_allOf_resolution(petstore_expanded_spec):
     tag = items.properties["tag"]
     tag = items.properties["tag"]
     assert tag.type == "string"
+
+
+def test_resolving_nested_allof_ref(with_nested_allof_ref):
+    """
+    Tests that a schema with a $ref nested within a schema defined in an allOf
+    parses correctly
+    """
+    spec = OpenAPI(with_nested_allof_ref)
+
+    schema = spec.paths['/example'].get.responses['200'].content['application/json'].schema
+    assert type(schema.properties['other']) == Schema
+    assert schema.properties['other'].type == 'string'
+
+    assert type(schema.properties['data'].items) == Schema
+    tag = items.properties['tag']
+    tag = items.properties['tag']
+    assert tag.type == 'string'
+
+    assert 'bar' in schema.properties['data'].items.properties

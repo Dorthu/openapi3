@@ -1,0 +1,38 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: This has a $ref nested in an allOf
+paths:
+  /example:
+    get:
+      operationId: hasNestedAllOfRef
+      responses:
+        '200':
+          description: Example
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Example'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Data'
+                      other:
+                        $ref: '#/components/schemas/Other'
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        bar:
+          type: string
+    Example:
+      type: object
+      properties:
+        foo:
+          type: string
+    Other:
+      type: string

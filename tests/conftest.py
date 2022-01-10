@@ -144,3 +144,11 @@ def with_securityparameters():
     Provides a spec with security parameters
     """
     yield _get_parsed_yaml("with-securityparameters.yaml")
+
+
+@pytest.fixture
+def with_nested_allof_ref():
+    """
+    Provides a spec with a $ref under a schema defined in an allOf
+    """
+    yield _get_parsed_yaml("nested-allOf.yaml")
