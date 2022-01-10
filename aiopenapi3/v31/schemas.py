@@ -6,7 +6,15 @@ from ..base import ObjectExtended, SchemaBase, DiscriminatorBase
 from .general import Reference
 from .xml import XML
 
-from ..v30.schemas import Discriminator
+
+class Discriminator(ObjectExtended, DiscriminatorBase):
+    """
+
+    .. here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#discriminator-object
+    """
+
+    propertyName: str = Field(...)
+    mapping: Optional[Dict[str, str]] = Field(default_factory=dict)
 
 
 class Schema(ObjectExtended, SchemaBase):
@@ -17,8 +25,6 @@ class Schema(ObjectExtended, SchemaBase):
     """
 
     """
-    https://datatracker.ietf.org/doc/html/draft-handrews-json-schema-validation-02
-
     6.1.  Validation Keywords for Any Instance Type
     """
 
@@ -83,13 +89,35 @@ class Schema(ObjectExtended, SchemaBase):
     examples: Optional[Any] = Field(default=None)
 
     """
+    https://datatracker.ietf.org/doc/html/draft-handrews-json-schema-validation-02
+    """
+
+    """
+    8.  The JSON Schema Core Vocabulary
+    """
+    id: Optional[str] = Field(default=None, alias="$id")
+    schema_: Optional[str] = Field(default=None, alias="$schema")
+    anchor: Optional[str] = Field(default=None, alias="$anchor")
+
+    """
+    8.2.4.  Schema References
+    """
+    ref: Optional[Reference] = Field(default=None, alias="$ref")
+    recursiveRef: Optional[Reference] = Field(default=None, alias="$recursiveRef")
+    recursiveAnchor: Optional[bool] = Field(default=None, alias="$recursiveAnchor")
+
+    vocabulary: Optional[Dict[str, bool]] = Field(default=None, alias="$vocabulary")
+    comment: Optional[str] = Field(default=None, alias="$comment")
+    defs: Optional[Dict[str, Any]] = Field(default=None, alias="$defs")
+
+    """
     https://datatracker.ietf.org/doc/html/draft-handrews-json-schema-02#section-9.2
     9.2.  Keywords for Applying Subschemas in Place
     """
-    allOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
-    oneOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
-    anyOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
-    not_: Optional[Union["Schema", Reference]] = Field(default=None, alias="not")
+    allOf: Optional[List["Schema"]] = Field(default_factory=list)
+    oneOf: Optional[List["Schema"]] = Field(default_factory=list)
+    anyOf: Optional[List["Schema"]] = Field(default_factory=list)
+    not_: Optional["Schema"] = Field(default=None, alias="not")
 
     """
     9.2.2.  Keywords for Applying Subschemas Conditionally
@@ -97,24 +125,24 @@ class Schema(ObjectExtended, SchemaBase):
     if_: Optional["Schema"] = Field(default=None, alias="if")
     then_: Optional["Schema"] = Field(default=None, alias="then")
     else_: Optional["Schema"] = Field(default=None, alias="else")
-    dependentSchemas: Optional[Dict[str, Union["Schema", Reference]]] = Field(default_factory=dict)
+    dependentSchemas: Optional[Dict[str, "Schema"]] = Field(default_factory=dict)
 
     """
     9.3.1.  Keywords for Applying Subschemas to Arrays
     """
-    items: Optional[Union[Union["Schema", Reference], List[Union["Schema", Reference]]]] = Field(default=None)
-    additionalItem: Optional[Union["Schema", Reference]] = Field(default=None)
-    unevaluatedItems: Optional[Union["Schema", Reference]] = Field(default=None)
-    contains: Optional[Union["Schema", Reference]] = Field(default=None)
+    items: Optional[Union["Schema", List["Schema"]]] = Field(default=None)
+    additionalItem: Optional["Schema"] = Field(default=None)
+    unevaluatedItems: Optional["Schema"] = Field(default=None)
+    contains: Optional["Schema"] = Field(default=None)
 
     """
     9.3.2.  Keywords for Applying Subschemas to Objects
     """
-    properties: Optional[Dict[str, Union["Schema", Reference]]] = Field(default_factory=dict)
+    properties: Optional[Dict[str, "Schema"]] = Field(default_factory=dict)
     patternProperties: Optional[Dict[str, str]] = Field(default_factory=dict)
-    additionalProperties: Optional[Union["Schema", Reference]] = Field(default=None)
-    unevaluatedProperties: Optional[Union["Schema", Reference]] = Field(default=None)
-    propertyNames: Optional[Union["Schema", Reference]] = Field(default=None)
+    additionalProperties: Optional["Schema"] = Field(default=None)
+    unevaluatedProperties: Optional["Schema"] = Field(default=None)
+    propertyNames: Optional["Schema"] = Field(default=None)
 
     """
     The OpenAPI Specification's base vocabulary is comprised of the following keywords:

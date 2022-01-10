@@ -31,7 +31,7 @@ class MediaType(ObjectExtended):
     .. _MediaType: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#media-type-object
     """
 
-    schema_: Optional[Union[Schema, Reference]] = Field(required=True, alias="schema")
+    schema_: Optional[Schema] = Field(required=True, alias="schema")
     example: Optional[Any] = Field(default=None)  # 'any' type
     examples: Optional[Dict[str, Union[Example, Reference]]] = Field(default_factory=dict)
     encoding: Optional[Dict[str, Encoding]] = Field(default_factory=dict)

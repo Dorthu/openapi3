@@ -11,7 +11,7 @@ class ServerVariable(ObjectExtended):
     """
     A ServerVariable object as defined `here`_.
 
-    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#server-variable-object
+    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#server-variable-object
     """
 
     enum: Optional[List[str]] = Field(default=None)
@@ -31,7 +31,7 @@ class Server(ObjectExtended):
     """
     The Server object, as described `here`_
 
-    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.0.3.md#server-object
+    .. _here: https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#server-object
     """
 
     url: str = Field(...)

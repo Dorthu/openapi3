@@ -24,7 +24,7 @@ class ParameterBase(ObjectExtended):
     style: Optional[str] = Field(default=None)
     explode: Optional[bool] = Field(default=None)
     allowReserved: Optional[bool] = Field(default=None)
-    schema_: Optional[Union[Schema, Reference]] = Field(default=None, alias="schema")
+    schema_: Optional[Schema] = Field(default=None, alias="schema")
     example: Optional[Any] = Field(default=None)
     examples: Optional[Dict[str, Union["Example", Reference]]] = Field(default_factory=dict)
 
