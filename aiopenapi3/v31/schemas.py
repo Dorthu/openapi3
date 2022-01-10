@@ -102,8 +102,8 @@ class Schema(ObjectExtended, SchemaBase):
     """
     8.2.4.  Schema References
     """
-    ref: Optional[Reference] = Field(default=None, alias="$ref")
-    recursiveRef: Optional[Reference] = Field(default=None, alias="$recursiveRef")
+    ref: Optional[str] = Field(default=None, alias="$ref")
+    recursiveRef: Optional[str] = Field(default=None, alias="$recursiveRef")
     recursiveAnchor: Optional[bool] = Field(default=None, alias="$recursiveAnchor")
 
     vocabulary: Optional[Dict[str, bool]] = Field(default=None, alias="$vocabulary")

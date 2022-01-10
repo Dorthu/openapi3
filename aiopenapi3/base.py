@@ -55,6 +55,13 @@ class RootBase:
                 if value is None:
                     continue
 
+                # v3.1 - Schema $ref
+                if isinstance(value, SchemaBase):
+                    r = getattr(value, "ref", None)
+                    if r is not None:
+                        value = _Reference.construct(ref=r)
+                        setattr(obj, slot, value)
+
                 if isinstance(obj, _PathItem) and slot == "ref":
                     ref = _Reference.construct(ref=value)
                     ref._target = api.resolve_jr(root, obj, ref)
