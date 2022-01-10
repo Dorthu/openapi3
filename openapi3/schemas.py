@@ -1,4 +1,4 @@
-from .errors import SpecError
+from .errors import SpecError, ModelError
 from .general import Reference  # need this for Model below
 from .object_base import ObjectBase, Map
 
@@ -263,6 +263,10 @@ class Model:
         for s in self.__slots__:
             # initialize all slots to None
             setattr(self, s, None)
+
+        keys = set(data.keys()) - frozenset(self.__slots__)
+        if keys:
+            raise ModelError("Schema {} got unexpected attribute keys {}".format(self.__class__.__name__, keys))
 
         # collect the data into this model
         for k, v in data.items():
