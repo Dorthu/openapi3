@@ -1,12 +1,13 @@
 import pathlib
 import re
-from typing import List, Dict, Union, Callable
+from typing import List, Dict, Union, Callable, Tuple
 
 import httpx
 import yarl
 
 from aiopenapi3.v30.general import Reference
 from .json import JSONReference
+from . import v20
 from . import v30
 from . import v31
 from .request import OperationIndex, HTTP_METHODS
@@ -84,22 +85,30 @@ class OpenAPI:
         return cls(url, data, session_factory, loader, plugins)
 
     def _parse_obj(self, raw_document):
-        if not (v := raw_document.get("openapi", None)):
-            raise ValueError("missing openapi field")
-        v = list(map(int, v.split(".")))
-        if v[0] != 3:
-            raise ValueError(f"openapi major version {v[0]} not supported")
-        if v[1] == 0:
-            return v30.Root.parse_obj(raw_document)
-        elif v[1] == 1:
-            return v31.Root.parse_obj(raw_document)
+        if v := raw_document.get("openapi", None):
+            v = list(map(int, v.split(".")))
+            if v[0] == 3:
+                if v[1] == 0:
+                    return v30.Root.parse_obj(raw_document)
+                elif v[1] == 1:
+                    return v31.Root.parse_obj(raw_document)
+                else:
+                    raise ValueError(f"openapi version 3.{v[1]} not supported")
+            else:
+                raise ValueError(f"openapi major version {v[0]} not supported")
+        elif v := raw_document.get("swagger", None):
+            v = list(map(int, v.split(".")))
+            if v[0] == 2 and v[1] == 0:
+                return v20.Root.parse_obj(raw_document)
+            else:
+                raise ValueError(f"swagger version {'.'.join(v)} not supported")
         else:
-            raise ValueError(f"openapi major version {v[0]} not supported")
+            raise ValueError("missing openapi/swagger field")
 
     def __init__(
         self,
         url,
-        raw_document,
+        document,
         session_factory: Callable[[], Union[httpx.Client, httpx.AsyncClient]] = httpx.AsyncClient,
         loader=None,
         plugins: List[Plugin] = None,
@@ -109,62 +118,127 @@ class OpenAPI:
         overridden here because we need to specify the path in the parent
         class' constructor.
 
-        :param raw_document: The raw OpenAPI file loaded into python
-        :type raw_document: dct
+        :param document: The raw OpenAPI file loaded into python
+        :type document: dct
         :param session_factory: default uses new session for each call, supply your own if required otherwise.
         :type session_factory: returns httpx.AsyncClient or http.Client
         """
 
         self._base_url: yarl.URL = yarl.URL(url)
+
+        self._session_factory: Callable[[], Union[httpx.Client, httpx.AsyncClient]] = session_factory
+
+        """
+        Loader - loading referenced documents
+        """
         self.loader: Loader = loader
-        self._session_factory = session_factory
 
-        self._security: List[str] = None
-        self._cached: Dict[str, RootBase] = dict()
-        self.plugins = Plugins(plugins or [])
+        """
+        creates the Async/Request for the protocol required
+        """
+        self._createRequest: Callable[["OpenAPI", str, str, "Operation"], "RequestBase"] = None
 
-        raw_document = self.plugins.document.parsed(url=url, document=raw_document).document
+        """
+        authorization informations
+        e.g. {"BasicAuth": ("user","secret")}
+        """
+        self._security: Dict[str, Tuple[str]] = None
 
-        self._root = self._parse_obj(raw_document)
+        """
+        the related documents
+        """
+        self._documents: Dict[str, RootBase] = dict()
+
+        """
+        the plugin interface allows taking care of defects in description documents and implementations
+        """
+        self.plugins: Plugins = Plugins(plugins or [])
+
+        document = self.plugins.document.parsed(url=url, document=document).document
+
+        self._root = self._parse_obj(document)
+
+        if issubclass(getattr(session_factory, "__annotations__", {}).get("return", None.__class__), httpx.Client):
+            if isinstance(self._root, v20.Root):
+                self._createRequest = v20.Request
+            elif isinstance(self._root, (v30.Root, v31.Root)):
+                self._createRequest = v30.Request
+            else:
+                raise ValueError(self._root)
+        elif issubclass(
+            getattr(session_factory, "__annotations__", {}).get("return", None.__class__), httpx.AsyncClient
+        ):
+            if isinstance(self._root, v20.Root):
+                self._createRequest = v20.AsyncRequest
+            elif isinstance(self._root, (v30.Root, v31.Root)):
+                self._createRequest = v30.AsyncRequest
+            else:
+                raise ValueError(self._root)
+        else:
+            raise ValueError("invalid return value annotation for session_factory")
 
         self._root._resolve_references(self)
-        for i in list(self._cached.values()):
+        for i in list(self._documents.values()):
             i._resolve_references(self)
 
-        if self.components:
-            for name, schema in filter(lambda v: isinstance(v[1], SchemaBase), self.components.schemas.items()):
-                schema._identity = name
+        operation_map = set()
 
-        if self.paths:
-            operation_map = set()
+        def test_operation(operation_id):
+            if operation_id in operation_map:
+                raise SpecError(f"Duplicate operationId {operation_id}", element=None)
+            operation_map.add(operation_id)
 
-            def test_operation(operation_id):
-                if operation_id in operation_map:
-                    raise SpecError(f"Duplicate operationId {operation_id}", element=None)
-                operation_map.add(operation_id)
-
-            for path, obj in self.paths.items():
-                for m in obj.__fields_set__ & HTTP_METHODS:
-                    op = getattr(obj, m)
-                    _validate_parameters(op, path)
-                    if op.operationId is None:
-                        continue
-                    formatted_operation_id = op.operationId.replace(" ", "_")
-                    test_operation(formatted_operation_id)
-                    for r, response in op.responses.items():
-                        if isinstance(response, Reference):
+        if isinstance(self._root, v20.Root):
+            if self.paths:
+                for path, obj in self.paths.items():
+                    for m in obj.__fields_set__ & HTTP_METHODS:
+                        op = getattr(obj, m)
+                        _validate_parameters(op, path)
+                        if op.operationId is None:
                             continue
-                        for c, content in response.content.items():
-                            if content.schema_ is None:
+                        formatted_operation_id = op.operationId.replace(" ", "_")
+                        test_operation(formatted_operation_id)
+                        for r, response in op.responses.items():
+                            if isinstance(response, Reference):
                                 continue
-                            if isinstance(content.schema_, (v30.Schema,)):
-                                content.schema_._identity = f"{path}.{m}.{r}.{c}"
+                            if isinstance(response.schema_, (v20.Schema,)):
+                                response.schema_._identity = f"{path}.{m}.{r}"
 
+        elif isinstance(self._root, (v30.Root, v31.Root)):
+            if self.components:
+                for name, schema in filter(lambda v: isinstance(v[1], SchemaBase), self.components.schemas.items()):
+                    schema._identity = name
+
+            if self.paths:
+                for path, obj in self.paths.items():
+                    for m in obj.__fields_set__ & HTTP_METHODS:
+                        op = getattr(obj, m)
+                        _validate_parameters(op, path)
+                        if op.operationId is None:
+                            continue
+                        formatted_operation_id = op.operationId.replace(" ", "_")
+                        test_operation(formatted_operation_id)
+                        for r, response in op.responses.items():
+                            if isinstance(response, Reference):
+                                continue
+                            for c, content in response.content.items():
+                                if content.schema_ is None:
+                                    continue
+                                if isinstance(content.schema_, (v30.Schema,)):
+                                    content.schema_._identity = f"{path}.{m}.{r}.{c}"
+        else:
+            raise ValueError(self._root)
         self.plugins.init.initialized(initialized=self._root)
 
     @property
     def url(self):
-        return self._base_url.join(yarl.URL(self._root.servers[0].url))
+        if isinstance(self._root, v20.Root):
+            r = self._base_url.with_path(self._root.basePath)
+            if self._root.host:
+                r = r.with_host(r)
+            return r
+        elif isinstance(self._root, (v30.Root, v31.Root)):
+            return self._base_url.join(yarl.URL(self._root.servers[0].url))
 
     # public methods
     def authenticate(self, security_scheme, value):
@@ -179,7 +253,7 @@ class OpenAPI:
             self._security = None
             return
 
-        if security_scheme not in self._root.components.securitySchemes:
+        if security_scheme not in self._root.securityDefinitions:
             raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
 
         self._security = {security_scheme: value}
@@ -196,9 +270,9 @@ class OpenAPI:
         url, jp = JSONReference.split(value.ref)
         if url != "":
             url = pathlib.Path(url)
-            if url not in self._cached:
-                self._cached[url] = self._load(url)
-            root = self._cached[url]
+            if url not in self._documents:
+                self._documents[url] = self._load(url)
+            root = self._documents[url]
 
         try:
             return root.resolve_jp(jp)

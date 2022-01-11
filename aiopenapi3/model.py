@@ -91,7 +91,7 @@ class Model(BaseModel):
         if shma.allOf:
             for i in shma.allOf:
                 annos.update(annotationsof(i))
-        elif shma.anyOf:
+        elif hasattr(shma, "anyOf") and shma.anyOf:
             t = tuple(
                 [
                     i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator])
@@ -102,7 +102,7 @@ class Model(BaseModel):
                 annos["__root__"] = Annotated[Union[t], Field(discriminator=shma.discriminator.propertyName)]
             else:
                 annos["__root__"] = Union[t]
-        elif shma.oneOf:
+        elif hasattr(shma, "oneOf") and shma.oneOf:
             t = tuple(
                 [
                     i.get_type(names=shmanm + [i.ref], discriminators=discriminators + [shma.discriminator])
