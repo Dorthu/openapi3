@@ -51,7 +51,7 @@ class Schema(ObjectExtended, SchemaBase):
     additionalProperties: Optional[Union[bool, "Schema", Reference]] = Field(default=None)
     description: Optional[str] = Field(default=None)
     format: Optional[str] = Field(default=None)
-    default: Optional[str] = Field(default=None)  # TODO - str as a default?
+    default: Optional[Any] = Field(default=None)
     nullable: Optional[bool] = Field(default=None)
     discriminator: Optional[Discriminator] = Field(default=None)  # 'Discriminator'
     readOnly: Optional[bool] = Field(default=None)

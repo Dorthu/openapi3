@@ -18,7 +18,7 @@ class Schema(ObjectExtended, SchemaBase):
     format: Optional[str] = Field(default=None)
     title: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    default: Optional[str] = Field(default=None)  # TODO - str as a default?
+    default: Optional[Any] = Field(default=None)
 
     multipleOf: Optional[int] = Field(default=None)
     maximum: Optional[float] = Field(default=None)  # FIXME Field(discriminator='type') would be better

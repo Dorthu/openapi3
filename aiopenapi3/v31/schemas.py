@@ -82,7 +82,7 @@ class Schema(ObjectExtended, SchemaBase):
     """
     title: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    default: Optional[str] = Field(default=None)  # TODO - str as a default?
+    default: Optional[Any] = Field(default=None)
     deprecated: Optional[bool] = Field(default=None)
     readOnly: Optional[bool] = Field(default=None)
     writeOnly: Optional[bool] = Field(default=None)
