@@ -7,7 +7,7 @@ servers:
 paths:
   /additional_prop:
     get:
-      operationId: test_operation
+      operationId: test_operation1
       responses:
         "200":
           description: Success!
@@ -18,5 +18,17 @@ paths:
                 properties:
                   foo:
                     type: string
+                additionalProperties:
+                  type: string
+  /only_additional_prop2:
+    get:
+      operationId: test_operation2
+      responses:
+        "200":
+          description: Success!
+          content:
+            application/json:
+              schema:
+                type: object
                 additionalProperties:
                   type: string
