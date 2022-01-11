@@ -158,7 +158,9 @@ class OpenAPI:
 
         self._root = self._parse_obj(document)
 
-        if issubclass(getattr(session_factory, "__annotations__", {}).get("return", None.__class__), httpx.Client):
+        if issubclass(getattr(session_factory, "__annotations__", {}).get("return", None.__class__), httpx.Client) or (
+            type(session_factory) == type and issubclass(session_factory, httpx.Client)
+        ):
             if isinstance(self._root, v20.Root):
                 self._createRequest = v20.Request
             elif isinstance(self._root, (v30.Root, v31.Root)):
@@ -167,7 +169,7 @@ class OpenAPI:
                 raise ValueError(self._root)
         elif issubclass(
             getattr(session_factory, "__annotations__", {}).get("return", None.__class__), httpx.AsyncClient
-        ):
+        ) or (type(session_factory) == type and issubclass(session_factory, httpx.AsyncClient)):
             if isinstance(self._root, v20.Root):
                 self._createRequest = v20.AsyncRequest
             elif isinstance(self._root, (v30.Root, v31.Root)):
