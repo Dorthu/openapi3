@@ -43,7 +43,6 @@ class ObjectExtended(ObjectBase):
 
 from .json import JSONPointer
 from .errors import ReferenceResolutionError
-import datetime
 
 
 class RootBase:
@@ -74,7 +73,7 @@ class RootBase:
                     setattr(obj, slot, ref)
 
                 value = getattr(obj, slot)
-                if isinstance(value, (str, int, float, datetime.datetime)):
+                if isinstance(value, (str, int, float)):  # , datetime.datetime, datetime.date)):
                     continue
                 elif isinstance(value, _Reference):
                     value._target = api.resolve_jr(root, obj, value)
