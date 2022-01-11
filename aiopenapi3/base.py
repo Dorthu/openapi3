@@ -125,10 +125,14 @@ class RootBase:
 
         for part in path:
             part = JSONPointer.decode(part)
+            if part == "schema":
+                part = "schema_"
             if isinstance(node, dict):
                 if part not in node:  # pylint: disable=unsupported-membership-test
                     raise ReferenceResolutionError(f"Invalid path {path} in Reference")
                 node = node.get(part)
+            elif isinstance(node, list):
+                node = node[int(part)]
             else:
                 if not hasattr(node, part):
                     raise ReferenceResolutionError(f"Invalid path {path} in Reference")
