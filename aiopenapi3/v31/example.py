@@ -1,10 +1,8 @@
-from typing import Union, Optional
+from typing import Optional, Any
 
 from pydantic import Field
 
 from ..base import ObjectExtended
-
-from .general import Reference
 
 
 class Example(ObjectExtended):
@@ -17,5 +15,5 @@ class Example(ObjectExtended):
 
     summary: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
-    value: Optional[Union[Reference, dict, str]] = Field(default=None)  # 'any' type
+    value: Optional[Any] = Field(default=None)
     externalValue: Optional[str] = Field(default=None)
