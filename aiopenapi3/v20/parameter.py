@@ -4,7 +4,7 @@ from pydantic import Field
 
 from .general import Reference
 from .schemas import Schema
-from ..base import ObjectExtended
+from ..base import ObjectExtended, ObjectBase
 
 
 class Item(ObjectExtended):
@@ -26,8 +26,13 @@ class Item(ObjectExtended):
     pattern: Optional[str] = Field(default=None)
     maxItems: Optional[int] = Field(default=None)
     minItems: Optional[int] = Field(default=None)
+    uniqueItems: Optional[bool] = Field(default=None)
     enum: Optional[Any] = Field(default=None)
     multipleOf: Optional[int] = Field(default=None)
+
+
+class Empty(ObjectBase):
+    pass
 
 
 class Parameter(ObjectExtended):
@@ -47,7 +52,8 @@ class Parameter(ObjectExtended):
 
     type: Optional[str] = Field(default=None)
     format: Optional[str] = Field(default=None)
-    items: Optional[Item] = Field(default=None)
+    allowEmptyValue: Optional[bool] = Field(default=None)
+    items: Optional[Union[Item, Empty]] = Field(default=None)
     collectionFormat: Optional[str] = Field(default=None)
     default: Any = Field(default=None)
     maximum: Optional[int] = Field(default=None)
@@ -59,6 +65,7 @@ class Parameter(ObjectExtended):
     pattern: Optional[str] = Field(default=None)
     maxItems: Optional[int] = Field(default=None)
     minItems: Optional[int] = Field(default=None)
+    uniqueItems: Optional[bool] = Field(default=None)
     enum: Optional[Any] = Field(default=None)
     multipleOf: Optional[int] = Field(default=None)
 
@@ -84,6 +91,7 @@ class Header(ObjectExtended):
     pattern: Optional[str] = Field(default=None)
     maxItems: Optional[int] = Field(default=None)
     minItems: Optional[int] = Field(default=None)
+    uniqueItems: Optional[bool] = Field(default=None)
     enum: Optional[Any] = Field(default=None)
     multipleOf: Optional[int] = Field(default=None)
 
