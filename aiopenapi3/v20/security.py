@@ -33,7 +33,7 @@ class SecurityRequirement(BaseModel):
 
     __root__: Dict[str, List[str]]
 
-    @root_validator
+    #    @root_validator
     def validate_SecurityRequirement(cls, values):
         root = values.get("__root__", {})
         if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
