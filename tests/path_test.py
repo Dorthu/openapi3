@@ -20,9 +20,9 @@ def test_paths_exist(petstore_expanded_spec):
     """
     Tests that paths are parsed correctly
     """
-    assert "/pets" in petstore_expanded_spec.paths
-    assert "/pets/{id}" in petstore_expanded_spec.paths
-    assert len(petstore_expanded_spec.paths) == 2
+    assert "/pets" in petstore_expanded_spec.paths._paths
+    assert "/pets/{id}" in petstore_expanded_spec.paths._paths
+    assert len(petstore_expanded_spec.paths._paths) == 2
 
 
 def test_operations_exist(petstore_expanded_spec):

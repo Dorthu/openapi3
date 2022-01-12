@@ -257,8 +257,12 @@ class OpenAPI:
             self._security = None
             return
 
-        if security_scheme not in self._root.securityDefinitions:
-            raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
+        if isinstance(self._root, v20.Root):
+            if security_scheme not in self._root.securityDefinitions:
+                raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
+        elif isinstance(self._root, (v30.Root, v31.Root)):
+            if security_scheme not in self._root.components.securitySchemes:
+                raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
 
         self._security = {security_scheme: value}
 

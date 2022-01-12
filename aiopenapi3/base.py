@@ -65,6 +65,9 @@ class PathsBase(ObjectBase):
     def items(self):
         return self._paths.items()
 
+    def values(self):
+        return self._paths.values()
+
 
 class RootBase:
     @staticmethod

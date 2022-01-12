@@ -11,10 +11,15 @@ A Python [OpenAPI 3 Specification](https://github.com/OAI/OpenAPI-Specification/
 This project is based on [Dorthu/openapi3](github.com/Dorthu/openapi3/).
 
 ## Features
-  * implements OpenAPI 3.0.3
+  * implements …
+    * Swagger 2.0
+    * OpenAPI 3.0.3
+    * OpenAPI 3.1.0
   * object parsing via pydantic
   * request body model creation via [pydantic](https://github.com/samuelcolvin/pydantic)
   * blocking and nonblocking (asyncio) interface via [httpx](https://www.python-httpx.org/)
+  * tests with pytest
+  * providing access to methods and arguments via the sad smiley ._. interface
 
 
 ## Usage as a Client
@@ -168,6 +173,36 @@ paths -> /with-links-two -> get -> responses -> 200 -> links -> exampleWithNeith
 paths -> /with-links-two -> get -> responses -> 200 -> $ref
  field required (type=value_error.missing)
 ```
+
+## Real World issues
+### YAML
+The description document may no be valid yaml.
+YAML type coercion can cause this.
+```python
+>>> yaml.safe_load(str(datetime.datetime.now().date()))
+datetime.date(2022, 1, 12)
+
+>>> yaml.safe_load("name: on")
+{'name': True}
+
+>>> yaml.safe_load('12_24: "test"')
+{1224: 'test'}
+```
+Those can be turned of using the yload yaml.Loader argument to the Loader.
+
+```python
+import aiopenapi3.loader
+
+OpenAPI.load…(…, loader=FileSystemLoader(pathlib.Path(dir), yload = aiopenapi3.loader.YAMLCompatibilityLoader))
+
+```
+
+### description document mismatch
+In case the description document does not match the protocol, it may be required to alter the description, objects or data sent/received.
+The [Plugin interface](tests/plugin_test.py) can be used to alter any of those.
+It can even be used to alter an invalid description document to be usable.
+
+
 
 ## Running Tests
 
