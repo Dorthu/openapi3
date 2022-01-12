@@ -140,7 +140,7 @@ class Schema(ObjectExtended, SchemaBase):
     """
     properties: Optional[Dict[str, "Schema"]] = Field(default_factory=dict)
     patternProperties: Optional[Dict[str, str]] = Field(default_factory=dict)
-    additionalProperties: Optional["Schema"] = Field(default=None)
+    additionalProperties: Optional[Union[bool, "Schema"]] = Field(default=None)
     unevaluatedProperties: Optional["Schema"] = Field(default=None)
     propertyNames: Optional["Schema"] = Field(default=None)
 
