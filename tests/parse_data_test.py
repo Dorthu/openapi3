@@ -1,8 +1,15 @@
 import pytest
-from aiopenapi3 import FileSystemLoader, OpenAPI
-import pathlib
+import sys
+
+if sys.version_info >= (3, 9):
+    import pathlib
+else:
+    import pathlib3x as pathlib
 
 import yarl
+
+import aiopenapi3.loader
+from aiopenapi3 import FileSystemLoader, OpenAPI
 
 URLBASE = yarl.URL("http://127.1.1.1/open5gs/")
 

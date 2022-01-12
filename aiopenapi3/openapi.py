@@ -1,4 +1,10 @@
-import pathlib
+import sys
+
+if sys.version_info >= (3, 9):
+    import pathlib
+else:
+    import pathlib3x as pathlib
+
 import re
 from typing import List, Dict, Union, Callable, Tuple
 

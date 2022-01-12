@@ -1,5 +1,11 @@
-from pathlib import Path
 import json
+import sys
+
+if sys.version_info >= (3, 9):
+    from pathlib import Path
+else:
+    from pathlib3x import Path
+
 
 import pytest
 from aiopenapi3 import OpenAPI, FileSystemLoader, ReferenceResolutionError

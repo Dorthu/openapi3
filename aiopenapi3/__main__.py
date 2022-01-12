@@ -1,5 +1,10 @@
 import sys
-from pathlib import Path
+import sys
+
+if sys.version_info >= (3, 9):
+    from pathlib import Path
+else:
+    from pathlib3x import Path
 
 from .openapi import OpenAPI
 

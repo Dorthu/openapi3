@@ -2,6 +2,13 @@
 Tests parsing specs
 """
 import dataclasses
+import sys
+
+if sys.version_info >= (3, 9):
+    pass
+else:
+    import pathlib3x as pathlib
+
 import pytest
 
 from pydantic import ValidationError
