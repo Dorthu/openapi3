@@ -37,7 +37,7 @@ class Schema(ObjectExtended, SchemaBase):
     enum: Optional[list] = Field(default=None)
     type: Optional[str] = Field(default=None)
 
-    items: Optional[Union["Schema", Reference]] = Field(default=None)
+    items: Optional[Union[List[Union["Schema", Reference]], Union["Schema", Reference]]] = Field(default=None)
     allOf: Optional[List[Union["Schema", Reference]]] = Field(default_factory=list)
     properties: Optional[Dict[str, Union["Schema", Reference]]] = Field(default_factory=dict)
     additionalProperties: Optional[Union[bool, "Schema", Reference]] = Field(default=None)
