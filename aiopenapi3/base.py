@@ -44,6 +44,27 @@ class ObjectExtended(ObjectBase):
 from .json import JSONPointer
 from .errors import ReferenceResolutionError
 
+from typing import Dict, Any
+
+
+class PathsBase(ObjectBase):
+    __root__: Dict[str, Any] = Field(default_factory=dict)
+
+    class Config:
+        from pydantic import Extra
+
+        extra = Extra.allow
+
+    @property
+    def extensions(self):
+        return self._extensions
+
+    def __getitem__(self, item):
+        return self._paths[item]
+
+    def items(self):
+        return self._paths.items()
+
 
 class RootBase:
     @staticmethod
@@ -73,6 +94,11 @@ class RootBase:
                     setattr(obj, slot, ref)
 
                 value = getattr(obj, slot)
+
+                if isinstance(value, PathsBase):
+                    value.items()
+                    value = value._paths
+
                 if isinstance(value, (str, int, float)):  # , datetime.datetime, datetime.date)):
                     continue
                 elif isinstance(value, _Reference):
@@ -125,18 +151,24 @@ class RootBase:
 
         for part in path:
             part = JSONPointer.decode(part)
-            if part == "schema":
-                part = "schema_"
+
+            if isinstance(node, PathsBase):  # forward
+                node = node._paths  # will be dict
+
             if isinstance(node, dict):
                 if part not in node:  # pylint: disable=unsupported-membership-test
                     raise ReferenceResolutionError(f"Invalid path {path} in Reference")
                 node = node.get(part)
             elif isinstance(node, list):
                 node = node[int(part)]
-            else:
+            elif isinstance(node, ObjectBase):
+                if part == "schema":
+                    part = "schema_"
                 if not hasattr(node, part):
                     raise ReferenceResolutionError(f"Invalid path {path} in Reference")
                 node = getattr(node, part)
+            else:
+                raise TypeError(node)
 
         return node
 

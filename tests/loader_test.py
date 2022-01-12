@@ -44,10 +44,10 @@ def test_loader_jsonref(jsonref, exception):
     loader = FileSystemLoader(Path("tests/fixtures"))
     values = {"jsonref": jsonref, "description": ""}
     if exception is None:
-        api = OpenAPI.loads("loader.yaml", SPECTPL.format(**values), session_factory=None, loader=loader)
+        api = OpenAPI.loads("loader.yaml", SPECTPL.format(**values), loader=loader)
     else:
         with pytest.raises(exception):
-            api = OpenAPI.loads("loader.yaml", SPECTPL.format(**values), session_factory=None, loader=loader)
+            api = OpenAPI.loads("loader.yaml", SPECTPL.format(**values), loader=loader)
 
 
 def test_loader_decode():
@@ -63,3 +63,12 @@ def test_loader_format():
     spec = Loader.parse(Plugins([]), Path("loader.yaml"), spec)
     spec = json.dumps(spec)
     api = OpenAPI.loads("loader.json", spec)
+
+
+def test_webload():
+    name = "https://raw.githubusercontent.com/Azure/azure-rest-api-specs/main/specification/network/resource-manager/Microsoft.Network/stable/2018-10-01/serviceEndpointPolicy.json"
+    from aiopenapi3.loader import WebLoader
+    import yarl
+
+    loader = WebLoader(yarl.URL(name))
+    api = OpenAPI.load_sync(name, loader=loader)
