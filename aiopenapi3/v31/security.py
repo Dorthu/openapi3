@@ -51,7 +51,7 @@ class SecurityScheme(ObjectExtended):
     def validate_SecurityScheme(cls, values):
         t = values.get("type", None)
         keys = set(map(lambda x: x[0], filter(lambda x: x[1] is not None, values.items())))
-        keys -= frozenset(["type", "description"])
+        keys -= frozenset(["type", "description", "extensions"])
         if t == "apikey":
             assert keys == set(["in_", "name"])
         if t == "http":
