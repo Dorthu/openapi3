@@ -2,18 +2,18 @@ import abc
 import json
 from pathlib import Path
 
-from .plugin import Plugins
-
 import yaml
+import httpx
+import yarl
 
-from yaml import SafeLoader
+from .plugin import Plugins
 
 """
 https://stackoverflow.com/questions/34667108/ignore-dates-and-times-while-parsing-yaml
 """
 
 
-class NoDatesSafeLoader(SafeLoader):
+class YAMLCompatibilityLoader(yaml.SafeLoader):
     @classmethod
     def remove_implicit_resolver(cls, tag_to_remove):
         """
@@ -34,10 +34,13 @@ class NoDatesSafeLoader(SafeLoader):
             ]
 
 
-NoDatesSafeLoader.remove_implicit_resolver("tag:yaml.org,2002:timestamp")
+YAMLCompatibilityLoader.remove_implicit_resolver("tag:yaml.org,2002:timestamp")
 
 
 class Loader(abc.ABC):
+    def __init__(self, yload: yaml.Loader = yaml.SafeLoader):
+        self.yload = yload
+
     @abc.abstractmethod
     def load(self, plugins, file: Path, codec=None):
         raise NotImplementedError("load")
@@ -58,10 +61,9 @@ class Loader(abc.ABC):
             raise ValueError("encoding")
         return data
 
-    @classmethod
-    def parse(cls, plugins, file, data):
+    def parse(self, plugins, file, data):
         if file.suffix == ".yaml":
-            data = yaml.load(data, Loader=NoDatesSafeLoader)
+            data = yaml.load(data, Loader=self.yload)
         elif file.suffix == ".json":
             data = json.loads(data)
         else:
@@ -73,8 +75,30 @@ class Loader(abc.ABC):
         return self.parse(plugins, file, data)
 
 
+class NullLoader(Loader):
+    def load(self, plugins, file: Path, codec=None):
+        raise NotImplementedError("load")
+
+
+class WebLoader(Loader):
+    def __init__(self, baseurl, session_factory=httpx.Client, yload=yaml.SafeLoader):
+        super().__init__(yload)
+        self.baseurl = baseurl
+        self.session_factory = session_factory
+
+    def load(self, plugins, file: Path, codec=None):
+        url = self.baseurl.join(yarl.URL(str(file)))
+        with self.session_factory() as session:
+            data = session.get(str(url))
+            data = data.content
+        data = self.decode(data, codec)
+        data = plugins.document.loaded(url=str(file), document=data).document
+        return data
+
+
 class FileSystemLoader(Loader):
-    def __init__(self, base: Path):
+    def __init__(self, base: Path, yload: yaml.Loader = yaml.SafeLoader):
+        super().__init__(yload)
         assert isinstance(base, Path)
         self.base = base
 
@@ -88,8 +112,7 @@ class FileSystemLoader(Loader):
         data = plugins.document.loaded(url=str(file), document=data).document
         return data
 
-    @classmethod
-    def parse(cls, plugins, file, data):
-        data = Loader.parse(plugins, file, data)
+    def parse(self, plugins, file, data):
+        data = super().parse(plugins, file, data)
         data = plugins.document.parsed(url=str(file), document=data).document
         return data

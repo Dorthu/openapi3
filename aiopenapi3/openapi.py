@@ -12,7 +12,7 @@ from . import v30
 from . import v31
 from .request import OperationIndex, HTTP_METHODS
 from .errors import ReferenceResolutionError, SpecError
-from .loader import Loader
+from .loader import Loader, NullLoader
 from .plugin import Plugin, Plugins
 from .base import RootBase
 from .v30.paths import Operation
@@ -81,7 +81,9 @@ class OpenAPI:
         loader=None,
         plugins: List[Plugin] = None,
     ):
-        data = Loader.parse(Plugins(plugins or []), pathlib.Path(url), data)
+        if loader is None:
+            loader = NullLoader()
+        data = loader.parse(Plugins(plugins or []), pathlib.Path(url), data)
         return cls(url, data, session_factory, loader, plugins)
 
     def _parse_obj(self, raw_document):
