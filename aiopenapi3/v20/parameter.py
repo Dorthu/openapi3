@@ -31,7 +31,7 @@ class Item(ObjectExtended):
     multipleOf: Optional[int] = Field(default=None)
 
 
-class Empty(ObjectBase):
+class Empty(ObjectExtended):
     pass
 
 
