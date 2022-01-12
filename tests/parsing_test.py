@@ -1,6 +1,7 @@
 """
 Tests parsing specs
 """
+import dataclasses
 import pytest
 
 from pydantic import ValidationError
