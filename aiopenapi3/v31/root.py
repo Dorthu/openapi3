@@ -1,11 +1,11 @@
 from typing import Any, List, Optional, Dict, Union
 
-from pydantic import Field, root_validator
+from pydantic import Field, root_validator, validator
 
 from ..base import ObjectExtended, RootBase
 
 from .info import Info
-from .paths import PathItem
+from .paths import Paths, PathItem
 from .security import SecurityRequirement
 from .servers import Server
 
@@ -26,14 +26,13 @@ class Root(ObjectExtended, RootBase):
     info: Info = Field(...)
     jsonSchemaDialect: Optional[str] = Field(default=None)  # FIXME should be URI
     servers: Optional[List[Server]] = Field(default=None)
-    paths: Optional[Dict[str, PathItem]] = Field(required=False)
+    paths: Paths = Field(default_factory=Paths)
     webhooks: Optional[Dict[str, Union[PathItem, Reference]]] = Field(required=False)
     components: Optional[Components] = Field(default=None)
     security: Optional[List[SecurityRequirement]] = Field(default=None)
     tags: Optional[List[Tag]] = Field(default=None)
     externalDocs: Optional[Dict[Any, Any]] = Field(default_factory=dict)
 
-    @root_validator
     def validate_Root(cls, values):
         assert any([values.get(i) is not None for i in ["paths", "components", "webhooks"]]), values
         return values

@@ -124,3 +124,33 @@ def test_securityparameters(with_securityparameters):
 
 def test_callback(with_callback):
     spec = OpenAPI(URLBASE, with_callback)
+
+
+@dataclasses.dataclass
+class _Version:
+    major: int
+    minor: int
+    patch: int = 0
+
+    def __str__(self):
+        if self.major == 3:
+            return f'openapi: "{self.major}.{self.minor}.{self.patch}"'
+        else:
+            return f'swagger: "{self.major}.{self.minor}"'
+
+
+@pytest.fixture(scope="session", params=[_Version(2, 0), _Version(3, 0, 3), _Version(3, 1, 0)])
+def openapi_version(request):
+    return request.param
+
+
+def test_extended_paths(openapi_version):
+    DOC = f"""{openapi_version}
+info:
+  title: ''
+  version: 0.0.0
+paths:
+    x-codegen-contextRoot: /apis/registry/v2
+"""
+    api = OpenAPI.loads("test.yaml", DOC)
+    print(api)

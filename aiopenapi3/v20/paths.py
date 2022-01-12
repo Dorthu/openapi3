@@ -1,13 +1,13 @@
 from typing import Union, List, Optional, Dict, Any
 
-from pydantic import Field
+from pydantic import Field, root_validator
 
 from .general import ExternalDocumentation
 from .general import Reference
 from .parameter import Header, Parameter
 from .schemas import Schema
 from .security import SecurityRequirement
-from ..base import ObjectExtended
+from ..base import ObjectExtended, ObjectBase, PathsBase
 
 
 class Response(ObjectExtended):
@@ -61,6 +61,20 @@ class PathItem(ObjectExtended):
     head: Optional[Operation] = Field(default=None)
     patch: Optional[Operation] = Field(default=None)
     parameters: Optional[List[Union[Parameter, Reference]]] = Field(default_factory=list)
+
+
+class Paths(PathsBase):
+    @root_validator(pre=True)
+    def validate_Paths(cls, values):
+        assert set(values.keys()) - frozenset(["__root__"]) == set([])
+        p = {}
+        e = {}
+        for k, v in values.get("__root__", {}).items():
+            if k[:2] == "x-":
+                e[k] = v
+            else:
+                p[k] = PathItem(**v)
+        return {"_paths": p, "_extensions": e}
 
 
 Operation.update_forward_refs()

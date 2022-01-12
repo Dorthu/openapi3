@@ -1,13 +1,14 @@
 from typing import Any, List, Optional, Dict
 
-from pydantic import Field
+from pydantic import Field, validator
 
 from ..base import ObjectExtended, RootBase
 
 from .components import Components
 from .general import Reference
 from .info import Info
-from .paths import PathItem, SecurityRequirement
+from .paths import PathItem, Paths
+from .security import SecurityRequirement
 from .servers import Server
 from .tag import Tag
 
@@ -23,7 +24,7 @@ class Root(ObjectExtended, RootBase):
     openapi: str = Field(...)
     info: Info = Field(...)
     servers: Optional[List[Server]] = Field(default_factory=list)
-    paths: Dict[str, PathItem] = Field(required=True, default_factory=dict)
+    paths: Paths = Field(required=True, default=None)
     components: Optional[Components] = Field(default_factory=Components)
     security: Optional[List[SecurityRequirement]] = Field(default=None)
     tags: Optional[List[Tag]] = Field(default=None)

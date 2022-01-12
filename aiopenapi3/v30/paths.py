@@ -107,6 +107,20 @@ class PathItem(ObjectExtended):
     parameters: Optional[List[Union[Parameter, Reference]]] = Field(default_factory=list)
 
 
+class Paths(PathsBase):
+    @root_validator(pre=True)
+    def validate_Paths(cls, values):
+        assert set(values.keys()) - frozenset(["__root__"]) == set([])
+        p = {}
+        e = {}
+        for k, v in values.get("__root__", {}).items():
+            if k[:2] == "x-":
+                e[k] = v
+            else:
+                p[k] = PathItem(**v)
+        return {"_paths": p, "_extensions": e}
+
+
 class Callback(ObjectBase):
     """
     A map of possible out-of band callbacks related to the parent operation.

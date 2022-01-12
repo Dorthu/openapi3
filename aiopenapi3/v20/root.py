@@ -1,17 +1,15 @@
 from typing import List, Optional, Dict
 
-from pydantic import Field
-
-from ..base import ObjectExtended, RootBase
+from pydantic import Field, validator
 
 from .general import Reference, ExternalDocumentation
 from .info import Info
-from .paths import PathItem
+from .parameter import Parameter
+from .paths import Response, Paths, PathItem
 from .schemas import Schema
 from .security import SecurityScheme, SecurityRequirement
-from .paths import Response
-from .paths import Parameter
 from .tag import Tag
+from ..base import ObjectExtended, RootBase
 
 
 class Root(ObjectExtended, RootBase):
@@ -28,7 +26,7 @@ class Root(ObjectExtended, RootBase):
     schemes: Optional[List[str]] = Field(default_factory=list)
     consumes: Optional[List[str]] = Field(default_factory=list)
     produces: Optional[List[str]] = Field(default_factory=list)
-    paths: Dict[str, PathItem] = Field(default_factory=dict)
+    paths: Paths = Field(default=None)
     definitions: Optional[Dict[str, Schema]] = Field(default_factory=dict)
     parameters: Optional[Dict[str, Parameter]] = Field(default_factory=dict)
     responses: Optional[Dict[str, Response]] = Field(default_factory=dict)

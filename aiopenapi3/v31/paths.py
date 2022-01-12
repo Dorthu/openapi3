@@ -2,7 +2,7 @@ from typing import Union, List, Optional, Dict, Any
 
 from pydantic import Field, root_validator
 
-from ..base import ObjectBase, ObjectExtended
+from ..base import ObjectBase, ObjectExtended, PathsBase
 from ..errors import SpecError
 from .general import ExternalDocumentation
 from .general import Reference
@@ -105,6 +105,20 @@ class PathItem(ObjectExtended):
     trace: Optional[Operation] = Field(default=None)
     servers: Optional[List[Server]] = Field(default=None)
     parameters: Optional[List[Union[Parameter, Reference]]] = Field(default_factory=list)
+
+
+class Paths(PathsBase):
+    @root_validator(pre=True)
+    def validate_Paths(cls, values):
+        assert set(values.keys()) - frozenset(["__root__"]) == set([])
+        p = {}
+        e = {}
+        for k, v in values.get("__root__", {}).items():
+            if k[:2] == "x-":
+                e[k] = v
+            else:
+                p[k] = PathItem(**v)
+        return {"_paths": p, "_extensions": e}
 
 
 class Callback(ObjectBase):
