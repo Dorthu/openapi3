@@ -36,6 +36,21 @@ class YAMLCompatibilityLoader(yaml.SafeLoader):
 
 YAMLCompatibilityLoader.remove_implicit_resolver("tag:yaml.org,2002:timestamp")
 
+"""
+example: =
+"""
+YAMLCompatibilityLoader.remove_implicit_resolver("tag:yaml.org,2002:value")
+
+"""
+18_24: test
+"""
+YAMLCompatibilityLoader.remove_implicit_resolver("tag:yaml.org,2002:int")
+
+"""
+name: on
+"""
+YAMLCompatibilityLoader.remove_implicit_resolver("tag:yaml.org,2002:bool")
+
 
 class Loader(abc.ABC):
     def __init__(self, yload: yaml.Loader = yaml.SafeLoader):
