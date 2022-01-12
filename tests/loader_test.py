@@ -3,7 +3,7 @@ import json
 
 import pytest
 from aiopenapi3 import OpenAPI, FileSystemLoader, ReferenceResolutionError
-from aiopenapi3.loader import Loader, Plugins
+from aiopenapi3.loader import Loader, Plugins, NullLoader
 
 SPECTPL = """
 openapi: "3.0.0"
@@ -59,8 +59,8 @@ def test_loader_format():
     values = {"jsonref": "'#/components/schemas/Example'", "description": ""}
     spec = SPECTPL.format(**values)
     api = OpenAPI.loads("loader.yaml", spec)
-
-    spec = Loader.parse(Plugins([]), Path("loader.yaml"), spec)
+    loader = NullLoader()
+    spec = loader.parse(Plugins([]), Path("loader.yaml"), spec)
     spec = json.dumps(spec)
     api = OpenAPI.loads("loader.json", spec)
 
