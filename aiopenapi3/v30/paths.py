@@ -2,7 +2,7 @@ from typing import Union, List, Optional, Dict, Any
 
 from pydantic import Field, root_validator
 
-from ..base import ObjectBase, ObjectExtended
+from ..base import ObjectBase, ObjectExtended, PathsBase
 from ..errors import SpecError
 from .general import ExternalDocumentation
 from .general import Reference
@@ -38,14 +38,15 @@ class Link(ObjectExtended):
     description: Optional[str] = Field(default=None)
     server: Optional[Server] = Field(default=None)
 
-    @root_validator(pre=False)
+    @root_validator
     def validate_Link_operation(cls, values):
-        if values["operationId"] != None and values["operationRef"] != None:
-            raise SpecError("operationId and operationRef are mutually exclusive, only one of them is allowed")
-
-        if values["operationId"] == values["operationRef"] == None:
-            raise SpecError("operationId and operationRef are mutually exclusive, one of them must be specified")
-
+        operationId, operationRef = (values.get(i, None) for i in ["operationId", "operationRef"])
+        assert not (
+            operationId != None and operationRef != None
+        ), "operationId and operationRef are mutually exclusive, only one of them is allowed"
+        assert not (
+            operationId == operationRef == None
+        ), "operationId and operationRef are mutually exclusive, one of them must be specified"
         return values
 
 
