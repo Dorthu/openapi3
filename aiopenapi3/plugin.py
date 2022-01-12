@@ -103,7 +103,8 @@ class Method:
     def __call__(self, **kwargs):
         r = self.domain.Context(**kwargs)
         for plugin in self.domain.plugins:
-            if (method := getattr(plugin, self.name, None)) is None:
+            method = getattr(plugin, self.name, None)
+            if method is None:
                 continue
             method(r)
         return r

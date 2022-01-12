@@ -87,7 +87,8 @@ class OpenAPI:
         return cls(url, data, session_factory, loader, plugins)
 
     def _parse_obj(self, raw_document):
-        if v := raw_document.get("openapi", None):
+        v = raw_document.get("openapi", None)
+        if v:
             v = list(map(int, v.split(".")))
             if v[0] == 3:
                 if v[1] == 0:
@@ -98,7 +99,10 @@ class OpenAPI:
                     raise ValueError(f"openapi version 3.{v[1]} not supported")
             else:
                 raise ValueError(f"openapi major version {v[0]} not supported")
-        elif v := raw_document.get("swagger", None):
+            return
+
+        v = raw_document.get("swagger", None)
+        if v:
             v = list(map(int, v.split(".")))
             if v[0] == 2 and v[1] == 0:
                 return v20.Root.parse_obj(raw_document)

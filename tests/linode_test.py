@@ -17,7 +17,11 @@ def event_loop(request):
 
 @pytest.fixture(scope="session")
 async def api():
-    return await OpenAPI.load_async("https://www.linode.com/docs/api/openapi.yaml")
+    from aiopenapi3.loader import NullLoader, YAMLCompatibilityLoader
+
+    return await OpenAPI.load_async(
+        "https://www.linode.com/docs/api/openapi.yaml", loader=NullLoader(YAMLCompatibilityLoader)
+    )
 
 
 @pytest.mark.asyncio

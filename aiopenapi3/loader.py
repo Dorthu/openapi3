@@ -1,10 +1,17 @@
 import abc
 import json
-from pathlib import Path
+
 
 import yaml
 import httpx
 import yarl
+
+import sys
+
+if sys.version_info >= (3, 9):
+    from pathlib import Path
+else:
+    from pathlib3x import Path
 
 from .plugin import Plugins
 

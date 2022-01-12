@@ -1,6 +1,14 @@
+from __future__ import annotations
 import types
 import uuid
-from typing import List, Literal, Optional, Annotated, Union
+
+import sys
+
+if sys.version_info >= (3, 9):
+    from typing import List, Optional, Literal, Union, Annotated
+else:
+    from typing import List, Optional, Union
+    from typing_extensions import Annotated, Literal
 
 from pydantic import BaseModel, Extra, Field
 

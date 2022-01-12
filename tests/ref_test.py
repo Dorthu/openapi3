@@ -1,8 +1,18 @@
+from __future__ import annotations
+import sys
+
 """
 This file tests that $ref resolution works as expected, and that
 allOfs are populated as expected as well.
 """
-import typing
+
+if sys.version_info >= (3, 8):
+    import typing
+else:
+    # fot typing.get_origin
+    import typing_extensions as typing
+
+
 import dataclasses
 import pytest
 from aiopenapi3 import OpenAPI

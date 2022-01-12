@@ -1,9 +1,10 @@
+import sys
+import asyncio
+import uuid
+
 import pydantic
 
 from tests.api.v2.schema import Dog
-
-import asyncio
-import uuid
 
 import pytest
 
@@ -63,6 +64,7 @@ def test_Pet():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="requires asyncio.to_thread")
 async def test_sync(event_loop, server, version):
     url = f"http://{server.bind[0]}/{version}/openapi.json"
     api = await asyncio.to_thread(aiopenapi3.OpenAPI.load_sync, url)
