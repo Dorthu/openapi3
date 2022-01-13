@@ -161,3 +161,8 @@ def with_callback():
     Provides a spec with callback
     """
     yield _get_parsed_yaml("callback-example.yaml")
+
+
+@pytest.fixture
+def with_swagger():
+    yield _get_parsed_yaml("swagger-example.yaml")

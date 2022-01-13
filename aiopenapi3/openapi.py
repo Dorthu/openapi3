@@ -247,9 +247,25 @@ class OpenAPI:
     @property
     def url(self):
         if isinstance(self._root, v20.Root):
-            r = self._base_url.with_path(self._root.basePath)
+            base = yarl.URL(self._base_url)
+            scheme = host = path = None
+            if self._root.schemes:
+                for i in ["https", "http"]:
+                    if i not in self._root.schemes:
+                        continue
+                    scheme = i
+                    break
+                else:
+                    scheme = base.scheme
             if self._root.host:
-                r = r.with_host(r)
+                host = self._root.host
+            else:
+                host = base.host
+            if self._root.basePath:
+                path = self._root.basePath
+            else:
+                path = base.path
+            r = yarl.URL.build(scheme=scheme, host=host, path=path)
             return r
         elif isinstance(self._root, (v30.Root, v31.Root)):
             return self._base_url.join(yarl.URL(self._root.servers[0].url))

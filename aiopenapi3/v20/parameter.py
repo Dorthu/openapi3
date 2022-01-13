@@ -43,7 +43,7 @@ class Parameter(ObjectExtended):
     """
 
     name: str = Field(required=True)
-    in_: str = Field(required=True, alias="in")  # TODO must be one of ["query","header","path","cookie"]
+    in_: str = Field(required=True, alias="in")  # "query", "header", "path", "formData" or "body"
 
     description: Optional[str] = Field(default=None)
     required: Optional[bool] = Field(default=None)

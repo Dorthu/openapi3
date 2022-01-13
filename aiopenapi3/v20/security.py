@@ -23,6 +23,13 @@ class SecurityScheme(ObjectExtended):
     refreshUrl: Optional[str] = Field(default=None)
     scopes: Dict[str, str] = Field(default_factory=dict)
 
+    @root_validator
+    def validate_SecurityScheme(cls, values):
+        if values["type"] == "apiKey":
+            assert values["name"], "name is required for apiKey"
+            assert values["in_"] in frozenset(["query", "header"]), "in must be query or header"
+        return values
+
 
 class SecurityRequirement(BaseModel):
     """

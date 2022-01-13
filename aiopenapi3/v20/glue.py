@@ -7,6 +7,8 @@ import pydantic
 from ..base import SchemaBase, ParameterBase
 from ..request import RequestBase, AsyncRequestBase
 
+
+from .parameter import Parameter
 from . import SecurityRequirement
 
 
@@ -16,10 +18,14 @@ class Request(RequestBase):
         return self.api._security
 
     @property
-    def data(self) -> SchemaBase:
+    def _data_parameter(self) -> Parameter:
         for i in filter(lambda x: x.in_ == "body", self.operation.parameters):
-            return i.schema_
+            return i
         raise ValueError("body")
+
+    @property
+    def data(self) -> SchemaBase:
+        return self._data_parameter.schema_
 
     @property
     def parameters(self) -> Dict[str, ParameterBase]:
@@ -34,7 +40,7 @@ class Request(RequestBase):
         return {"parameters": parameters, "data": schema}
 
     def return_value(self, http_status: int = 200, content_type: str = "application/json") -> SchemaBase:
-        return self.operation.responses[str(http_status)].content[content_type].schema_
+        return self.operation.responses[str(http_status)].schema_
 
     def _prepare_security(self):
         if self.operation.security == []:
@@ -51,9 +57,7 @@ class Request(RequestBase):
                     continue
                 break
             else:
-                raise ValueError(
-                    f"No security requirement satisfied (accepts {', '.join(self.operation.security.keys())})"
-                )
+                raise ValueError(f"No security requirement satisfied (accepts {', '.join([i.name for i in security])})")
 
     def _prepare_secschemes(self, security_requirement: SecurityRequirement, value: List[str]):
         """
@@ -72,9 +76,6 @@ class Request(RequestBase):
             if ss.in_ == "header":
                 # apiKey in query header data
                 self.req.headers[ss.name] = value
-
-            if ss.in_ == "cookie":
-                self.req.cookies = {ss.name: value}
 
     def _prepare_parameters(self, parameters):
         # Parameters
@@ -106,21 +107,19 @@ class Request(RequestBase):
             if spec.in_ == "header":
                 self.req.headers[name] = value
 
-            if spec.in_ == "cookie":
-                self.req.cookies[name] = value
-
         self.req.url = self.req.url.format(**path_parameters)
 
     def _prepare_body(self, data):
         try:
-            self.data
+            required = self._data_parameter.required
         except ValueError:
             return
 
-        if data is None and self.data.required:
+        if data is None and required:
             raise ValueError("Request Body is required but none was provided.")
 
-        if "application/json" in self.operation.consumes:
+        consumes = frozenset(self.operation.consumes or self.root.consumes)
+        if "application/json" in consumes:
             if isinstance(data, (dict, list)):
                 pass
             elif isinstance(data, pydantic.BaseModel):
@@ -136,7 +135,7 @@ class Request(RequestBase):
             self.req.content = data
             self.req.headers["Content-Type"] = "application/json"
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(f"unsupported mime types {consumes}")
 
     def _prepare(self, data, parameters):
         self._prepare_security()
