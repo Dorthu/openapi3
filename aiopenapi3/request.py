@@ -1,3 +1,4 @@
+from typing import Dict
 import httpx
 import pydantic
 import yarl
@@ -83,20 +84,20 @@ class OperationIndex:
             return self.operations[next(self.r)]
 
     def __init__(self, api):
-        self._api = api
-        self._root = api._root
+        self._api: "OpenAPI" = api
+        self._root: "RootBase" = api._root
 
-    def __getattr__(self, item):
-        pi: "PathItem"
+        self._operations: Dict[str, "Operation"] = dict()
+
         for path, pi in self._root.paths.items():
             op: "Operation"
             for method in pi.__fields_set__ & HTTP_METHODS:
                 op = getattr(pi, method)
-                if op.operationId != item:
-                    continue
-                return self._api._createRequest(self._api, method, path, op)
+                self._operations[op.operationId.replace(" ", "_")] = (method, path, op)
 
-        raise ValueError(item)
+    def __getattr__(self, item):
+        (method, path, op) = self._operations[item]
+        return self._api._createRequest(self._api, method, path, op)
 
     def __iter__(self):
         return self.Iter(self._root)
