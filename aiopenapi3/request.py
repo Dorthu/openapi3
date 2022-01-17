@@ -93,6 +93,8 @@ class OperationIndex:
             op: "Operation"
             for method in pi.__fields_set__ & HTTP_METHODS:
                 op = getattr(pi, method)
+                if op.operationId is None:
+                    continue
                 self._operations[op.operationId.replace(" ", "_")] = (method, path, op)
 
     def __getattr__(self, item):
