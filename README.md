@@ -91,12 +91,12 @@ print(json.dumps((list(filter(lambda x: 'eu-west' in x.id, regions.data))[0]).di
 
 #### discriminators
 discriminators are supported as well, but the linode api can't be used to show how to use them.
-look at [tests/model_test.py] test_model.
+look at [aiopenapi3/tests/model_test.py](aiopenapi3/tests/model_test.py) test_model.
 
 ### authentication
 ```python
 my_token = "Gae6aikaegainoor"
-api.authenticate('personalAccessToken', my_token)
+api.authenticate(personalAccessToken=my_token)
 
 # call an operation that requires authentication
 linodes  = api._.getLinodeInstances()
@@ -106,7 +106,12 @@ HTTP basic authentication and HTTP digest authentication works like this:
 ```python
 # authenticate using a securityScheme defined in the spec's components.securitySchemes
 # Tuple with (username, password) as second argument
-api.authenticate('basicAuth', ('username', 'password'))
+api.authenticate(basicAuth=('username', 'password'))
+```
+
+Resetting authentication tokens:
+```python
+api.authenticate(None)
 ```
 
 ### parameters
