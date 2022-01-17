@@ -24,11 +24,32 @@ securityDefinitions:
     type: apiKey
     in: query
     name: auth
+  user:
+    type: apiKey
+    in: header
+    name: x-user
+  token:
+    type: apiKey
+    in: header
+    name: x-token
+
 
 security:
   - BasicAuth: []
 
 paths:
+  /combined:
+    get:
+      operationId: combinedSecurity
+      responses:
+        200:
+          description: ''
+          schema:
+            type: str
+      security:
+        - user: []
+          token: []
+
   /users/{userId}:
     get:
       operationId: getUser
@@ -72,7 +93,6 @@ paths:
             type: array
             items:
               $ref: '#/definitions/User'
-
     post:
       security:
         - QueryAuth: []

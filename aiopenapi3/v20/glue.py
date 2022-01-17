@@ -9,7 +9,6 @@ from ..request import RequestBase, AsyncRequestBase
 
 
 from .parameter import Parameter
-from . import SecurityRequirement
 
 
 class Request(RequestBase):
@@ -43,27 +42,38 @@ class Request(RequestBase):
         return self.operation.responses[str(http_status)].schema_
 
     def _prepare_security(self):
-        if self.operation.security == []:
-            security = []
-        else:
-            security = (self.operation.security or []) + self.root.security
+        security = self.operation.security or self.api._root.security
 
-        if self.security and security:
-            for scheme, value in self.security.items():
-                for r in filter(lambda x: x.name == scheme, security):
-                    self._prepare_secschemes(r, value)
-                    break
-                else:
-                    continue
-                break
+        if not security:
+            return
+
+        if not self.security:
+            if any([{} == i.__root__ for i in security]):
+                return
             else:
-                raise ValueError(f"No security requirement satisfied (accepts {', '.join([i.name for i in security])})")
+                options = " or ".join(
+                    sorted(map(lambda x: f"{{{x}}}", [" and ".join(sorted(i.__root__.keys())) for i in security]))
+                )
+                raise ValueError(f"No security requirement satisfied (accepts {options})")
 
-    def _prepare_secschemes(self, security_requirement: SecurityRequirement, value: List[str]):
+        for s in security:
+            if frozenset(s.__root__.keys()) - frozenset(self.security.keys()):
+                continue
+            for scheme, _ in s.__root__.items():
+                value = self.security[scheme]
+                self._prepare_secschemes(scheme, value)
+            break
+        else:
+            options = " or ".join(
+                sorted(map(lambda x: f"{{{x}}}", [" and ".join(sorted(i.__root__.keys())) for i in security]))
+            )
+            raise ValueError(f"No security requirement satisfied (accepts {options})")
+
+    def _prepare_secschemes(self, scheme: str, value: List[str]):
         """
         https://swagger.io/specification/v2/#security-scheme-object
         """
-        ss = self.root.securityDefinitions[security_requirement.name]
+        ss = self.root.securityDefinitions[scheme]
 
         if ss.type == "basic":
             self.req.auth = value

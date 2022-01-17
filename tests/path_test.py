@@ -110,55 +110,74 @@ def test_securityparameters(httpx_mock, with_securityparameters):
         if not i.post or not i.post.security:
             continue
         s = i.post.security[0]
-        assert type(s.name) == str
-        assert type(s.types) == list
+        #        assert type(s.name) == str
+        #        assert type(s.types) == list
         break
     else:
         assert False
 
-    with pytest.raises(ValueError, match="does not accept security scheme xAuth"):
-        api.authenticate("xAuth", auth)
+    with pytest.raises(ValueError, match=r"does not accept security schemes \['xAuth'\]"):
+        api.authenticate(xAuth=auth)
         api._.api_v1_auth_login_info(data={}, parameters={})
 
     # global security
-    api.authenticate("cookieAuth", auth)
+    api.authenticate(None, cookieAuth=auth)
     api._.api_v1_auth_login_info(data={}, parameters={})
     request = httpx_mock.get_requests()[-1]
 
     # path
-    api.authenticate("tokenAuth", auth)
+    api.authenticate(None, tokenAuth=auth)
     api._.api_v1_auth_login_create(data={}, parameters={})
     request = httpx_mock.get_requests()[-1]
     assert request.headers["Authorization"] == auth
 
-    api.authenticate("paramAuth", auth)
+    api.authenticate(None, paramAuth=auth)
     api._.api_v1_auth_login_create(data={}, parameters={})
     request = httpx_mock.get_requests()[-1]
     assert yarl.URL(str(request.url)).query["auth"] == auth
 
-    api.authenticate("cookieAuth", auth)
+    api.authenticate(None, cookieAuth=auth)
     api._.api_v1_auth_login_create(data={}, parameters={})
     request = httpx_mock.get_requests()[-1]
     assert request.headers["Cookie"] == "Session=%s" % (auth,)
 
-    api.authenticate("basicAuth", (auth, auth))
+    api.authenticate(None, basicAuth=(auth, auth))
     api._.api_v1_auth_login_create(data={}, parameters={})
     request = httpx_mock.get_requests()[-1]
     assert request.headers["Authorization"].split(" ")[1] == base64.b64encode((auth + ":" + auth).encode()).decode()
 
-    api.authenticate("digestAuth", (auth, auth))
+    api.authenticate(None, digestAuth=(auth, auth))
     api._.api_v1_auth_login_create(data={}, parameters={})
     request = httpx_mock.get_requests()[-1]
     # can't test?
 
-    api.authenticate("bearerAuth", auth)
+    api.authenticate(None, bearerAuth=auth)
     api._.api_v1_auth_login_create(data={}, parameters={})
     request = httpx_mock.get_requests()[-1]
     assert request.headers["Authorization"] == "Bearer %s" % (auth,)
 
     # null session
-    api.authenticate(None, None)
+    api.authenticate(None)
     api._.api_v1_auth_login_info(data={}, parameters={})
+
+
+def test_combined_security(httpx_mock, with_securityparameters):
+    api = OpenAPI(URLBASE, with_securityparameters, session_factory=httpx.Client)
+    httpx_mock.add_response(headers={"Content-Type": "application/json"}, content=b"[]")
+
+    auth = str(uuid.uuid4())
+
+    # combined
+    api.authenticate(user="test")
+    with pytest.raises(ValueError, match="No security requirement satisfied"):
+        r = api._.api_v1_auth_login_combined(data={}, parameters={})
+
+    api.authenticate(**{"user": "theuser", "token": "thetoken"})
+    r = api._.api_v1_auth_login_combined(data={}, parameters={})
+
+    api.authenticate(None)
+    with pytest.raises(ValueError, match="No security requirement satisfied"):
+        r = api._.api_v1_auth_login_combined(data={}, parameters={})
 
 
 def test_parameters(httpx_mock, with_parameters):

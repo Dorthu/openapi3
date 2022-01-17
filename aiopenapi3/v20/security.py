@@ -39,22 +39,3 @@ class SecurityRequirement(BaseModel):
     """
 
     __root__: Dict[str, List[str]]
-
-    #    @root_validator
-    def validate_SecurityRequirement(cls, values):
-        root = values.get("__root__", {})
-        if not (len(root.keys()) == 1 and isinstance([c for c in root.values()][0], list) or len(root.keys()) == 0):
-            raise ValueError(root)
-        return values
-
-    @property
-    def name(self):
-        if len(self.__root__.keys()):
-            return list(self.__root__.keys())[0]
-        return None
-
-    @property
-    def types(self):
-        if self.name:
-            return self.__root__[self.name]
-        return None

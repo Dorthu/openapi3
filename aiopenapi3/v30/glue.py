@@ -7,8 +7,6 @@ import pydantic
 from ..base import SchemaBase, ParameterBase
 from ..request import RequestBase, AsyncRequestBase
 
-from . import SecurityRequirement
-
 
 class Request(RequestBase):
     """
@@ -41,21 +39,35 @@ class Request(RequestBase):
         return self.operation.responses[str(http_status)].content[content_type].schema_
 
     def _prepare_security(self):
-        if self.security and self.operation.security:
-            for scheme, value in self.security.items():
-                for r in filter(lambda x: x.name == scheme, self.operation.security):
-                    self._prepare_secschemes(r, value)
-                    break
-                else:
-                    continue
-                break
-            else:
-                raise ValueError(
-                    f"No security requirement satisfied (accepts {', '.join(self.operation.security.keys())})"
-                )
+        security = self.operation.security or self.api._root.security
 
-    def _prepare_secschemes(self, security_requirement: SecurityRequirement, value: List[str]):
-        ss = self.root.components.securitySchemes[security_requirement.name]
+        if not security:
+            return
+
+        if not self.security:
+            if any([{} == i.__root__ for i in security]):
+                return
+            else:
+                options = " or ".join(
+                    sorted(map(lambda x: f"{{{x}}}", [" and ".join(sorted(i.__root__.keys())) for i in security]))
+                )
+                raise ValueError(f"No security requirement satisfied (accepts {options})")
+
+        for s in security:
+            if frozenset(s.__root__.keys()) - frozenset(self.security.keys()):
+                continue
+            for scheme, _ in s.__root__.items():
+                value = self.security[scheme]
+                self._prepare_secschemes(scheme, value)
+            break
+        else:
+            options = " or ".join(
+                sorted(map(lambda x: f"{{{x}}}", [" and ".join(sorted(i.__root__.keys())) for i in security]))
+            )
+            raise ValueError(f"No security requirement satisfied (accepts {options})")
+
+    def _prepare_secschemes(self, scheme: str, value: List[str]):
+        ss = self.root.components.securitySchemes[scheme]
 
         if ss.type == "http" and ss.scheme_ == "basic":
             self.req.auth = value

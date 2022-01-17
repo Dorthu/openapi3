@@ -56,6 +56,30 @@ paths:
       - bearerAuth: []
       - {}
 
+  /api/v1/auth/combined/:
+    post:
+      operationId: api_v1_auth_login_combined
+      description: ''
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+          description: ''
+      security:
+      - user: []
+        token: []
+
+
 components:
   schemas:
     Login:
@@ -85,3 +109,11 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+    user:
+      type: apiKey
+      in: header
+      name: x-user
+    token:
+      type: apiKey
+      in: header
+      name: x-token

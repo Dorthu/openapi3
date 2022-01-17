@@ -154,7 +154,7 @@ class OpenAPI:
         authorization informations
         e.g. {"BasicAuth": ("user","secret")}
         """
-        self._security: Dict[str, Tuple[str]] = None
+        self._security: Dict[str, Tuple[str]] = dict()
 
         """
         the related documents
@@ -271,26 +271,29 @@ class OpenAPI:
             return self._base_url.join(yarl.URL(self._root.servers[0].url))
 
     # public methods
-    def authenticate(self, security_scheme, value):
-        """
-        Authenticates all subsequent requests with the given arguments.
-
-        TODO - this should support more than just HTTP Auth
+    def authenticate(self, *args, **kwargs):
         """
 
-        # authentication is optional and can be disabled
-        if security_scheme is None:
-            self._security = None
-            return
+        :param args: None to remove all credentials / reset the authorizations
+        :param kwargs: scheme=value
+        """
+        if len(args) == 1 and args[0] == None:
+            self._security = dict()
 
+        schemes = frozenset(kwargs.keys())
         if isinstance(self._root, v20.Root):
-            if security_scheme not in self._root.securityDefinitions:
-                raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
+            v = schemes - frozenset(self._root.securityDefinitions)
         elif isinstance(self._root, (v30.Root, v31.Root)):
-            if security_scheme not in self._root.components.securitySchemes:
-                raise ValueError("{} does not accept security scheme {}".format(self.info.title, security_scheme))
+            v = schemes - frozenset(self._root.components.securitySchemes)
 
-        self._security = {security_scheme: value}
+        if v:
+            raise ValueError("{} does not accept security schemes {}".format(self.info.title, sorted(v)))
+
+        for security_scheme, value in kwargs.items():
+            if value is None:
+                del self._security[security_scheme]
+            else:
+                self._security[security_scheme] = value
 
     def _load(self, i):
         data = self.loader.get(self.plugins, i)
