@@ -6,6 +6,7 @@ import pydantic
 
 from ..base import SchemaBase, ParameterBase
 from ..request import RequestBase, AsyncRequestBase
+from ..errors import HTTPStatusError, ContentTypeError
 
 
 class Request(RequestBase):
@@ -185,8 +186,9 @@ class Request(RequestBase):
         if expected_response is None:
             # TODO - custom exception class that has the response object in it
             options = ",".join(self.operation.responses.keys())
-            raise ValueError(
-                f"""Unexpected response {result.status_code} from {self.operation.operationId} (expected one of {options}), no default is defined"""
+            raise HTTPStatusError(
+                result.status_code,
+                f"""Unexpected response {result.status_code} from {self.operation.operationId} (expected one of {options}), no default is defined""",
             )
 
         if len(expected_response.content) == 0:
@@ -208,9 +210,11 @@ class Request(RequestBase):
 
         if expected_media is None:
             options = ",".join(expected_response.content.keys())
-            raise ValueError(
+            raise ContentTypeError(
+                content_type,
                 f"Unexpected Content-Type {content_type} returned for operation {self.operation.operationId} \
-                         (expected one of {options})"
+                         (expected one of {options})",
+                result,
             )
 
         if content_type.lower() == "application/json":

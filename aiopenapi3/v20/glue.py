@@ -6,7 +6,7 @@ import pydantic
 
 from ..base import SchemaBase, ParameterBase
 from ..request import RequestBase, AsyncRequestBase
-
+from ..errors import HTTPStatusError, ContentTypeError
 
 from .parameter import Parameter
 
@@ -177,8 +177,10 @@ class Request(RequestBase):
         if expected_response is None:
             # TODO - custom exception class that has the response object in it
             options = ",".join(self.operation.responses.keys())
-            raise ValueError(
-                f"""Unexpected response {result.status_code} from {self.operation.operationId} (expected one of {options}), no default is defined"""
+            raise HTTPStatusError(
+                result.status_code,
+                f"""Unexpected response {result.status_code} from {self.operation.operationId} (expected one of {options}), no default is defined""",
+                result,
             )
 
         if status_code == "204":
@@ -197,7 +199,11 @@ class Request(RequestBase):
             ).unmarshalled
             return data
         else:
-            raise NotImplementedError(content_type)
+            raise ContentTypeError(
+                content_type,
+                f"Unexpected Content-Type {content_type} returned for operation {self.operation.operationId} (expected application/json)",
+                result,
+            )
 
 
 class AsyncRequest(Request, AsyncRequestBase):
