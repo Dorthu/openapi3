@@ -69,10 +69,22 @@ class Model(BaseModel):
                         break
                     else:
                         r = typeof(f)
-                    if name not in schema.required:
-                        annos[name] = Optional[r]
+
+                    from . import v20, v30, v31
+
+                    if isinstance(schema, v20.Schema):
+                        if not f.required:
+                            annos[name] = Optional[r]
+                        else:
+                            annos[name] = r
+                    elif isinstance(schema, (v30.Schema, v31.Schema)):
+                        if name not in schema.required:
+                            annos[name] = Optional[r]
+                        else:
+                            annos[name] = r
                     else:
-                        annos[name] = r
+                        raise TypeError(schema)
+
             return annos
 
         def fieldof(schema: "SchemaBase"):
