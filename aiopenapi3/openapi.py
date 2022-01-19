@@ -248,7 +248,7 @@ class OpenAPI:
     def url(self):
         if isinstance(self._root, v20.Root):
             base = yarl.URL(self._base_url)
-            scheme = host = path = None
+            scheme = host = port = path = None
 
             for i in ["https", "http"]:
                 if not self._root.schemes or i not in self._root.schemes:
