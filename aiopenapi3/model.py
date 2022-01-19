@@ -72,12 +72,12 @@ class Model(BaseModel):
 
                     from . import v20, v30, v31
 
-                    if isinstance(schema, v20.Schema):
+                    if isinstance(schema, (v20.Schema, v20.Reference)):
                         if not f.required:
                             annos[name] = Optional[r]
                         else:
                             annos[name] = r
-                    elif isinstance(schema, (v30.Schema, v31.Schema)):
+                    elif isinstance(schema, (v30.Schema, v31.Schema, v30.Reference, v31.Reference)):
                         if name not in schema.required:
                             annos[name] = Optional[r]
                         else:
