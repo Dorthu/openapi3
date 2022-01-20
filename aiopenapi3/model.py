@@ -102,8 +102,8 @@ class Model(BaseModel):
             return r
 
         # do not create models for primitive types
-        if shma.type in ("string", "integer"):
-            return typeof(shma)
+        if shma.type in ("string", "integer", "number", "boolean"):
+            return Model.typeof(shma)
 
         type_name = shma.title or shma._identity if hasattr(shma, "_identity") else str(uuid.uuid4())
         namespace = dict()

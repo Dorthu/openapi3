@@ -199,7 +199,7 @@ class SchemaBase:
         :returns: A new :any:`Model` created in this Schema's type from the data.
         :rtype: self.get_type()
         """
-        if self.type in ("string", "number"):
+        if self.type in ("string", "number", "boolean", "integer"):
             assert len(self.properties) == 0
             # more simple types
             # if this schema represents a simple type, simply return the data
