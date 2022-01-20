@@ -70,7 +70,6 @@ def raise_on_unknown_type(parent, field, object_types, found):
             path=parent.path,
             element=parent,
         )
-    print(object_types)
     raise SpecError(
         "Expected {}.{} to be one of [{}], got {}".format(
             parent.get_path(),
