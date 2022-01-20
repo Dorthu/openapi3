@@ -367,6 +367,12 @@ class Operation(ObjectBase):
             return
 
         content_type = result.headers["Content-Type"]
+        if ';' in content_type:
+            # if the content type that came in included an encoding, we'll ignore
+            # it for now (requests has already parsed it for us) and only look at
+            # the MIME type when determining if an expected content type was returned.
+            content_type = content_type.split(';')[0].strip()
+
         expected_media = expected_response.content.get(content_type, None)
 
         if expected_media is None and "/" in content_type:

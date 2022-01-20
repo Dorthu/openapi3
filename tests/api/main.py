@@ -61,8 +61,11 @@ def getPet(pet_id: int = Query(..., alias='petId')) -> Pets:
         if pet_id == v.id:
             return v
     else:
+        # media_type included here is to ensure that content encodings do not break
+        # expected response type handling for requests
         return JSONResponse(status_code=starlette.status.HTTP_404_NOT_FOUND,
-                            content=Error(code=errno.ENOENT, message=f"{pet_id} not found").dict())
+                            content=Error(code=errno.ENOENT, message=f"{pet_id} not found").dict(),
+                            media_type="application/json; utf-8")
 
 
 @app.delete('/pets/{pet_id}',
