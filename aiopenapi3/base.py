@@ -187,7 +187,9 @@ class DiscriminatorBase:
 class SchemaBase:
     #    @lru_cache
     def get_type(self, names: List[str] = None, discriminators: List[DiscriminatorBase] = None):
-        return Model.from_schema(self, names, discriminators)
+        if not hasattr(self, "_model_type"):
+            self._model_type = Model.from_schema(self, names, discriminators)
+        return self._model_type
 
     def model(self, data: Dict):
         """

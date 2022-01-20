@@ -82,6 +82,10 @@ class Model(BaseModel):
         elif schema.type == "object":
             return schema.get_type()
         elif schema.type is None:  # discriminated root
+            """
+            recursively define related discriminated objects
+            """
+            schema.get_type()
             return None
         else:
             raise TypeError(schema.type)

@@ -232,14 +232,20 @@ class OpenAPI:
                             continue
                         formatted_operation_id = op.operationId.replace(" ", "_")
                         test_operation(formatted_operation_id)
+                        if op.requestBody:
+                            for r, media in op.requestBody.content.items():
+                                media.schema_.get_type()
                         for r, response in op.responses.items():
+
                             if isinstance(response, Reference):
                                 continue
                             for c, content in response.content.items():
                                 if content.schema_ is None:
                                     continue
-                                if isinstance(content.schema_, (v30.Schema,)):
+                                if isinstance(content.schema_, (v30.Schema, v31.Schema)):
                                     content.schema_._identity = f"{path}.{m}.{r}.{c}"
+                                    content.schema_.get_type()
+
         else:
             raise ValueError(self._root)
         self.plugins.init.initialized(initialized=self._root)
