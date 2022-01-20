@@ -105,7 +105,7 @@ class Model(BaseModel):
         if shma.type in ("string", "integer", "number", "boolean"):
             return Model.typeof(shma)
 
-        type_name = shma.title or shma._identity if hasattr(shma, "_identity") else str(uuid.uuid4())
+        type_name = shma.title or getattr(shma, "_identity", None) or str(uuid.uuid4())
         namespace = dict()
         annos = dict()
         if shma.allOf:
