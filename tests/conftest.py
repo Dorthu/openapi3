@@ -139,6 +139,15 @@ def with_broken_links():
 
 
 @pytest.fixture
+def with_param_types():
+    """
+    Provides a spec with multiple parameter types and typed examples
+    """
+    # JSON file to allow specific typing of bool example (bool is a subclass of int in Python)
+    yield _get_parsed_yaml("parameter-types.json")
+
+
+@pytest.fixture
 def with_securityparameters():
     """
     Provides a spec with security parameters

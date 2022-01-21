@@ -99,6 +99,14 @@ def test_parsing_with_links(with_links):
     assert response_b.links["exampleWithRef"] == spec.components.links["exampleWithOperationRef"]
 
 
+def test_param_types(with_param_types):
+    spec = OpenAPI(with_param_types, validate=True)
+
+    errors = spec.errors()
+
+    assert len(errors) == 0
+
+
 def test_parsing_broken_links(with_broken_links):
     """
     Tests that broken "links" values error properly

@@ -1,0 +1,121 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "This has examples with varying param types and typed examples."
+  },
+  "paths": {
+    "/example/str/{val}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "val",
+            "example": "abc",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "example_string",
+        "responses": {
+          "200": {
+            "description": "Success!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/example/int/{val}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "val",
+            "example": 123,
+            "required": true,
+            "schema": {
+              "type": "int"
+            }
+          }
+        ],
+        "operationId": "example_int",
+        "responses": {
+          "200": {
+            "description": "Success!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/example/float/{val}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "val",
+            "example": 123.456,
+            "required": true,
+            "schema": {
+              "type": "int"
+            }
+          }
+        ],
+        "operationId": "example_float",
+        "responses": {
+          "200": {
+            "description": "Success!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/example/bool/{val}": {
+      "get": {
+        "parameters": [
+          {
+            "in": "path",
+            "name": "val",
+            "example": true,
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "operationId": "example_bool",
+        "responses": {
+          "200": {
+            "description": "Success!",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
