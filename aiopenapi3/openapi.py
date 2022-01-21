@@ -1,4 +1,6 @@
 import sys
+import gc
+
 
 if sys.version_info >= (3, 9):
     import pathlib
@@ -20,9 +22,8 @@ from .request import OperationIndex, HTTP_METHODS
 from .errors import ReferenceResolutionError, SpecError
 from .loader import Loader, NullLoader
 from .plugin import Plugin, Plugins
-from .base import RootBase
+from .base import RootBase, ReferenceBase, SchemaBase
 from .v30.paths import Operation
-from .base import SchemaBase
 
 
 class OpenAPI:
@@ -170,6 +171,14 @@ class OpenAPI:
 
         self._root = self._parse_obj(document)
 
+        self._init_session_factory(session_factory)
+        self._init_references()
+        self._init_operationindex()
+        self._init_schema_types()
+
+        self.plugins.init.initialized(initialized=self._root)
+
+    def _init_session_factory(self, session_factory):
         if issubclass(getattr(session_factory, "__annotations__", {}).get("return", None.__class__), httpx.Client) or (
             type(session_factory) == type and issubclass(session_factory, httpx.Client)
         ):
@@ -191,10 +200,12 @@ class OpenAPI:
         else:
             raise ValueError("invalid return value annotation for session_factory")
 
+    def _init_references(self):
         self._root._resolve_references(self)
         for i in list(self._documents.values()):
             i._resolve_references(self)
 
+    def _init_operationindex(self):
         operation_map = set()
 
         def test_operation(operation_id):
@@ -232,9 +243,6 @@ class OpenAPI:
                             continue
                         formatted_operation_id = op.operationId.replace(" ", "_")
                         test_operation(formatted_operation_id)
-                        if op.requestBody:
-                            for r, media in op.requestBody.content.items():
-                                media.schema_.get_type()
                         for r, response in op.responses.items():
 
                             if isinstance(response, Reference):
@@ -244,11 +252,32 @@ class OpenAPI:
                                     continue
                                 if isinstance(content.schema_, (v30.Schema, v31.Schema)):
                                     content.schema_._identity = f"{path}.{m}.{r}.{c}"
-                                    content.schema_.get_type()
 
         else:
             raise ValueError(self._root)
-        self.plugins.init.initialized(initialized=self._root)
+
+    def _init_schema_types(self):
+        """
+        create & cache all the types -
+        discriminated types are special,
+        they need to inherit properly and have to be created when creating the parent type
+
+        :return: None
+        """
+        #
+        gc.collect()
+        schemas = dict((id(i), i) for i in filter(lambda obj: isinstance(obj, SchemaBase), gc.get_objects()))
+        init = set(schemas.keys())
+        for k, i in schemas.items():
+            if not i.discriminator:
+                continue
+            init -= frozenset(
+                map(lambda x: id(x._target), filter(lambda x: isinstance(x, ReferenceBase), i.oneOf + i.anyOf))
+            )
+
+        for i in init:
+            s = schemas[i]
+            s.set_type()
 
     @property
     def url(self):
@@ -335,9 +364,10 @@ def _validate_parameters(op: "Operation", path):
     Ensures that all parameters for this path are valid
     """
     assert isinstance(path, str)
-    allowed_path_parameters = re.findall(r"{([a-zA-Z0-9\-\._~]+)}", path)
+    allowed_path_parameters = frozenset(re.findall(r"{([a-zA-Z0-9\-\._~]+)}", path))
 
-    for c in op.parameters:
-        if c.in_ == "path":
-            if c.name not in allowed_path_parameters:
-                raise SpecError("Parameter name not found in path: {}".format(c.name))
+    path_parameters = frozenset(map(lambda x: x.name, filter(lambda c: c.in_ == "path", op.parameters)))
+
+    r = path_parameters - allowed_path_parameters
+    if r:
+        raise SpecError(f"Parameter name(s) not found in path: {', '.join(r)}")

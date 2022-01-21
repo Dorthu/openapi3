@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import Field, Extra
 
-from ..base import ObjectExtended, ObjectBase
+from ..base import ObjectExtended, ObjectBase, ReferenceBase
 
 
 class ExternalDocumentation(ObjectExtended):
@@ -17,7 +17,7 @@ class ExternalDocumentation(ObjectExtended):
     url: str = Field(...)
 
 
-class Reference(ObjectBase):
+class Reference(ObjectBase, ReferenceBase):
     """
     A `Reference Object`_ designates a reference to another node in the specification.
 

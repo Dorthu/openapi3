@@ -185,11 +185,15 @@ class DiscriminatorBase:
 
 
 class SchemaBase:
-    #    @lru_cache
-    def get_type(self, names: List[str] = None, discriminators: List[DiscriminatorBase] = None):
-        if not hasattr(self, "_model_type"):
-            self._model_type = Model.from_schema(self, names, discriminators)
+    def set_type(self, names: List[str] = None, discriminators: List[DiscriminatorBase] = None):
+        self._model_type = Model.from_schema(self, names, discriminators)
         return self._model_type
+
+    def get_type(self, names: List[str] = None, discriminators: List[DiscriminatorBase] = None):
+        try:
+            return self._model_type
+        except AttributeError:
+            return self.set_type(names, discriminators)
 
     def model(self, data: Dict):
         """
@@ -212,6 +216,10 @@ class SchemaBase:
             return [self.items.get_type().parse_obj(i) for i in data]
         else:
             return self.get_type().parse_obj(data)
+
+
+class ReferenceBase:
+    pass
 
 
 class ParameterBase:
