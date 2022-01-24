@@ -370,4 +370,4 @@ def _validate_parameters(op: "Operation", path):
 
     r = path_parameters - allowed_path_parameters
     if r:
-        raise SpecError(f"Parameter name(s) not found in path: {', '.join(r)}")
+        raise SpecError(f"Parameter name{'s' if len(r) > 1 else ''} not found in path: {', '.join(sorted(r))}")
