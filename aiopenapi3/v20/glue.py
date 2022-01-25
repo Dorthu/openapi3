@@ -188,7 +188,7 @@ class Request(RequestBase):
 
         content_type = result.headers.get("Content-Type", None)
 
-        if content_type.lower().partition(";")[0] == "application/json":
+        if content_type and content_type.lower().partition(";")[0] == "application/json":
             data = result.text
             data = self.api.plugins.message.received(operationId=self.operation.operationId, received=data).received
             data = json.loads(data)

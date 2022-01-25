@@ -71,4 +71,5 @@ def deletePet(response: Response, pet_id: int = Query(..., alias="petId")) -> Pe
         return JSONResponse(
             status_code=starlette.status.HTTP_404_NOT_FOUND,
             content=Error(code=errno.ENOENT, message=f"{pet_id} not found").dict(),
+            media_type="application/json; utf-8",
         )

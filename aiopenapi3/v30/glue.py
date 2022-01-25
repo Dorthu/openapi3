@@ -195,7 +195,9 @@ class Request(RequestBase):
             return None
 
         content_type = result.headers.get("Content-Type", None)
+
         if content_type:
+            content_type, _, encoding = content_type.partition(";")
             expected_media = expected_response.content.get(content_type, None)
             if expected_media is None and "/" in content_type:
                 # accept media type ranges in the spec. the most specific matching
