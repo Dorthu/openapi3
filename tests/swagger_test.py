@@ -25,7 +25,7 @@ def test_securityparameters(httpx_mock, with_swagger):
 
     auth = str(uuid.uuid4())
 
-    with pytest.raises(ValueError, match="does not accept security schemes \['xAuth'\]"):
+    with pytest.raises(ValueError, match=r"does not accept security schemes \['xAuth'\]"):
         api.authenticate(xAuth=auth)
         api._.createUser(data=user, parameters={})
 
@@ -90,7 +90,7 @@ def test_parameters(httpx_mock, with_swagger):
     auth = str(uuid.uuid4())
     api.authenticate(BasicAuth=(auth, auth))
 
-    with pytest.raises(ValueError, match="Required parameter \w+ not provided"):
+    with pytest.raises(ValueError, match=r"Required parameter \w+ not provided"):
         api._.getUser(data={}, parameters={})
 
     httpx_mock.add_response(headers={"Content-Type": "application/json"}, json=[user.dict()])

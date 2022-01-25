@@ -41,6 +41,9 @@ def test_operations_exist(petstore_expanded_spec):
     assert pets_id_path.put is None
     assert pets_id_path.delete is not None
 
+    for operation in petstore_expanded_spec._:
+        continue
+
 
 def test_operation_populated(petstore_expanded_spec):
     """
@@ -184,7 +187,7 @@ def test_parameters(httpx_mock, with_parameters):
     httpx_mock.add_response(headers={"Content-Type": "application/json"}, content=b"[]")
     api = OpenAPI(URLBASE, with_parameters, session_factory=httpx.Client)
 
-    with pytest.raises(ValueError, match="Required parameter \w+ not provided"):
+    with pytest.raises(ValueError, match=r"Required parameter \w+ not provided"):
         api._.getTest(data={}, parameters={})
 
     Header = str([i ** i for i in range(3)])

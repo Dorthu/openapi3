@@ -3,6 +3,7 @@ import uuid
 import sys
 
 import pytest
+import pytest_asyncio
 
 import uvloop
 from hypercorn.asyncio import serve
@@ -27,7 +28,7 @@ def event_loop(request):
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def server(event_loop, config):
     uvloop.install()
     try:
@@ -39,7 +40,7 @@ async def server(event_loop, config):
         await task
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def client(event_loop, server):
     api = await asyncio.to_thread(aiopenapi3.OpenAPI.load_sync, f"http://{server.bind[0]}/v1/openapi.json")
     return api

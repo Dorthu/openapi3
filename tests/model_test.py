@@ -7,6 +7,7 @@ import pydantic
 from tests.api.v2.schema import Dog
 
 import pytest
+import pytest_asyncio
 
 import uvloop
 from hypercorn.asyncio import serve
@@ -32,7 +33,7 @@ def event_loop(request):
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def server(event_loop, config):
     uvloop.install()
     try:
@@ -49,7 +50,7 @@ def version(request):
     return f"v{request.param}"
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def client(event_loop, server, version):
     url = f"http://{server.bind[0]}/{version}/openapi.json"
     api = await aiopenapi3.OpenAPI.load_async(url)
