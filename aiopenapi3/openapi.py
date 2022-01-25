@@ -294,17 +294,12 @@ class OpenAPI:
                 scheme = base.scheme
 
             if self._root.host:
-                host = self._root.host
-                if ":" in host:
-                    host, _, port = host.partition(":")
+                host, _, port = self._root.host.partition(":")
             else:
-                host = base.host
-                port = base.port
+                host, port = base.host, base.port
 
-            if self._root.basePath:
-                path = self._root.basePath
-            else:
-                path = base.path
+            path = self._root.basePath or base.path
+
             r = yarl.URL.build(scheme=scheme, host=host, port=port, path=path)
             return r
         elif isinstance(self._root, (v30.Root, v31.Root)):
