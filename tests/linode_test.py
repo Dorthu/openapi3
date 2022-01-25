@@ -4,7 +4,7 @@ import asyncio
 from aiopenapi3 import OpenAPI
 import pytest
 
-
+# downloading the description document in the github CI fails due to the cloudflare captcha
 noci = pytest.mark.skipif(os.environ.get("GITHUB_ACTIONS", None) is not None, reason="fails on github")
 
 
