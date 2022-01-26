@@ -170,3 +170,10 @@ def with_ref_allof():
     an allOf
     """
     yield _get_parsed_yaml("ref-allof.yaml")
+
+@pytest.fixture
+def additional_properties_spec():
+    """
+    Provides an OpenAPI version of the additional-properties.yaml spec
+    """
+    yield _get_parsed_spec("additional-properties.yaml")

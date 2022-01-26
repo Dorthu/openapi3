@@ -131,7 +131,7 @@ class Schema(ObjectBase):
             self._model_type = type(
                 type_name,
                 (Model,),
-                {"__slots__": self.properties.keys()},  # pylint: disable=attribute-defined-outside-init
+                ({} if self.additionalProperties else {"__slots__": self.properties.keys()}),  # pylint: disable=attribute-defined-outside-init
             )
 
         return self._model_type
@@ -278,14 +278,16 @@ class Model:
             setattr(self, s, None)
 
         keys = set(data.keys()) - frozenset(self.__slots__)
-        if keys:
+        if keys and not schema.additionalProperties:
             raise ModelError("Schema {} got unexpected attribute keys {}".format(self.__class__.__name__, keys))
 
         # collect the data into this model
         for k, v in data.items():
-            prop = schema.properties[k]
+            prop = schema.properties.get(k) if schema.properties else None
 
-            if prop.type == "array":
+            if (not prop) and schema.additionalProperties:
+                setattr(self, k, v)
+            elif prop.type == "array":
                 # handle arrays
                 item_schema = prop.items
                 setattr(self, k, [item_schema.model(c) for c in v])
