@@ -107,7 +107,7 @@ class Parameter(ObjectBase):
     def _parse_data(self):
         self.deprecated = self._get("deprecated", bool)
         self.description = self._get("description", str)
-        self.example = self._get("example", str)
+        self.example = self._get("example", [str, int, bool, float])  # Spec notes 'Any' but just limited to primitives
         self.examples = self._get("examples", dict)  # Map[str: ['Example','Reference']]
         self.explode = self._get("explode", bool)
         self.in_ = self._get("in", str)  # TODO must be one of ["query","header","path","cookie"]
