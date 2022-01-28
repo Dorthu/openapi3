@@ -1,3 +1,5 @@
+import datetime
+import random
 import sys
 import asyncio
 import uuid
@@ -97,7 +99,11 @@ async def test_model(event_loop, server, client):
 
 def randomPet(client, name=None):
     if name:
-        return {"pet": client.components.schemas["Dog"].model({"name": name}).dict()}
+        return client._.createPet.data.get_type().construct(
+            pet=client.components.schemas["Dog"]
+            .get_type()
+            .construct(name=name, age=datetime.timedelta(seconds=random.randint(1, 2 ** 32)))
+        )
     else:
         return {
             "pet": client.components.schemas["WhiteCat"]

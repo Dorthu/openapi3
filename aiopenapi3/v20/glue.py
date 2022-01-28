@@ -133,13 +133,13 @@ class Request(RequestBase):
             if isinstance(data, (dict, list)):
                 pass
             elif isinstance(data, pydantic.BaseModel):
-                data = data.dict()
+                data = dict(data._iter(to_dict=True))
             else:
                 raise TypeError(data)
             data = self.api.plugins.message.marshalled(
                 operationId=self.operation.operationId, marshalled=data
             ).marshalled
-            data = json.dumps(data)
+            data = json.dumps(data, default=pydantic.json.pydantic_encoder)
             data = data.encode()
             data = self.api.plugins.message.sending(operationId=self.operation.operationId, sending=data).sending
             self.req.content = data

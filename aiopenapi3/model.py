@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import collections
 import types
 import uuid
 
@@ -11,6 +13,27 @@ else:
     from typing_extensions import Annotated, Literal
 
 from pydantic import BaseModel, Extra, Field
+from pydantic.schema import field_class_to_schema
+
+type_format_to_class = collections.defaultdict(lambda: dict())
+
+
+def generate_type_format_to_class():
+    """
+    initialize type_format_to_class
+    :return: None
+    """
+    global type_format_to_class
+    for cls, spec in field_class_to_schema:
+        if spec["type"] not in frozenset(["string", "number"]):
+            continue
+        type_format_to_class[spec["type"]][spec.get("format", None)] = cls
+
+
+def class_from_schema(s):
+    a = type_format_to_class[s.type]
+    b = a.get(s.format, a[None])
+    return b
 
 
 class Model(BaseModel):
@@ -72,9 +95,9 @@ class Model(BaseModel):
         if schema.type == "integer":
             r = int
         elif schema.type == "number":
-            r = float
+            r = class_from_schema(schema)
         elif schema.type == "string":
-            r = str
+            r = class_from_schema(schema)
         elif schema.type == "boolean":
             r = bool
         elif schema.type == "array":
@@ -145,3 +168,7 @@ class Model(BaseModel):
                         args[i] = v
                 r[name] = Field(**args)
         return r
+
+
+if len(type_format_to_class) == 0:
+    generate_type_format_to_class()

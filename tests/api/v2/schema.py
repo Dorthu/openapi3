@@ -1,3 +1,4 @@
+from datetime import timedelta
 import uuid
 
 import sys
@@ -50,6 +51,7 @@ class Cat(BaseModel):
 class Dog(PetBase):
     pet_type: Literal["dog"] = "dog"
     name: str
+    age: timedelta
 
 
 # Pet = Annotated[Union[Cat, Dog], Field(default=Undefined, discriminator='pet_type')]
