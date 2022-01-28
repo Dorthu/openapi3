@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 
 from pydantic import BaseModel, Field, root_validator, Extra
 
@@ -18,7 +18,7 @@ class ObjectBase(BaseModel):
 
 
 class ObjectExtended(ObjectBase):
-    extensions: Optional[object] = Field(default=None)
+    extensions: Optional[Any] = Field(default=None)
 
     @root_validator(pre=True)
     def validate_ObjectExtended_extensions(cls, values):
