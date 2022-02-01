@@ -1,26 +1,35 @@
 """
 Tests parsing specs
 """
+import dataclasses
+import sys
+
+if sys.version_info >= (3, 9):
+    pass
+else:
+    import pathlib3x as pathlib
+
 import pytest
 
-from openapi3 import OpenAPI, SpecError, ReferenceResolutionError
+from pydantic import ValidationError
+from aiopenapi3 import OpenAPI, SpecError, ReferenceResolutionError, FileSystemLoader
+
+URLBASE = "/"
 
 
 def test_parse_from_yaml(petstore_expanded):
     """
     Tests that we can parse a valid yaml file
     """
-    spec = OpenAPI(petstore_expanded)
+    spec = OpenAPI(URLBASE, petstore_expanded)
 
 
 def test_parsing_fails(broken):
     """
     Tests that broken specs fail to parse
     """
-    with pytest.raises(
-        SpecError, match=r"Expected .info to be of type Info, with required fields \['title', 'version'\]"
-    ):
-        spec = OpenAPI(broken)
+    with pytest.raises(ValidationError) as e:
+        spec = OpenAPI(URLBASE, broken)
 
 
 def test_parsing_broken_refernece(broken_reference):
@@ -28,7 +37,7 @@ def test_parsing_broken_refernece(broken_reference):
     Tests that parsing fails correctly when a reference is broken
     """
     with pytest.raises(ReferenceResolutionError):
-        spec = OpenAPI(broken_reference)
+        spec = OpenAPI(URLBASE, broken_reference)
 
 
 def test_parsing_wrong_parameter_name(has_bad_parameter_name):
@@ -37,7 +46,7 @@ def test_parsing_wrong_parameter_name(has_bad_parameter_name):
     actually in the path.
     """
     with pytest.raises(SpecError, match="Parameter name not found in path: different"):
-        spec = OpenAPI(has_bad_parameter_name)
+        spec = OpenAPI(URLBASE, has_bad_parameter_name)
 
 
 def test_parsing_dupe_operation_id(dupe_op_id):
@@ -45,22 +54,22 @@ def test_parsing_dupe_operation_id(dupe_op_id):
     Tests that duplicate operation Ids are an error
     """
     with pytest.raises(SpecError, match="Duplicate operationId dupe"):
-        spec = OpenAPI(dupe_op_id)
+        spec = OpenAPI(URLBASE, dupe_op_id)
 
 
 def test_parsing_parameter_name_with_underscores(parameter_with_underscores):
     """
     Tests that path parameters with underscores in them are accepted
     """
-    spec = OpenAPI(parameter_with_underscores)
+    spec = OpenAPI(URLBASE, parameter_with_underscores)
 
 
 def test_object_example(obj_example_expanded):
     """
     Tests that `example` exists.
     """
-    spec = OpenAPI(obj_example_expanded)
-    schema = spec.paths["/check-dict"].get.responses["200"].content["application/json"].schema
+    spec = OpenAPI(URLBASE, obj_example_expanded)
+    schema = spec.paths["/check-dict"].get.responses["200"].content["application/json"].schema_
     assert isinstance(schema.example, dict)
     assert isinstance(schema.example["real"], float)
 
@@ -72,8 +81,8 @@ def test_parsing_float_validation(float_validation_expanded):
     """
     Tests that `minimum` and similar validators work with floats.
     """
-    spec = OpenAPI(float_validation_expanded)
-    properties = spec.paths["/foo"].get.responses["200"].content["application/json"].schema.properties
+    spec = OpenAPI(URLBASE, float_validation_expanded)
+    properties = spec.paths["/foo"].get.responses["200"].content["application/json"].schema_.properties
 
     assert isinstance(properties["integer"].minimum, int)
     assert isinstance(properties["integer"].maximum, int)
@@ -85,7 +94,7 @@ def test_parsing_with_links(with_links):
     """
     Tests that "links" parses correctly
     """
-    spec = OpenAPI(with_links)
+    spec = OpenAPI(URLBASE, with_links)
 
     assert "exampleWithOperationRef" in spec.components.links
     assert spec.components.links["exampleWithOperationRef"].operationRef == "/with-links"
@@ -96,39 +105,60 @@ def test_parsing_with_links(with_links):
 
     response_b = spec.paths["/with-links-two/{param}"].get.responses["200"]
     assert "exampleWithRef" in response_b.links
-    assert response_b.links["exampleWithRef"] == spec.components.links["exampleWithOperationRef"]
-
-
-def test_param_types(with_param_types):
-    spec = OpenAPI(with_param_types, validate=True)
-
-    errors = spec.errors()
-
-    assert len(errors) == 0
+    assert response_b.links["exampleWithRef"]._target == spec.components.links["exampleWithOperationRef"]
 
 
 def test_parsing_broken_links(with_broken_links):
     """
     Tests that broken "links" values error properly
     """
-    spec = OpenAPI(with_broken_links, validate=True)
+    with pytest.raises(ValidationError) as e:
+        spec = OpenAPI(URLBASE, with_broken_links)
 
-    errors = spec.errors()
-
-    assert len(errors) == 2
-    error_strs = [str(e) for e in errors]
-    assert (
-        sorted(
-            [
+    assert all(
+        [
+            i in str(e.value)
+            for i in [
                 "operationId and operationRef are mutually exclusive, only one of them is allowed",
                 "operationId and operationRef are mutually exclusive, one of them must be specified",
             ]
-        )
-        == sorted(error_strs)
+        ]
     )
 
 
 def test_securityparameters(with_securityparameters):
-    spec = OpenAPI(with_securityparameters, validate=True)
-    errors = spec.errors()
-    assert len(errors) == 0
+    spec = OpenAPI(URLBASE, with_securityparameters)
+
+
+def test_callback(with_callback):
+    spec = OpenAPI(URLBASE, with_callback)
+
+
+@dataclasses.dataclass
+class _Version:
+    major: int
+    minor: int
+    patch: int = 0
+
+    def __str__(self):
+        if self.major == 3:
+            return f'openapi: "{self.major}.{self.minor}.{self.patch}"'
+        else:
+            return f'swagger: "{self.major}.{self.minor}"'
+
+
+@pytest.fixture(scope="session", params=[_Version(2, 0), _Version(3, 0, 3), _Version(3, 1, 0)])
+def openapi_version(request):
+    return request.param
+
+
+def test_extended_paths(openapi_version):
+    DOC = f"""{openapi_version}
+info:
+  title: ''
+  version: 0.0.0
+paths:
+    x-codegen-contextRoot: /apis/registry/v2
+"""
+    api = OpenAPI.loads("test.yaml", DOC)
+    print(api)

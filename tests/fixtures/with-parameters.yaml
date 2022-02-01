@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: ''
+  version: 0.0.0
+servers:
+  - url: http://127.0.0.1/api
+
+security:
+  - {}
+
+paths:
+  /test/{Path}:
+    get:
+      operationId: getTest
+      parameters:
+        - $ref: "#/components/parameters/Cookie"
+        - name: Query
+          in: query
+          description: ""
+          required: True
+          schema:
+            type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Test'
+          description: ''
+    parameters:
+      - $ref: "#/components/parameters/Path"
+      - name: Header
+        in: header
+        description: ""
+        required: True
+        schema:
+          type: array
+          items:
+            type: integer
+
+
+components:
+  schemas:
+    Test:
+      type: string
+  parameters:
+    Path:
+      name: Path
+      in: path
+      required: true
+      schema:
+        type: string
+    Cookie:
+      name: Cookie
+      in: cookie
+      required: True
+      schema:
+        type: string

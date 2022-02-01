@@ -1,20 +1,34 @@
+from __future__ import annotations
+import sys
+
 """
 This file tests that $ref resolution works as expected, and that
 allOfs are populated as expected as well.
 """
-import pytest
 
-from openapi3 import OpenAPI
-from openapi3.schemas import Schema
+if sys.version_info >= (3, 8):
+    import typing
+else:
+    # fot typing.get_origin
+    import typing_extensions as typing
+
+
+import dataclasses
+import pytest
+from aiopenapi3 import OpenAPI
+
+from pydantic.main import ModelMetaclass
 
 
 def test_ref_resolution(petstore_expanded_spec):
     """
     Tests that $refs are resolved as we expect them to be
     """
-    ref = petstore_expanded_spec.paths["/pets"].get.responses["default"].content["application/json"].schema
+    from aiopenapi3.v30.schemas import Schema
 
-    assert type(ref) == Schema
+    ref = petstore_expanded_spec.paths["/pets"].get.responses["default"].content["application/json"].schema_
+
+    assert type(ref._target) == Schema
     assert ref.type == "object"
     assert len(ref.properties) == 2
     assert "code" in ref.properties
@@ -33,62 +47,67 @@ def test_allOf_resolution(petstore_expanded_spec):
     """
     Tests that allOfs are resolved correctly
     """
-    ref = petstore_expanded_spec.paths["/pets"].get.responses["200"].content["application/json"].schema
-    ref = petstore_expanded_spec.paths["/pets"].get.responses["200"].content["application/json"].schema
+    ref = petstore_expanded_spec.paths["/pets"].get.responses["200"].content["application/json"].schema_.get_type()
 
-    assert type(ref) == Schema
-    assert ref.type == "array"
-    assert ref.items is not None
+    assert type(ref) == ModelMetaclass
+    assert typing.get_origin(ref.__fields__["__root__"].outer_type_) == list
 
-    items = ref.items
-    assert type(items) == Schema
-    assert sorted(items.required) == sorted(["id", "name"])
-    assert len(items.properties) == 3
-    assert "id" in items.properties
-    assert "name" in items.properties
-    assert "tag" in items.properties
+    items = typing.get_args(ref.__fields__["__root__"].outer_type_)[0].__fields__
 
-    id_prop = items.properties["id"]
-    id_prop = items.properties["id"]
-    assert id_prop.type == "integer"
-    assert id_prop.format == "int64"
+    assert sorted(map(lambda x: x.name, filter(lambda y: y.required == True, items.values()))) == sorted(["id", "name"])
 
-    name = items.properties["name"]
-    name = items.properties["name"]
-    assert name.type == "string"
+    assert sorted(map(lambda x: x.name, items.values())) == ["id", "name", "tag"]
 
-    tag = items.properties["tag"]
-    assert tag.type == "string"
+    assert items["id"].outer_type_ == int
+    assert items["name"].outer_type_ == str
+    assert items["tag"].outer_type_ == str
 
 
-def test_resolving_nested_allof_ref(with_nested_allof_ref):
+@dataclasses.dataclass
+class _Version:
+    major: int
+    minor: int
+    patch: int
+
+    def __str__(self):
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+
+@pytest.fixture(scope="session", params=[_Version(3, 0, 3), _Version(3, 1, 0)])
+def openapi_version(request):
+    return request.param
+
+
+def test_schemaref(openapi_version):
+    import aiopenapi3.v30.general
+    import aiopenapi3.v31.general
+
+    expected = {0: aiopenapi3.v30.general.Reference, 1: aiopenapi3.v31.general.Reference}[openapi_version.minor]
+
+    SPEC = f"""openapi: {openapi_version}
+info:
+  title: API
+  version: 1.0.0
+paths:
+  /pets:
+    get:
+      description: yes
+      operationId: findPets
+      responses:
+        '200':
+          description: pet response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+components:
+  schemas:
+    Pet:
+      type: str
     """
-    Tests that a schema with a $ref nested within a schema defined in an allOf
-    parses correctly
-    """
-    spec = OpenAPI(with_nested_allof_ref)
+    api = OpenAPI.loads("test.yaml", SPEC)
+    print(api)
 
-    schema = spec.paths['/example'].get.responses['200'].content['application/json'].schema
-    assert type(schema.properties['other']) == Schema
-    assert schema.properties['other'].type == 'string'
-
-    assert type(schema.properties['data'].items) == Schema
-    assert 'bar' in schema.properties['data'].items.properties
-
-
-def test_ref_allof_handling(with_ref_allof):
-    """
-    Tests that allOfs do not modify the originally loaded value of a $ref they
-    includes (which would cause all references to that schema to be modified)
-    """
-    spec = OpenAPI(with_ref_allof)
-    referenced_schema = spec.components.schemas['Example']
-
-    # this should have only one property; the allOf from 
-    # paths['/allof-example']get.responses['200'].content['application/json'].schema
-    # should not modify the component
-    assert len(referenced_schema.properties) == 1, \
-           "Unexpectedly found {} properties on componenets.schemas['Example']: {}".format(
-                   len(referenced_schema.properties),
-                   ", ".join(referenced_schema.properties.keys()),
-            )
+    assert api.paths["/pets"].get.responses["200"].content["application/json"].schema_.items.__class__ == expected

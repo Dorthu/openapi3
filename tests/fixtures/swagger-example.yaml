@@ -1,0 +1,124 @@
+swagger: "2.0"
+info:
+  title: Sample API
+  description: API description in Markdown.
+  version: 1.0.0
+host: api.example.com
+basePath: /v1
+schemes:
+  - https
+
+consumes:
+  - application/json
+produces:
+  - application/json
+
+securityDefinitions:
+  BasicAuth:
+    type: basic
+  HeaderAuth:
+    type: apiKey
+    in: header
+    name: Authorization
+  QueryAuth:
+    type: apiKey
+    in: query
+    name: auth
+  user:
+    type: apiKey
+    in: header
+    name: x-user
+  token:
+    type: apiKey
+    in: header
+    name: x-token
+
+
+security:
+  - BasicAuth: []
+
+paths:
+  /combined:
+    get:
+      operationId: combinedSecurity
+      responses:
+        200:
+          description: ''
+          schema:
+            type: str
+      security:
+        - user: []
+          token: []
+
+  /users/{userId}:
+    get:
+      operationId: getUser
+      summary: Returns a user by ID.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          type: integer
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/User'
+        400:
+          description: The specified user ID is invalid (e.g. not a number).
+        404:
+          description: A user with the specified ID was not found.
+        default:
+          description: Unexpected error
+  /users:
+    get:
+      security:
+        - {}
+      operationId: listUsers
+      summary: Returns a list of users.
+      description: Optional extended description in Markdown.
+      parameters:
+        - in: header
+          name: inHeader
+          type: string
+        - in: query
+          name: inQuery
+          type: string
+      produces:
+        - application/json
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/User'
+    post:
+      security:
+        - QueryAuth: []
+        - HeaderAuth: []
+      operationId: createUser
+      summary: Creates a new user.
+      parameters:
+        - in: body
+          name: user
+          required: true
+          schema:
+            $ref: '#/definitions/User'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/User'
+
+definitions:
+  User:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    # Both properties are required
+    required:
+      - id
+      - name

@@ -1,9 +1,10 @@
 import pytest
 from yaml import safe_load
 
-from openapi3 import OpenAPI
+from aiopenapi3 import OpenAPI
 
 LOADED_FILES = {}
+URLBASE = "/"
 
 
 def _get_parsed_yaml(filename):
@@ -36,7 +37,7 @@ def _get_parsed_spec(filename):
     if "spec:" + filename not in LOADED_FILES:
         parsed = _get_parsed_yaml(filename)
 
-        spec = OpenAPI(parsed)
+        spec = OpenAPI(URLBASE, parsed)
 
         LOADED_FILES["spec:" + filename] = spec
 
@@ -139,15 +140,6 @@ def with_broken_links():
 
 
 @pytest.fixture
-def with_param_types():
-    """
-    Provides a spec with multiple parameter types and typed examples
-    """
-    # JSON file to allow specific typing of bool example (bool is a subclass of int in Python)
-    yield _get_parsed_yaml("parameter-types.json")
-
-
-@pytest.fixture
 def with_securityparameters():
     """
     Provides a spec with security parameters
@@ -156,17 +148,21 @@ def with_securityparameters():
 
 
 @pytest.fixture
-def with_nested_allof_ref():
+def with_parameters():
     """
-    Provides a spec with a $ref under a schema defined in an allOf
+    Provides a spec with parameters
     """
-    yield _get_parsed_yaml("nested-allOf.yaml")
+    yield _get_parsed_yaml("with-parameters.yaml")
 
 
 @pytest.fixture
-def with_ref_allof():
+def with_callback():
     """
-    Provides a spec that includes a reference to a component schema in and out of
-    an allOf
+    Provides a spec with callback
     """
-    yield _get_parsed_yaml("ref-allof.yaml")
+    yield _get_parsed_yaml("callback-example.yaml")
+
+
+@pytest.fixture
+def with_swagger():
+    yield _get_parsed_yaml("swagger-example.yaml")

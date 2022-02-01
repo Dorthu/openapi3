@@ -3,24 +3,26 @@ This file tests that paths are parsed and populated correctly
 """
 import base64
 import uuid
-
-from unittest.mock import patch, MagicMock
-from urllib.parse import urlparse
+import pathlib
 
 import pytest
-import requests.auth
+import httpx
+import yarl
 
-from openapi3 import OpenAPI
-from openapi3.schemas import Schema
+from aiopenapi3 import OpenAPI
+from aiopenapi3.v30.schemas import Schema
+
+
+URLBASE = "/"
 
 
 def test_paths_exist(petstore_expanded_spec):
     """
     Tests that paths are parsed correctly
     """
-    assert "/pets" in petstore_expanded_spec.paths
-    assert "/pets/{id}" in petstore_expanded_spec.paths
-    assert len(petstore_expanded_spec.paths) == 2
+    assert "/pets" in petstore_expanded_spec.paths._paths
+    assert "/pets/{id}" in petstore_expanded_spec.paths._paths
+    assert len(petstore_expanded_spec.paths._paths) == 2
 
 
 def test_operations_exist(petstore_expanded_spec):
@@ -38,6 +40,9 @@ def test_operations_exist(petstore_expanded_spec):
     assert pets_id_path.post is None
     assert pets_id_path.put is None
     assert pets_id_path.delete is not None
+
+    for operation in petstore_expanded_spec._:
+        continue
 
 
 def test_operation_populated(petstore_expanded_spec):
@@ -60,18 +65,18 @@ def test_operation_populated(petstore_expanded_spec):
     assert param1.description == "tags to filter by"
     assert param1.required == False
     assert param1.style == "form"
-    assert param1.schema is not None
-    assert param1.schema.type == "array"
-    assert param1.schema.items.type == "string"
+    assert param1.schema_ is not None
+    assert param1.schema_.type == "array"
+    assert param1.schema_.items.type == "string"
 
     param2 = op.parameters[1]
     assert param2.name == "limit"
     assert param2.in_ == "query"
     assert param2.description == "maximum number of results to return"
     assert param2.required == False
-    assert param2.schema is not None
-    assert param2.schema.type == "integer"
-    assert param2.schema.format == "int32"
+    assert param2.schema_ is not None
+    assert param2.schema_.type == "integer"
+    assert param2.schema_.format == "int32"
 
     # check that responses populated correctly
     assert "200" in op.responses
@@ -83,76 +88,113 @@ def test_operation_populated(petstore_expanded_spec):
     assert len(resp1.content) == 1
     assert "application/json" in resp1.content
     con1 = resp1.content["application/json"]
-    assert con1.schema is not None
-    assert con1.schema.type == "array"
+    assert con1.schema_ is not None
+    assert con1.schema_.type == "array"
     # we're not going to test that the ref resolved correctly here - that's a separate test
-    assert type(con1.schema.items) == Schema
+    assert type(con1.schema_.items._target) == Schema
 
     resp2 = op.responses["default"]
     assert resp2.description == "unexpected error"
     assert len(resp2.content) == 1
     assert "application/json" in resp2.content
     con2 = resp2.content["application/json"]
-    assert con2.schema is not None
+    assert con2.schema_ is not None
     # again, test ref resolution elsewhere
-    assert type(con2.schema) == Schema
+    assert type(con2.schema_._target) == Schema
 
 
-def test_securityparameters(with_securityparameters):
-    api = OpenAPI(with_securityparameters)
-    r = patch("requests.sessions.Session.send")
+def test_securityparameters(httpx_mock, with_securityparameters):
+    api = OpenAPI(URLBASE, with_securityparameters, session_factory=httpx.Client)
+    httpx_mock.add_response(headers={"Content-Type": "application/json"}, content=b"[]")
 
     auth = str(uuid.uuid4())
 
+    for i in api.paths.values():
+        if not i.post or not i.post.security:
+            continue
+        s = i.post.security[0]
+        #        assert type(s.name) == str
+        #        assert type(s.types) == list
+        break
+    else:
+        assert False
+
+    with pytest.raises(ValueError, match=r"does not accept security schemes \['xAuth'\]"):
+        api.authenticate(xAuth=auth)
+        api._.api_v1_auth_login_info(data={}, parameters={})
+
     # global security
-    api.authenticate("cookieAuth", auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
+    api.authenticate(None, cookieAuth=auth)
+    api._.api_v1_auth_login_info(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
 
     # path
-    api.authenticate("tokenAuth", auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert r.call_args.args[0].headers["Authorization"] == auth
+    api.authenticate(None, tokenAuth=auth)
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers["Authorization"] == auth
 
-    api.authenticate("paramAuth", auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
+    api.authenticate(None, paramAuth=auth)
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert yarl.URL(str(request.url)).query["auth"] == auth
 
-    parsed_url = urlparse(r.call_args.args[0].url)
-    parsed_url.query == auth
+    api.authenticate(None, cookieAuth=auth)
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers["Cookie"] == "Session=%s" % (auth,)
 
-    api.authenticate("cookieAuth", auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert r.call_args.args[0].headers["Cookie"] == "Session=%s" % (auth,)
+    api.authenticate(None, basicAuth=(auth, auth))
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers["Authorization"].split(" ")[1] == base64.b64encode((auth + ":" + auth).encode()).decode()
 
-    api.authenticate("basicAuth", (auth, auth))
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    r.call_args.args[0].headers["Authorization"].split(" ")[1] == base64.b64encode(
-        (auth + ":" + auth).encode()
-    ).decode()
+    api.authenticate(None, digestAuth=(auth, auth))
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    # can't test?
 
-    api.authenticate("digestAuth", (auth, auth))
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert requests.auth.HTTPDigestAuth.handle_401 == r.call_args.args[0].hooks["response"][0].__func__
+    api.authenticate(None, bearerAuth=auth)
+    api._.api_v1_auth_login_create(data={}, parameters={})
+    request = httpx_mock.get_requests()[-1]
+    assert request.headers["Authorization"] == "Bearer %s" % (auth,)
 
-    api.authenticate("bearerAuth", auth)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"}, json=lambda: [])
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-    assert r.call_args.args[0].headers["Authorization"] == "Bearer %s" % (auth,)
+    # null session
+    api.authenticate(None)
+    api._.api_v1_auth_login_info(data={}, parameters={})
 
-    api.authenticate(None, None)
-    resp = MagicMock(status_code=200, headers={"Content-Type": "application/json"})
-    with patch("requests.sessions.Session.send", return_value=resp) as r:
-        api.call_api_v1_auth_login_create(data={}, parameters={})
-        api.call_api_v1_auth_login_create(data={}, parameters={})
+
+def test_combined_security(httpx_mock, with_securityparameters):
+    api = OpenAPI(URLBASE, with_securityparameters, session_factory=httpx.Client)
+    httpx_mock.add_response(headers={"Content-Type": "application/json"}, content=b"[]")
+
+    auth = str(uuid.uuid4())
+
+    # combined
+    api.authenticate(user="test")
+    with pytest.raises(ValueError, match="No security requirement satisfied"):
+        r = api._.api_v1_auth_login_combined(data={}, parameters={})
+
+    api.authenticate(**{"user": "theuser", "token": "thetoken"})
+    r = api._.api_v1_auth_login_combined(data={}, parameters={})
+
+    api.authenticate(None)
+    with pytest.raises(ValueError, match="No security requirement satisfied"):
+        r = api._.api_v1_auth_login_combined(data={}, parameters={})
+
+
+def test_parameters(httpx_mock, with_parameters):
+    httpx_mock.add_response(headers={"Content-Type": "application/json"}, content=b"[]")
+    api = OpenAPI(URLBASE, with_parameters, session_factory=httpx.Client)
+
+    with pytest.raises(ValueError, match=r"Required parameter \w+ not provided"):
+        api._.getTest(data={}, parameters={})
+
+    Header = str([i ** i for i in range(3)])
+    api._.getTest(data={}, parameters={"Cookie": "Cookie", "Path": "Path", "Header": Header, "Query": "Query"})
+    request = httpx_mock.get_requests()[-1]
+
+    assert request.headers["Header"] == Header
+    assert request.headers["Cookie"] == "Cookie=Cookie"
+    assert pathlib.Path(request.url.path).name == "Path"
+    assert yarl.URL(str(request.url)).query["Query"] == "Query"

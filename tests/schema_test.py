@@ -1,15 +1,13 @@
+import httpx
 import pytest
+from pydantic import ValidationError
 
-from openapi3 import OpenAPI
-from openapi3.errors import ModelError
-
-from unittest.mock import patch, MagicMock
+from aiopenapi3 import OpenAPI
 
 
-def test_invalid_response(petstore_expanded):
-    api = OpenAPI(petstore_expanded)
-    resp = MagicMock(status_code=200, headers={"Content-Type":"application/json"}, json=lambda: {'foo':1})
-    with patch("requests.sessions.Session.send", return_value=resp) as s:
-        with pytest.raises(ModelError, match="Schema Pet got unexpected attribute keys {'foo'}") as r:
-            api.call_find_pet_by_id(data={}, parameters={"id":1})
-            print(r)
+def test_invalid_response(httpx_mock, petstore_expanded):
+    httpx_mock.add_response(headers={"Content-Type": "application/json"}, json={"foo": 1})
+    api = OpenAPI("test.yaml", petstore_expanded, session_factory=httpx.Client)
+
+    with pytest.raises(ValidationError, match="2 validation errors for Pet") as r:
+        p = api._.find_pet_by_id(data={}, parameters={"id": 1})
