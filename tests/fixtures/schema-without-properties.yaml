@@ -1,0 +1,22 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Schema with no properties
+servers:
+  - url: http://localhost
+paths:
+  /no-props:
+    get:
+      operationId: noProps
+      responses:
+        '200':
+          description: Response object with no properties
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  example:
+                    type: string
+                  no_properties:
+                    type: object
