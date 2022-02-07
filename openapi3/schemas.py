@@ -128,10 +128,14 @@ class Schema(ObjectBase):
         # this is defined in ObjectBase.__init__ as all slots are
         if self._model_type is None:  # pylint: disable=access-member-before-definition
             type_name = self.title or self.path[-1]
+            # if there are no defined properites for this model, use an empty dict
+            # to allow the model to be set up correctly
+            model_properties = self.properties or {}
+
             self._model_type = type(
                 type_name,
                 (Model,),
-                {"__slots__": self.properties.keys()},  # pylint: disable=attribute-defined-outside-init
+                {"__slots__": model_properties.keys()},  # pylint: disable=attribute-defined-outside-init
             )
 
         return self._model_type

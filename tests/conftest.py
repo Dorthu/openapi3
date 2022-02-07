@@ -170,3 +170,11 @@ def with_ref_allof():
     an allOf
     """
     yield _get_parsed_yaml("ref-allof.yaml")
+
+
+@pytest.fixture
+def schema_without_properties():
+    """
+    Provides a spec that includes a schema with no properties defined
+    """
+    yield _get_parsed_yaml("schema-without-properties.yaml")
