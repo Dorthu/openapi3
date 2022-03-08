@@ -3,8 +3,7 @@ openapi3
 
 A Python `OpenAPI 3 Specification`_ client and validator for Python 3.
 
-.. image:: https://travis-ci.org/Dorthu/openapi3.svg?branch=master
-    :target: https://travis-ci.org/Dorthu/openapi3
+.. image:: https://github.com/dorthu/openapi3/actions/workflows/main/badge.svg
 
 
 .. image:: https://badge.fury.io/py/openapi3.svg
