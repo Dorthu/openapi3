@@ -178,3 +178,11 @@ def schema_without_properties():
     Provides a spec that includes a schema with no properties defined
     """
     yield _get_parsed_yaml("schema-without-properties.yaml")
+
+
+@pytest.fixture
+def rfc_6901():
+    """
+    Provides a spec that includes RFC 6901 escape codes in ref paths
+    """
+    yield _get_parsed_yaml("rfc_6901.yaml")

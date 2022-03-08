@@ -92,3 +92,16 @@ def test_ref_allof_handling(with_ref_allof):
                    len(referenced_schema.properties),
                    ", ".join(referenced_schema.properties.keys()),
             )
+
+def test_ref_6901_refs(rfc_6901):
+    """
+    Tests that RFC 6901 escape codes, such as ~0 and ~1, are pared correctly
+    """
+    spec = OpenAPI(rfc_6901)
+
+    # spec parsed, make sure our refs got the right values
+    response = spec.paths['/ref-test'].get.responses['200'].content['application/json'].schema
+
+    assert response.properties['one'].type == 'string'
+    assert response.properties['two'].type == 'int'
+    assert response.properties['three'].type == 'array'
