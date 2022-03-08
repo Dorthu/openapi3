@@ -6,7 +6,6 @@ A Python `OpenAPI 3 Specification`_ client and validator for Python 3.
 .. image:: https://github.com/Dorthu/openapi3/actions/workflows/main.yml/badge.svg
    :alt: GitHub Actions Build Badge
 
-
 .. image:: https://badge.fury.io/py/openapi3.svg
    :target: https://badge.fury.io/py/openapi3
 
