@@ -1,0 +1,41 @@
+# this is a valid spec that contains a schema with an array as the value of an
+# exmaple object
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: Examples Array
+paths:
+  /example:
+    get:
+      operationId: exampleArrayGet
+      responses:
+        '200':
+          description: example
+          content:
+            application/json:
+              example:
+                - name: something
+              schema:
+                properties:
+                  name:
+                    type: string
+                    description: example
+                    example: something
+  /examples:
+    get:
+      operationId: examplesArrayGet
+      responses:
+        '200':
+          description: example
+          content:
+            application/json:
+              examples:
+                one:
+                  value:
+                    - name: something
+              schema:
+                properties:
+                  name:
+                    type: string
+                    description: example
+                    example: something

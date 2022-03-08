@@ -17,5 +17,5 @@ class Example(ObjectBase):
         """
         self.summary = self._get("summary", str)
         self.description = self._get("description", str)
-        self.value = self._get("value", ["Reference", dict, str])  # 'any' type
+        self.value = self._get("value", "*")
         self.externalValue = self._get("externalValue", str)

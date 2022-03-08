@@ -186,3 +186,11 @@ def rfc_6901():
     Provides a spec that includes RFC 6901 escape codes in ref paths
     """
     yield _get_parsed_yaml("rfc_6901.yaml")
+
+
+@pytest.fixture
+def with_array_example():
+    """
+    Provides a spec that includes arrays as the value of examples
+    """
+    yield _get_parsed_yaml("example_array.yaml")

@@ -132,3 +132,11 @@ def test_securityparameters(with_securityparameters):
     spec = OpenAPI(with_securityparameters, validate=True)
     errors = spec.errors()
     assert len(errors) == 0
+
+
+def test_example_type_array(with_array_example):
+    """
+    Tests that examples, definied as "any" type, accept arrays
+    """
+    spec = OpenAPI(with_array_example, validate=True)
+    assert len(spec.errors()) == 0, spec.errors()

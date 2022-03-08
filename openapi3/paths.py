@@ -467,7 +467,7 @@ class MediaType(ObjectBase):
         Implementation of :any:`ObjectBase._parse_data`
         """
         self.schema = self._get("schema", ["Schema", "Reference"])
-        self.example = self._get("example", str)  # 'any' type
+        self.example = self._get("example", "*")
         self.examples = self._get("examples", ["Example", "Reference"], is_map=True)
         self.encoding = self._get("encoding", dict)  # Map['Encoding']
 
