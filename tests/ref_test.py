@@ -84,7 +84,7 @@ def test_ref_allof_handling(with_ref_allof):
     spec = OpenAPI(with_ref_allof)
     referenced_schema = spec.components.schemas['Example']
 
-    # this should have only one property; the allOf from 
+    # this should have only one property; the allOf from
     # paths['/allof-example']get.responses['200'].content['application/json'].schema
     # should not modify the component
     assert len(referenced_schema.properties) == 1, \
@@ -92,3 +92,26 @@ def test_ref_allof_handling(with_ref_allof):
                    len(referenced_schema.properties),
                    ", ".join(referenced_schema.properties.keys()),
             )
+
+def test_ref_6901_refs(rfc_6901):
+    """
+    Tests that RFC 6901 escape codes, such as ~0 and ~1, are pared correctly
+    """
+    spec = OpenAPI(rfc_6901, validate=True)
+    assert len(spec.errors()) == 0, spec.errors()
+
+    # spec parsed, make sure our refs got the right values
+    path = spec.paths['/ref-test']
+    response = path.get.responses['200'].content['application/json'].schema
+
+    assert response.properties['one'].type == 'string'
+    assert response.properties['two'].type == 'int'
+    assert response.properties['three'].type == 'array'
+
+    # ensure the integer path components parsed as expected too
+    assert response.properties['four'].type == 'string'
+    assert response.properties['four'].example == 'it worked'
+
+    # ensure integer path parsing does work as expected
+    assert len(path.parameters) == 1
+    assert path.parameters[0].name == 'example2'

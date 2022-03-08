@@ -1,0 +1,79 @@
+# this schema has refs whose paths include the escaped `~` and `/` characters
+# (escaped as ~0 and ~1 respectively).  This also purposefully includes the ~01
+# escape sequence to ensure parsing ends in `~1` and not `/`
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: RFC 6901 Test
+paths:
+  /ref-test:
+    parameters:
+      - $ref: '#/paths/~1parameters-holder/parameters/1'
+    get:
+      operationId: refTestGet
+      responses:
+        '200':
+          description: Test
+          content:
+            application/json:
+              schema:
+                description: |
+                  References all other fields in components/schemas to ensure all references
+                  are tested.
+                type: object
+                properties:
+                  one:
+                    $ref: '#/components/schemas/test~1one'
+                  two:
+                    $ref: '#/components/schemas/test~0two'
+                  three:
+                    $ref: '#/components/schemas/test~01three'
+                  four:
+                    $ref: '#/components/schemas/01/properties/example'
+  /parameters-holder:
+    parameters:
+      - name: example
+        in: query
+        schema:
+          type: int
+      - name: example2
+        in: query
+        schema:
+          type: int
+    get:
+      operationId: parametersHolderGet
+      responses:
+        '200':
+          description: Placeholder
+          content:
+            application/json:
+              schema:
+                type: object
+components:
+  schemas:
+    test/one:
+      description: |
+        Tests that refs can reference paths with a `/` character; this should be
+        escaped as `#/components/schemas/test~1one`
+      type: string
+    test~two:
+      description: |
+        Tests that refs can reference paths with a `~` character; this should be
+        escaped as `#/components/schemas/test~0two`
+      type: int
+    test~1three:
+      description: |
+        Tests that refs can reference paths with a ~1 sequence in them; this should
+        be escaped as `#/components/schemas/test~01three`
+      type: array
+      items:
+        type: string
+    '01':
+      description: |
+        Tests that paths parsed using integer-like segments are handled correctly.
+        This will be referenced as `#/components/schemas/0/properties/example`
+      type: object
+      properties:
+        example:
+          type: string
+          example: it worked

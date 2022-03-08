@@ -101,16 +101,27 @@ class OpenAPI(ObjectBase):
         node = self
 
         for part in path:
+            part = part.replace('~1','/').replace('~0','~')
             if isinstance(node, Map):
-                if part not in node:  # pylint: disable=unsupported-membership-test
+                try:
+                    node = node[part]
+                except KeyError:
                     err_msg = "Invalid path {} in Reference".format(path)
                     raise ReferenceResolutionError(err_msg)
-                node = node.get(part)
             else:
-                if not hasattr(node, part):
+                try:
+                    ipart = int(part)
+                except ValueError:
+                    pass
+                else:
+                    if ipart>=0 and ipart<len(node):
+                        node = node[ipart]
+                        continue
+                try:
+                    node = getattr(node, part)
+                except AttributeError:
                     err_msg = "Invalid path {} in Reference".format(path)
                     raise ReferenceResolutionError(err_msg)
-                node = getattr(node, part)
 
         return node
 
