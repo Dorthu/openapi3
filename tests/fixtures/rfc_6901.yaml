@@ -29,7 +29,7 @@ paths:
                   three:
                     $ref: '#/components/schemas/test~01three'
                   four:
-                    $ref: '#/components/schemas/0/properties/example'
+                    $ref: '#/components/schemas/01/properties/example'
   /parameters-holder:
     parameters:
       - name: example
@@ -68,7 +68,7 @@ components:
       type: array
       items:
         type: string
-    '0':
+    '01':
       description: |
         Tests that paths parsed using integer-like segments are handled correctly.
         This will be referenced as `#/components/schemas/0/properties/example`
