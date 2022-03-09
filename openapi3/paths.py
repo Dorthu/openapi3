@@ -7,7 +7,7 @@ try:
 except ImportError:
     from urllib import urlencode
 
-from .errors import SpecError
+from .errors import SpecError, UnexpectedResponseError
 from .object_base import ObjectBase
 from .schemas import Model
 
@@ -354,12 +354,7 @@ class Operation(ObjectBase):
             expected_response = self.responses["default"]
 
         if expected_response is None:
-            # TODO - custom exception class that has the response object in it
-            err_msg = """Unexpected response {} from {} (expected one of {}, \
-                         no default is defined"""
-            err_var = result.status_code, self.operationId, ",".join(self.responses.keys())
-
-            raise RuntimeError(err_msg.format(*err_var))
+            raise UnexpectedResponseError(result, self)
 
         # if we got back a valid response code (or there was a default) and no
         # response content was expected, return None

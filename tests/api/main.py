@@ -57,6 +57,13 @@ def listPet(limit: Optional[int] = None) -> Pets:
          }
          )
 def getPet(pet_id: int = Query(..., alias='petId')) -> Pets:
+    if pet_id == -2:
+        # special case - return an unexpected response code
+        return JSONResponse(
+            status_code=starlette.status.HTTP_204_NO_CONTENT,
+        )
+
+    # normal responses
     for k, v in ZOO.items():
         if pet_id == v.id:
             return v
