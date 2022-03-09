@@ -39,7 +39,7 @@ class UnexpectedResponseError(RuntimeError):
             "Unexpected response {} from {} (expected one of {}, no default is defined)".format(
                 response.status_code,
                 operation.operationId,
-                ",".join(operation.responses.keys()),
+                ", ".join(operation.responses.keys()),
             ),
         )
 
