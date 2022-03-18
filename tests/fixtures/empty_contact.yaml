@@ -1,0 +1,7 @@
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: Valid spec with valid an empty contact block
+  contact:
+    name: Example
+paths:

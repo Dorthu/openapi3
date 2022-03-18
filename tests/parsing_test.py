@@ -140,3 +140,11 @@ def test_example_type_array(with_array_example):
     """
     spec = OpenAPI(with_array_example, validate=True)
     assert len(spec.errors()) == 0, spec.errors()
+
+
+def test_empty_contact(empty_contact):
+    """
+    Tests that empty contact blocks are accepted
+    """
+    spec = OpenAPI(empty_contact, validate=True)
+    assert len(spec.errors()) == 0
