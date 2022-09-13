@@ -4,8 +4,10 @@ import requests
 
 try:
     from urllib.parse import urlencode
+    from urllib.parse import urljoin
 except ImportError:
     from urllib import urlencode
+    from urlparse import urljoin
 
 from .errors import SpecError, UnexpectedResponseError
 from .object_base import ObjectBase
@@ -310,7 +312,7 @@ class Operation(ObjectBase):
         self._request = requests.Request(self.path[-1])
 
         # Set self._request.url to base_url w/ path
-        self._request.url = base_url + self.path[-2]
+        self._request.url = urljoin(base_url, self.path[-2])
 
         if security and self.security:
             security_requirement = None
