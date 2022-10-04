@@ -274,6 +274,9 @@ class Model:
         :param data: The data to create this Model with
         :type data: dict
         """
+        if not data:
+            data={}
+            
         self._raw_data = data
         self._schema = schema
 
