@@ -194,3 +194,11 @@ def with_array_example():
     Provides a spec that includes arrays as the value of examples
     """
     yield _get_parsed_yaml("example_array.yaml")
+
+
+@pytest.fixture
+def empty_contact():
+    """
+    Provides a spec with an empty contact section in info
+    """
+    yield _get_parsed_yaml("empty_contact.yaml")

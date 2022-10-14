@@ -31,7 +31,7 @@ class Contact(ObjectBase):
     """
 
     __slots__ = ["name", "url", "email"]
-    required_fields = ["name", "url", "email"]
+    required_fields = []
 
     def _parse_data(self):
         """
