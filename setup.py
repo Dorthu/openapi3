@@ -23,6 +23,6 @@ setup(
     license="BSD 3-Clause License",
     install_requires=["PyYaml", "requests"],
     extras_require={
-        "test": ["pytest", "pytest-asyncio==0.16", "uvloop", "hypercorn", "pydantic", "fastapi"],
+        "test": ["pytest", "pytest-asyncio==0.16", "uvloop==0.17.0", "hypercorn==0.14.3", "pydantic==1.10.2", "fastapi==0.76.0"],
     },
 )
