@@ -6,3 +6,4 @@ openapi3.egg-info/*
 build/*
 dist/*
 .idea
+env
