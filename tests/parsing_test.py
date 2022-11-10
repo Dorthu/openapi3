@@ -148,3 +148,14 @@ def test_empty_contact(empty_contact):
     """
     spec = OpenAPI(empty_contact, validate=True)
     assert len(spec.errors()) == 0
+
+
+def test_external_docs(with_external_docs):
+    """
+    Tests that ExternalDocumentation objects are parsed as expected
+    """
+    spec = OpenAPI(with_external_docs)
+    assert spec.externalDocs.url == "http://example.org/openapi"
+    assert spec.tags[0].externalDocs.url == "http://example.org/tags"
+    assert spec.paths["/example"].get.externalDocs.url == "http://example.org/operation"
+    assert spec.paths["/example"].get.responses['200'].content['application/json'].schema.externalDocs.url == "http://example.org/schema"
