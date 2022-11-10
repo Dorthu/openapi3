@@ -92,7 +92,7 @@ class Schema(ObjectBase):
         self.readOnly = self._get("readOnly", bool)
         self.writeOnly = self._get("writeOnly", bool)
         self.xml = self._get("xml", dict)  # 'XML'
-        self.externalDocs = self._get("externalDocs", dict)  # 'ExternalDocs'
+        self.externalDocs = self._get("externalDocs", "ExternalDocumentation")  # 'ExternalDocs'
         self.deprecated = self._get("deprecated", bool)
         self.example = self._get("example", "*")
         self.contentEncoding = self._get("contentEncoding", str)

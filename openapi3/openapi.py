@@ -172,7 +172,7 @@ class OpenAPI(ObjectBase):
         self._operation_map = {}
 
         self.components = self._get("components", ["Components"])
-        self.externalDocs = self._get("externalDocs", dict)
+        self.externalDocs = self._get("externalDocs", "ExternalDocumentation")
         self.info = self._get("info", "Info")
         self.openapi = self._get("openapi", str)
         self.paths = self._get("paths", ["Path"], is_map=True)

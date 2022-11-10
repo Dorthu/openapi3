@@ -1,0 +1,33 @@
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: With External Docs
+externalDocs:
+  url: http://example.org/openapi
+tags:
+- name: Example
+  description: Example
+  externalDocs:
+    url: http://example.org/tags
+paths:
+  /example:
+    get:
+      operationId: example
+      externalDocs:
+        description: Example external docs
+        url: http://example.org/operation
+      responses:
+        '200':
+          description: example
+          content:
+            application/json:
+              schema:
+                properties:
+                  name:
+                    type: string
+                    description: example
+                    example: something
+                externalDocs:
+                    url: http://example.org/schema
+                    description: External docs reference
+

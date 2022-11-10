@@ -17,4 +17,4 @@ class Tag(ObjectBase):
         """
         self.name = self._get("name", str)
         self.description = self._get("description", str)
-        self.externalDocs = self._get("externalDocs", str)
+        self.externalDocs = self._get("externalDocs", "ExternalDocumentation")

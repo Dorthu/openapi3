@@ -202,3 +202,10 @@ def empty_contact():
     Provides a spec with an empty contact section in info
     """
     yield _get_parsed_yaml("empty_contact.yaml")
+
+@pytest.fixture
+def with_external_docs():
+    """
+    Provides a spec with externalDocs objects in all valid places
+    """
+    yield _get_parsed_yaml("with-external-docs.yaml")
