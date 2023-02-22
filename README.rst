@@ -42,7 +42,7 @@ specs. For example, using `Linode's OpenAPI 3 Specification`_ for reference::
    # call an operation that requires authentication
    linodes  = api.call_getLinodeInstances()
 
-   # call an opertaion with parameters
+   # call an operation with parameters
    linode = api.call_getLinodeInstance(parameters={"linodeId": 123})
 
    # the models returns are all of the same (generated) type

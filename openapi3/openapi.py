@@ -47,7 +47,7 @@ class OpenAPI(ObjectBase):
         :param ssl_verify: Decide if to use ssl verification to the requests or not,
                            in case an str is passed, will be used as the CA.
         :type ssl_verify: bool, str, None
-        :param use_session: Should we use a consistant session between API calls
+        :param use_session: Should we use a consistent session between API calls
         :type use_session: bool
         """
         # do this first so super().__init__ can see it

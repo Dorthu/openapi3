@@ -88,7 +88,7 @@ def test_ref_allof_handling(with_ref_allof):
     # paths['/allof-example']get.responses['200'].content['application/json'].schema
     # should not modify the component
     assert len(referenced_schema.properties) == 1, \
-           "Unexpectedly found {} properties on componenets.schemas['Example']: {}".format(
+           "Unexpectedly found {} properties on components.schemas['Example']: {}".format(
                    len(referenced_schema.properties),
                    ", ".join(referenced_schema.properties.keys()),
             )
