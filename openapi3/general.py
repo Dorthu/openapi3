@@ -25,11 +25,13 @@ class Reference(ObjectBase):
     """
 
     # can't start a variable name with a $
-    __slots__ = ["ref"]
+    __slots__ = ["ref", "summary", "description"]
     required_fields = ["$ref"]
 
     def _parse_data(self):
         self.ref = self._get("$ref", str)
+        self.summary = self._get("summary", str)
+        self.description = self._get("description", str)
 
     @classmethod
     def can_parse(cls, dct):
@@ -38,6 +40,9 @@ class Reference(ObjectBase):
         in __slots__ (since that's not a valid python variable name)
         """
         # TODO - can a reference object have spec extensions?
-        cleaned_keys = [k for k in dct.keys() if not k.startswith("x-")]
+        # summary and description are optional keys; their presence shouldn't
+        # affect what we can and can't parse (so remove them for the purpose of
+        # checking)
+        cleaned_keys = [k for k in dct.keys() if not k.startswith("x-") and k not in ("summary", "description")]
 
         return len(cleaned_keys) == 1 and "$ref" in dct

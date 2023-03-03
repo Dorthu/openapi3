@@ -203,9 +203,18 @@ def empty_contact():
     """
     yield _get_parsed_yaml("empty_contact.yaml")
 
+
 @pytest.fixture
 def with_external_docs():
     """
     Provides a spec with externalDocs objects in all valid places
     """
     yield _get_parsed_yaml("with-external-docs.yaml")
+
+
+@pytest.fixture
+def with_openapi_310_references():
+    """
+    Provides a spec with OpenAPI 3.1.0 expanded Reference Objects
+    """
+    yield _get_parsed_yaml("openapi-3.1.0-refs.yaml")

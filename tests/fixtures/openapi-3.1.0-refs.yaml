@@ -1,0 +1,33 @@
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: OpenAPI 3.1.0 Expanded Refernce Objects
+paths:
+  /example:
+    $ref: "#/components/pathItems/example"
+  /other:
+    $ref: "#/components/pathItems/example"
+    summary: /other
+    description: /other
+components:
+  schemas:
+    Example:
+      type: object
+      properties:
+        foo:
+          type: string
+          description: example
+  pathItems:
+    example:
+      summary: /example
+      description: /example
+      get:
+        responses:
+          "200":
+            description: ''
+            content:
+              'application/json':
+                schema:
+                  $ref: '#/components/schemas/Example'
+                  summary: Has no effect
+                  description: Has no effect

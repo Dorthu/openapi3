@@ -175,7 +175,7 @@ class OpenAPI(ObjectBase):
         self.externalDocs = self._get("externalDocs", "ExternalDocumentation")
         self.info = self._get("info", "Info")
         self.openapi = self._get("openapi", str)
-        self.paths = self._get("paths", ["Path"], is_map=True)
+        self.paths = self._get("paths", ["Path", "Reference"], is_map=True)
         self.security = self._get("security", ["SecurityRequirement"], is_list=True)
         self.servers = self._get("servers", ["Server"], is_list=True)
         self.tags = self._get("tags", ["Tag"], is_list=True)

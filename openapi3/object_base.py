@@ -513,10 +513,12 @@ class ObjectBase(object):
                     e.element = self
                     raise
 
+                # TODO: remove _original_ref, as proxy objects now handle this
                 resolved_value._original_ref = value
+                proxy = ReferenceProxy(resolved_value, value)
 
                 # resolved
-                setattr(self, slot, resolved_value)
+                setattr(self, slot, proxy)
             elif issubclass(type(value), ObjectBase) or isinstance(value, Map):
                 # otherwise, continue resolving down the tree
                 value._resolve_references()
@@ -536,8 +538,10 @@ class ObjectBase(object):
                             e.element = self
                             raise
 
+                        # TODO: remove _original_ref
                         resolved_value._original_ref = value
-                        resolved_list.append(resolved_value)
+                        proxy = ReferenceProxy(resolved_value, value)
+                        resolved_list.append(proxy)
                     else:
                         if issubclass(type(item), ObjectBase) or isinstance(item, Map):
                             item._resolve_references()
@@ -648,10 +652,12 @@ class Map(dict):
                     e.element = self
                     raise
 
+                # TODO: Remove _original_ref
                 resolved_value._original_ref = value
+                proxy = ReferenceProxy(resolved_value, value)
 
                 # resolved
-                self[key] = resolved_value
+                self[key] = proxy
             else:
                 value._resolve_references()
 
@@ -682,3 +688,55 @@ class Map(dict):
         :rtype: str
         """
         return ".".join(self.path)
+
+
+class ReferenceProxy(ObjectBase):
+    """
+    This is a proxy class that is used to handle a resolved reference; for all
+    intents and purposes, it behaves like the object it proxies, except for the
+    following:
+
+     * If a "summary" or "description" were set in the Refernce object _and_ the
+       proxies object has this attributes, the Reference object's values are used
+       instead
+     * This holds the original Refernce object that it is proxying for, allowing
+       code to track down the reference
+     * Calling `type` on a ReferenceProxy will return the ReferenceProxy type;
+       use `type(ref._proxy)` or `isinstance(ref, Type)` to see the proxied type
+    """
+    def __init__(self, proxy, reference):
+        self._proxy = proxy
+        self._original_ref = reference
+
+    def __eq__(self, other):
+        """
+        Use the proxy object when comparing identity
+        """
+        return self._proxy == other
+
+    @property
+    def __class__(self):
+        """
+        Fake our class so we look like the proxied object's class
+        """
+        return self._proxy.__class__
+
+    def __getattribute__(self, value):
+        """
+        Overriding __getattribute__ allows us to act as the proxied object except
+        in very special cases.  This should make the proxy type virtually transparent
+        to a normal user.
+        """
+        # allow _proxy and _original_ref to access members of this class directly
+        if value in ("_proxy", "_original_ref", "__eq__"):
+            return object.__getattribute__(self, value)
+
+        # OpenAPI 3.1.0 allows Reference objects to makes the summary and description
+        # fields of the object they're referencing, but only if they have the field
+        # defined _and_ the field exists in the type they're referencing.
+        if value in ("summary", "description"):
+            if hasattr(self._proxy, value) and getattr(self._original_ref, value) is not None:
+                return getattr(self._original_ref, value)
+
+        # otherwise, return the value of the proxied object
+        return getattr(self._proxy, value)
