@@ -10,7 +10,7 @@ paths:
         '200':
           description: This has links
           content:
-            applicaton/json:
+            application/json:
               schema:
                 type: object
                 properties:
@@ -31,7 +31,7 @@ paths:
         '200':
           description: This has links too
           content:
-            applicaton/json:
+            application/json:
               schema:
                 type: object
                 properties:

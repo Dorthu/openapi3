@@ -74,7 +74,7 @@ class Schema(ObjectBase):
         self.minLength = self._get("minLength", int)
         self.pattern = self._get("pattern", str)
         self.maxItems = self._get("maxItems", int)
-        self.minItems = self._get("minItmes", int)
+        self.minItems = self._get("minItems", int)
         self.required = self._get("required", list)
         self.enum = self._get("enum", list)
         self.type = self._get("type", str)
@@ -128,7 +128,7 @@ class Schema(ObjectBase):
         # this is defined in ObjectBase.__init__ as all slots are
         if self._model_type is None:  # pylint: disable=access-member-before-definition
             type_name = self.title or self.path[-1]
-            # if there are no defined properites for this model, use an empty dict
+            # if there are no defined properties for this model, use an empty dict
             # to allow the model to be set up correctly
             model_properties = self.properties or {}
 

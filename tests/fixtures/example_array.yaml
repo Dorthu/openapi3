@@ -1,5 +1,5 @@
 # this is a valid spec that contains a schema with an array as the value of an
-# exmaple object
+# example object
 openapi: "3.1.0"
 info:
   version: 1.0.0

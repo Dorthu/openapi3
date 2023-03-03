@@ -23,7 +23,7 @@ def test_parsing_fails(broken):
         spec = OpenAPI(broken)
 
 
-def test_parsing_broken_refernece(broken_reference):
+def test_parsing_broken_reference(broken_reference):
     """
     Tests that parsing fails correctly when a reference is broken
     """
@@ -136,7 +136,7 @@ def test_securityparameters(with_securityparameters):
 
 def test_example_type_array(with_array_example):
     """
-    Tests that examples, definied as "any" type, accept arrays
+    Tests that examples, defined as "any" type, accept arrays
     """
     spec = OpenAPI(with_array_example, validate=True)
     assert len(spec.errors()) == 0, spec.errors()
