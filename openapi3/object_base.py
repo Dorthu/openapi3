@@ -696,10 +696,10 @@ class ReferenceProxy(ObjectBase):
     intents and purposes, it behaves like the object it proxies, except for the
     following:
 
-     * If a "summary" or "description" were set in the Refernce object _and_ the
+     * If a "summary" or "description" were set in the Reference object _and_ the
        proxies object has this attributes, the Reference object's values are used
        instead
-     * This holds the original Refernce object that it is proxying for, allowing
+     * This holds the original Reference object that it is proxying for, allowing
        code to track down the reference
      * Calling `type` on a ReferenceProxy will return the ReferenceProxy type;
        use `type(ref._proxy)` or `isinstance(ref, Type)` to see the proxied type
@@ -731,7 +731,7 @@ class ReferenceProxy(ObjectBase):
         if value in ("_proxy", "_original_ref", "__eq__"):
             return object.__getattribute__(self, value)
 
-        # OpenAPI 3.1.0 allows Reference objects to makes the summary and description
+        # OpenAPI 3.1.0 allows Reference objects to make the summary and description
         # fields of the object they're referencing, but only if they have the field
         # defined _and_ the field exists in the type they're referencing.
         if value in ("summary", "description"):

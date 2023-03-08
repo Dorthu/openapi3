@@ -1,7 +1,7 @@
 openapi: "3.1.0"
 info:
   version: 1.0.0
-  title: OpenAPI 3.1.0 Expanded Refernce Objects
+  title: OpenAPI 3.1.0 Expanded Reference Objects
 paths:
   /example:
     $ref: "#/components/pathItems/example"
