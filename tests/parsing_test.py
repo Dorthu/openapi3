@@ -159,3 +159,20 @@ def test_external_docs(with_external_docs):
     assert spec.tags[0].externalDocs.url == "http://example.org/tags"
     assert spec.paths["/example"].get.externalDocs.url == "http://example.org/operation"
     assert spec.paths["/example"].get.responses['200'].content['application/json'].schema.externalDocs.url == "http://example.org/schema"
+
+
+def test_schema_default_types(with_all_default_types):
+    """
+    Tests that schemas accept defaults in their defined types
+    """
+    spec = OpenAPI(with_all_default_types)
+    assert spec.components.parameters["int"].schema.default == 0
+    assert spec.components.parameters["str"].schema.default == "test"
+    assert spec.components.parameters["bool"].schema.default == True
+    assert spec.components.parameters["float"].schema.default == 0.1
+
+    schema = spec.paths["/example"].get.requestBody.content["application/json"].schema
+    assert schema.properties["int"].default == 0
+    assert schema.properties["str"].default == "test"
+    assert schema.properties["bool"].default == True
+    assert schema.properties["float"].default == 0.1

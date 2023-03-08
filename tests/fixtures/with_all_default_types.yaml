@@ -1,0 +1,55 @@
+openapi: 3.0.0
+info:
+  title: Numeric default parameter
+  version: 0.0.1
+paths:
+  /example:
+    get:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                int:
+                  type: integer
+                  default: 0
+                str:
+                  type: string
+                  default: "test"
+                bool:
+                  type: boolean
+                  default: true
+                float:
+                  type: number
+                  default: 0.1
+        required: true
+      responses:
+        200:
+          description: it worked
+components:
+  parameters:
+    int:
+      name: exampleParam
+      in: query
+      schema:
+        type: integer
+        default: 0
+    str:
+      name: exampleParam2
+      in: query
+      schema:
+        type: string
+        default: "test"
+    bool:
+      name: exampleParam3
+      in: query
+      schema:
+        type: boolean
+        default: true
+    float:
+      name: exampleParam4
+      in: query
+      schema:
+        type: number
+        default: 0.1
