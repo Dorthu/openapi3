@@ -1,0 +1,32 @@
+openapi: "3.1.0"
+info:
+  version: 1.0.0
+  title: Reference Reference Reference
+paths:
+  '/test':
+    post:
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                example:
+                  $ref: '#/components/schemas/Example/properties/reference'
+      responses:
+        default:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+components:
+  schemas:
+    Example:
+      type: object
+      properties:
+        reference:
+          $ref: '#/components/schemas/Example/properties/real'
+        real:
+          type: string
