@@ -182,7 +182,8 @@ class OpenAPI(ObjectBase):
 
         # now that we've parsed _all_ the data, resolve all references; start with
         # components so that paths that reference them will see the resolved references
-        self.components._resolve_references()
+        if self.components is not None:
+            self.components._resolve_references()
         self._resolve_references()
         self._resolve_allOfs()
 
