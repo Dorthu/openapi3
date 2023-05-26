@@ -213,6 +213,7 @@ def with_external_docs():
 
 
 @pytest.fixture
+
 def with_openapi_310_references():
     """
     Provides a spec with OpenAPI 3.1.0 expanded Reference Objects
@@ -226,3 +227,11 @@ def with_reference_referencing_reference():
     Provides a spec with a reference that references a reference
     """
     yield _get_parsed_yaml("reference-reference-reference.yaml")
+
+
+@pytest.fixture
+def with_all_default_types():
+    """
+    Provides a spec with defaults defined in various schemas of all types
+    """
+    yield _get_parsed_yaml("with_all_default_types.yaml")
