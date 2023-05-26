@@ -180,7 +180,10 @@ class OpenAPI(ObjectBase):
         self.servers = self._get("servers", ["Server"], is_list=True)
         self.tags = self._get("tags", ["Tag"], is_list=True)
 
-        # now that we've parsed _all_ the data, resolve all references
+        # now that we've parsed _all_ the data, resolve all references; start with
+        # components so that paths that reference them will see the resolved references
+        if self.components is not None:
+            self.components._resolve_references()
         self._resolve_references()
         self._resolve_allOfs()
 

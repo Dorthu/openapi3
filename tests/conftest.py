@@ -218,3 +218,11 @@ def with_openapi_310_references():
     Provides a spec with OpenAPI 3.1.0 expanded Reference Objects
     """
     yield _get_parsed_yaml("openapi-3.1.0-refs.yaml")
+
+
+@pytest.fixture
+def with_reference_referencing_reference():
+    """
+    Provides a spec with a reference that references a reference
+    """
+    yield _get_parsed_yaml("reference-reference-reference.yaml")

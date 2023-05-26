@@ -153,3 +153,11 @@ def test_openapi_3_1_0_references(with_openapi_310_references):
     assert extended_ref._proxy == original_path
     assert isinstance(extended_ref._original_ref, Reference)
     assert extended_ref._original_ref != normal_ref._original_ref
+
+
+def test_reference_referencing_reference(with_reference_referencing_reference):
+    spec = OpenAPI(with_reference_referencing_reference)
+
+    assert isinstance(spec.components.schemas["Example"].properties["real"], Schema), "Real property was not a schema?"
+    assert isinstance(spec.components.schemas["Example"].properties["reference"], Schema), "Reference property was not resolved"
+    assert isinstance(spec.paths["/test"].post.requestBody.content["application/json"].schema.properties["example"], Schema), "Reference reference was not resolved"
