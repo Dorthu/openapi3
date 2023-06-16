@@ -85,7 +85,7 @@ class Schema(ObjectBase):
         self.anyOf = self._get("anyOf", list)
         self.items = self._get("items", ["Schema", "Reference"])
         self.properties = self._get("properties", ["Schema", "Reference"], is_map=True)
-        self.additionalProperties = self._get("additionalProperties", [bool, dict])
+        self.additionalProperties = self._get("additionalProperties", ["Schema", "Reference"])
         self.description = self._get("description", str)
         self.format = self._get("format", str)
         self.default = self._get("default", TYPE_LOOKUP.get(self.type, str))  # TODO - str as a default?
@@ -157,6 +157,11 @@ class Schema(ObjectBase):
             # TODO - perhaps assert that the type of data matches the type we
             # expected
             return data
+        elif self.additionalProperties:
+            o = {}
+            for k, v in data.items():
+                o[k] = self.additionalProperties.get_type()(v, self.additionalProperties)
+            return o
         elif self.type == "array":
             return [self.items.get_type()(i, self.items) for i in data]
         else:
@@ -285,14 +290,20 @@ class Model:
             # initialize all slots to None
             setattr(self, s, None)
 
+        if schema.additionalProperties:
+            prop = schema.additionalProperties
+            for k, v in data.items():
+                setattr(self, k, prop.model(v))
+            return
+
         keys = set(data.keys()) - frozenset(self.__slots__)
+
         if keys:
             raise ModelError("Schema {} got unexpected attribute keys {}".format(self.__class__.__name__, keys))
 
         # collect the data into this model
         for k, v in data.items():
             prop = schema.properties[k]
-
             if prop.type == "array":
                 # handle arrays
                 item_schema = prop.items
