@@ -88,7 +88,7 @@ class Schema(ObjectBase):
         self.additionalProperties = self._get("additionalProperties", [bool, dict])
         self.description = self._get("description", str)
         self.format = self._get("format", str)
-        self.default = self._get("default", TYPE_LOOKUP.get(self.type, str))  # TODO - str as a default?
+        self.default = self._get("default", [list, dict, str, int, float, bool])  # TODO - str as a default?
         self.nullable = self._get("nullable", bool)
         self.discriminator = self._get("discriminator", dict)  # 'Discriminator'
         self.readOnly = self._get("readOnly", bool)
