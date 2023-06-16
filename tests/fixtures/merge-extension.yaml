@@ -1,0 +1,39 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Contains a POST request that overrides certain fields from a component ref
+paths:
+  /example:
+    post:
+      operationId: addExample
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: '#/components/schemas/Request'
+              properties:
+                bar:
+                  description: Foo
+      responses:
+        '200':
+          description: Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+components:
+  schemas:
+    Request:
+      type: object
+      properties:
+        bar:
+          type: string
+          x-test-extension: test
+    Response:
+      type: object
+      properties:
+        foo:
+          type: string
