@@ -52,11 +52,9 @@ def test_allOf_resolution(petstore_expanded_spec):
     assert "tag" in items.properties
 
     id_prop = items.properties["id"]
-    id_prop = items.properties["id"]
     assert id_prop.type == "integer"
     assert id_prop.format == "int64"
 
-    name = items.properties["name"]
     name = items.properties["name"]
     assert name.type == "string"
 
@@ -161,3 +159,16 @@ def test_reference_referencing_reference(with_reference_referencing_reference):
     assert isinstance(spec.components.schemas["Example"].properties["real"], Schema), "Real property was not a schema?"
     assert isinstance(spec.components.schemas["Example"].properties["reference"], Schema), "Reference property was not resolved"
     assert isinstance(spec.paths["/test"].post.requestBody.content["application/json"].schema.properties["example"], Schema), "Reference reference was not resolved"
+
+
+def test_reference_merge_extensions(with_merge_extension):
+    """
+    Tests that a schema with a $ref within the request schema will properly
+    merge extensions.
+    """
+    spec = OpenAPI(with_merge_extension)
+
+    schema = spec.paths["/example"].post.requestBody.content["application/json"].schema
+    assert type(schema.properties["bar"]) == Schema
+    assert schema.properties["bar"].type == "string"
+    assert schema.properties["bar"].extensions["test-extension"] == "test"

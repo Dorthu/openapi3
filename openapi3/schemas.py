@@ -58,6 +58,7 @@ class Schema(ObjectBase):
         "contentEncoding",
         "contentMediaType",
         "contentSchema",
+        "extensions",
         "_model_type",
         "_request_model_type",
         "_resolved_allOfs",

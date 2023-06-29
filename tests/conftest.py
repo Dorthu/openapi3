@@ -235,3 +235,11 @@ def with_all_default_types():
     Provides a spec with defaults defined in various schemas of all types
     """
     yield _get_parsed_yaml("with_all_default_types.yaml")
+
+
+@pytest.fixture
+def with_merge_extension():
+    """
+    Provides a spec that merges extensions from a component ref.
+    """
+    yield _get_parsed_yaml("merge-extension.yaml")
