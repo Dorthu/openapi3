@@ -161,12 +161,12 @@ def test_reference_referencing_reference(with_reference_referencing_reference):
     assert isinstance(spec.paths["/test"].post.requestBody.content["application/json"].schema.properties["example"], Schema), "Reference reference was not resolved"
 
 
-def test_reference_merge_extensions(with_merge_allOf):
+def test_reference_merge_extensions(with_merge_extension):
     """
     Tests that a schema with a $ref within the request schema will properly
     merge extensions.
     """
-    spec = OpenAPI(with_merge_allOf)
+    spec = OpenAPI(with_merge_extension)
 
     schema = spec.paths["/example"].post.requestBody.content["application/json"].schema
     assert type(schema.properties["bar"]) == Schema
