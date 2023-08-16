@@ -202,6 +202,9 @@ class Schema(ObjectBase):
                 if isinstance(c, Schema):
                     self._merge(c)
 
+        # Recursively merge allOfs for children
+        super()._resolve_allOfs()
+
     def _merge(self, other):
         """
         Merges ``other`` into this schema, preferring to use the values in ``other``
