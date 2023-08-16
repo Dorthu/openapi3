@@ -1,0 +1,32 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: This has an allOf nested within a Schema property.
+paths:
+  /example:
+    get:
+      operationId: hasDeeplyNestedAllOfRef
+      responses:
+        '200':
+          description: Example
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  foobar:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Data'
+                        - properties:
+                            foo:
+                              type: integer
+
+components:
+  schemas:
+    Data:
+      type: object
+      properties:
+        bar:
+          type: string

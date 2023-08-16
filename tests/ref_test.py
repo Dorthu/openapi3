@@ -172,3 +172,22 @@ def test_reference_merge_extensions(with_merge_extension):
     assert type(schema.properties["bar"]) == Schema
     assert schema.properties["bar"].type == "string"
     assert schema.properties["bar"].extensions["test-extension"] == "test"
+
+def test_resolving_deeply_nested_allof(with_deeply_nested_allof):
+    """
+    Tests that a schema with a $ref nested within a schema defined in an allOf
+    parses correctly
+    """
+    spec = OpenAPI(with_deeply_nested_allof)
+
+    schema = spec.paths['/example'].get.responses['200'].content['application/json'].schema
+
+    assert type(schema.properties['foobar']) == Schema
+    assert schema.properties['foobar'].type == 'array'
+    assert type(schema.properties['foobar'].items) == Schema
+
+    assert "foo" in schema.properties['foobar'].items.properties
+    assert schema.properties['foobar'].items.properties["foo"].type == "integer"
+
+    assert "bar" in schema.properties['foobar'].items.properties
+    assert schema.properties['foobar'].items.properties["bar"].type == "string"
