@@ -243,3 +243,10 @@ def with_merge_extension():
     Provides a spec that merges extensions from a component ref.
     """
     yield _get_parsed_yaml("merge-extension.yaml")
+
+@pytest.fixture
+def with_deeply_nested_allof():
+    """
+    Provides a spec with a $ref under a schema defined in an allOf
+    """
+    yield _get_parsed_yaml("deeply-nested-allOf.yaml")
