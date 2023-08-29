@@ -1,5 +1,6 @@
 import json
 import re
+
 import requests
 
 try:
@@ -280,6 +281,21 @@ class Operation(ObjectBase):
 
             self._request.data = body
             self._request.headers["Content-Type"] = "application/json"
+        elif "application/x-www-form-urlencoded" in self.requestBody.content:
+            if isinstance(data, dict) or isinstance(data, list):
+                body = urlencode(data)
+
+            if issubclass(type(data), Model):
+                # serialize models as dicts
+                converter = lambda c: dict(c)
+                data_dict = {k: v for k, v in data if v is not None}
+                # TODO: Delete this nonsense
+                body_json = json.dumps(data_dict, default=converter)
+                body_dict = json.loads(body_json)
+                body = urlencode(body_dict)
+
+            self._request.data = body
+            self._request.headers["Content-Type"] = "application/x-www-form-urlencoded"
         else:
             raise NotImplementedError()
 
