@@ -266,7 +266,7 @@ class Operation(ObjectBase):
 
         self._request.url = self._request.url.format(**path_parameters)
 
-    def _request_handle_body(self, data):
+    def _request_handle_body(self, data, files):
         if "application/json" in self.requestBody.content:
             if isinstance(data, dict) or isinstance(data, list):
                 body = json.dumps(data)
@@ -280,10 +280,22 @@ class Operation(ObjectBase):
 
             self._request.data = body
             self._request.headers["Content-Type"] = "application/json"
-        else:
-            raise NotImplementedError()
+        elif "multipart/form-data" in self.requestBody.content:
+            if issubclass(type(data), Model):
+                raise NotImplementedError("Passed Model for multipart body")
 
-    def request(self, base_url, security={}, data=None, parameters={}, verify=True, session=None, raw_response=False):
+            multipart_schema = self.requestBody.content['multipart/form-data']
+            if isinstance(files, dict) and len(files) > 0:
+                self._request.files = files
+
+            if isinstance(data, dict) or isinstance(data, list):
+                body = json.dumps(data)
+
+            self._request.headers["Content-Type"] = "multipart/form-data"
+        else:
+            raise NotImplementedError("Not implemented body content type")
+
+    def request(self, base_url, security={}, data=None, parameters={}, verify=True, session=None, raw_response=False, files={}):
         """
         Sends an HTTP request as described by this Path
 
@@ -333,7 +345,7 @@ class Operation(ObjectBase):
                 err_msg = "Request Body is required but none was provided."
                 raise ValueError(err_msg)
 
-            self._request_handle_body(data)
+            self._request_handle_body(data, files)
 
         self._request_handle_parameters(parameters)
 
