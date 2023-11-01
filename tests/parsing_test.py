@@ -176,3 +176,13 @@ def test_schema_default_types(with_all_default_types):
     assert schema.properties["str"].default == "test"
     assert schema.properties["bool"].default == True
     assert schema.properties["float"].default == 0.1
+
+
+def test_request_bodies_ref(ref_request_bodies):
+    """
+    Tests that refs to components/requestBodies can be resolved
+    """
+    spec = OpenAPI(ref_request_bodies, validate=True)
+    error_messages = [getattr(error, "message") for error in spec.errors()]
+    found_errors = bool(error_messages)
+    assert not found_errors, error_messages
