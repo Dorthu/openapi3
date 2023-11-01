@@ -250,3 +250,10 @@ def with_deeply_nested_allof():
     Provides a spec with a $ref under a schema defined in an allOf
     """
     yield _get_parsed_yaml("deeply-nested-allOf.yaml")
+
+@pytest.fixture
+def ref_request_bodies():
+    """
+    Provides a spec with a $ref to a requestBodies definition
+    """
+    yield _get_parsed_yaml("ref-request-bodies.yaml")

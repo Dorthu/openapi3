@@ -28,7 +28,7 @@ class Components(ObjectBase):
         """
         self.examples = self._get("examples", ["Example", "Reference"], is_map=True)
         self.parameters = self._get("parameters", ["Parameter", "Reference"], is_map=True)
-        self.requestBodies = self._get("requestBody", ["RequestBody", "Reference"], is_map=True)
+        self.requestBodies = self._get("requestBodies", ["RequestBody", "Reference"], is_map=True)
         self.responses = self._get("responses", ["Response", "Reference"], is_map=True)
         self.schemas = self._get("schemas", ["Schema", "Reference"], is_map=True)
         self.securitySchemes = self._get("securitySchemes", ["SecurityScheme", "Reference"], is_map=True)
