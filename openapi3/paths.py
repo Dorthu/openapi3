@@ -268,6 +268,7 @@ class Operation(ObjectBase):
 
     def _request_handle_body(self, data):
         if "application/json" in self.requestBody.content:
+            body = {}
             if isinstance(data, dict) or isinstance(data, list):
                 body = json.dumps(data)
 
