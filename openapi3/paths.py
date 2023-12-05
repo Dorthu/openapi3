@@ -341,7 +341,8 @@ class Operation(ObjectBase):
             session = self._session
 
         # send the prepared request
-        result = session.send(self._request.prepare(), verify=verify)
+        prepared_request = session.prepare_request(self._request)
+        result = session.send(prepared_request, verify=verify)
 
         # spec enforces these are strings
         status_code = str(result.status_code)
