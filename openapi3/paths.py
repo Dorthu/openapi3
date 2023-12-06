@@ -362,6 +362,15 @@ class Operation(ObjectBase):
             return
 
         content_type = result.headers["Content-Type"]
+        expected_media = expected_response.content.get(content_type, None)
+
+        if expected_media is not None:
+            if content_type.lower().startswith("application/json"):
+                return expected_media.schema.model(result.json())
+            else:
+                raise NotImplementedError()
+
+        # Handle if received content type does not match expected content type excatly
         if ';' in content_type:
             # if the content type that came in included an encoding, we'll ignore
             # it for now (requests has already parsed it for us) and only look at
