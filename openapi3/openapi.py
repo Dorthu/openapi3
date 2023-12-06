@@ -16,6 +16,7 @@ class OpenAPI(ObjectBase):
         "openapi",
         "info",
         "servers",
+        "base_url",
         "paths",
         "components",
         "security",
@@ -178,6 +179,7 @@ class OpenAPI(ObjectBase):
         self.paths = self._get("paths", ["Path", "Reference"], is_map=True)
         self.security = self._get("security", ["SecurityRequirement"], is_list=True)
         self.servers = self._get("servers", ["Server"], is_list=True)
+        self.base_url = self.servers[0].url
         self.tags = self._get("tags", ["Tag"], is_list=True)
 
         # now that we've parsed _all_ the data, resolve all references; start with
@@ -199,9 +201,8 @@ class OpenAPI(ObjectBase):
                   configuration.
         :rtype: OperationCallable
         """
-        base_url = self.servers[0].url
 
-        return OperationCallable(operation, base_url, self._security, self._ssl_verify, self._session)
+        return OperationCallable(operation, self.base_url, self._security, self._ssl_verify, self._session)
 
     def __getattribute__(self, attr):
         """
