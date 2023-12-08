@@ -280,6 +280,11 @@ class Operation(ObjectBase):
 
             self._request.data = body
             self._request.headers["Content-Type"] = "application/json"
+
+        elif "multipart/form-data" in self.requestBody.content:
+            self._request.data = data
+            self._request.headers["Content-Type"] = data.content_type
+
         else:
             raise NotImplementedError()
 
