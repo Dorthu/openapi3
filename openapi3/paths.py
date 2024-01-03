@@ -267,7 +267,8 @@ class Operation(ObjectBase):
         self._request.url = self._request.url.format(**path_parameters)
 
     def _request_handle_body(self, data):
-        if "application/json" in self.requestBody.content:
+        is_json = [k for k in self.requestBody.content.keys() if k.startswith('application/json')]
+        if is_json:
             if isinstance(data, dict) or isinstance(data, list):
                 body = json.dumps(data)
 
