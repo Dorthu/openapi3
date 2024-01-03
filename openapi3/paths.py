@@ -267,7 +267,8 @@ class Operation(ObjectBase):
         self._request.url = self._request.url.format(**path_parameters)
 
     def _request_handle_body(self, data):
-        if "application/json" in self.requestBody.content:
+        is_json = [k for k in self.requestBody.content.keys() if k.startswith('application/json')]
+        if is_json:
             if isinstance(data, dict) or isinstance(data, list):
                 body = json.dumps(data)
 
@@ -362,6 +363,15 @@ class Operation(ObjectBase):
             return
 
         content_type = result.headers["Content-Type"]
+        expected_media = expected_response.content.get(content_type, None)
+
+        if expected_media is not None:
+            if content_type.lower().startswith("application/json"):
+                return expected_media.schema.model(result.json())
+            else:
+                raise NotImplementedError()
+
+        # Handle if received content type does not match expected content type excatly
         if ';' in content_type:
             # if the content type that came in included an encoding, we'll ignore
             # it for now (requests has already parsed it for us) and only look at
